@@ -1,0 +1,6 @@
+streamlit
+PyQt6
+fastapi
+uvicorn
+sqlalchemy
+pillow
