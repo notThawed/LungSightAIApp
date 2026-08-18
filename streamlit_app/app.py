@@ -2,9 +2,24 @@ import streamlit as st
 
 from auth.login import show_login
 
+from layouts.physician_layout import show_physician_layout
+from layouts.radtech_layout import show_radtech_layout
+
+st.set_page_config(
+    page_title="LungSight",
+    page_icon=":microscope:",
+    layout="wide",
+)
+
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Dashboard"
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+
+if "user" not in st.session_state:
+    st.session_state.user = None
+
 
 
 if not st.session_state.logged_in:
@@ -13,16 +28,13 @@ if not st.session_state.logged_in:
 
 else:
 
-    user = st.session_state.user
+    role = st.session_state.user["role"]
 
-    st.success(f"Welcome {user['name']}!")
+    if role == "physician":
+        show_physician_layout()
 
-    st.write(f"Role: {user['role']}")
+    elif role == "radtech":
+        show_radtech_layout()
 
-    if user["role"] == "radtech":
-
-        st.header("Receptionist / RadTech Dashboard")
-
-    elif user["role"] == "physician":
-
-        st.header("Radiologist Dashboard")
+    else:
+        st.error("Invalid user role. Please contact the administrator.")
