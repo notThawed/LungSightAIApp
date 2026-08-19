@@ -85,3 +85,4 @@ def show_top_navbar(page_name: str, page_info: str) -> None:
 				""",
 				unsafe_allow_html=True,
 			)
+

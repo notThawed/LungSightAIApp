@@ -10,6 +10,12 @@ USERS = {
         "password": "123456",
         "name": "Dr. Smith",
         "role": "physician"
+    },
+
+    "admin@lungsight.com": {
+        "password": "123456",
+        "name": "Admin User",
+        "role": "admin"
     }
 }
 

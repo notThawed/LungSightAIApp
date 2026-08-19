@@ -104,3 +104,22 @@ def show_physician_sidebar():
     selected_page = _render_nav_buttons("physician_nav", physician_nav_items)
     _render_logout()
     return selected_page
+
+def show_admin_sidebar():
+    _load_sidebar_css()
+
+    admin_nav_items = [
+        ("Dashboard", "Home dashboard"),
+        ("User Management", "Manage users"),
+        ("System Settings", "Configure system settings"),
+        ("Reports", "View reports"),
+        ("Manage Hospital", "Manage hospital information"),
+        ("Subscription", "Manage subscription"),
+    ]
+    valid_pages = [page for page, _ in admin_nav_items]
+    _ensure_valid_current_page(valid_pages)
+    _show_sidebar_header("Administrator")
+
+    selected_page = _render_nav_buttons("admin_nav", admin_nav_items)
+    _render_logout()
+    return selected_page

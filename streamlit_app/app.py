@@ -4,6 +4,7 @@ from auth.login import show_login
 
 from layouts.physician_layout import show_physician_layout
 from layouts.radtech_layout import show_radtech_layout
+from layouts.admin_layout import show_admin_layout
 
 st.set_page_config(
     page_title="LungSight",
@@ -32,6 +33,9 @@ else:
 
     if role == "physician":
         show_physician_layout()
+
+    elif role == "admin":
+        show_admin_layout()
 
     elif role == "radtech":
         show_radtech_layout()
