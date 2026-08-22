@@ -1,6 +1,10 @@
-from PyQt6.QtWidgets import QApplication,QLabel
+from PyQt6.QtWidgets import QApplication
+from PyQt6 import uic
 import sys
-app=QApplication(sys.argv)
-label=QLabel('LungSightApp Desktop')
-label.show()
+
+app = QApplication(sys.argv)
+
+window = uic.loadUi("mainwindow.ui")
+window.show()
+
 sys.exit(app.exec())
