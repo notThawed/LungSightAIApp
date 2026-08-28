@@ -3,6 +3,6 @@ import streamlit as st
 
 def show():
 
-    st.title("Profile X-Ray")
+    st.title("Radiologic Technologist Profile")
 
     st.info("Profile page coming soon...")

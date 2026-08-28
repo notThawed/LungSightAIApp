@@ -50,22 +50,37 @@ def _render_nav_buttons(role_key: str, nav_items: list[tuple[str, str]]) -> str:
     return st.session_state.current_page
 
 
-def _render_logout() -> None:
-    # Start account section with border
+def _render_account(role_key: str) -> None:
+
     st.sidebar.markdown(
         """
         <div class="ls-sidebar-account">
-            <div class="ls-sidebar-section">Account</div>
+            <div class="ls-sidebar-account-label">Account</div>
         </div>
-        """, 
+        """,
         unsafe_allow_html=True
     )
-    if st.sidebar.button("Logout", key="sidebar_logout", width="stretch"):
+
+    is_profile_active = st.session_state.current_page == "Profile"
+
+    if st.sidebar.button(
+        "Manage Profile",
+        key=f"{role_key}_Profile",
+        width="stretch",
+        disabled=is_profile_active,
+    ):
+        st.session_state.current_page = "Profile"
+        st.rerun()
+
+    if st.sidebar.button(
+        "Logout",
+        key=f"{role_key}_Logout",
+        width="stretch",
+    ):
         st.session_state.logged_in = False
         st.session_state.user = None
         st.session_state.current_page = "Dashboard"
         st.rerun()
-
 
 def show_radtech_sidebar():
     _load_sidebar_css()
@@ -76,14 +91,13 @@ def show_radtech_sidebar():
         ("Patient Records", "Patient records"),
         ("Reports", "Reports"),
         ("Geospatial Map", "Geospatial map"),
-        ("Profile", "Profile"),
     ]
-    valid_pages = [page for page, _ in radtech_nav_items]
+    valid_pages = [page for page, _ in radtech_nav_items] + ["Profile"]
     _ensure_valid_current_page(valid_pages)
     _show_sidebar_header("Radiology technologist")
 
     selected_page = _render_nav_buttons("radtech_nav", radtech_nav_items)
-    _render_logout()
+    _render_account("radtech")
     return selected_page
 
 
@@ -95,14 +109,13 @@ def show_physician_sidebar():
         ("Patient Queue", "Patient queue"),
         ("Review Patient", "Review patient"),
         ("Patient Records", "Patient records"),
-        ("Profile", "Profile"),
     ]
-    valid_pages = [page for page, _ in physician_nav_items]
+    valid_pages = [page for page, _ in physician_nav_items] + ["Profile"]
     _ensure_valid_current_page(valid_pages)
     _show_sidebar_header("Physician")
 
     selected_page = _render_nav_buttons("physician_nav", physician_nav_items)
-    _render_logout()
+    _render_account("physician")
     return selected_page
 
 def show_admin_sidebar():
@@ -111,15 +124,15 @@ def show_admin_sidebar():
     admin_nav_items = [
         ("Dashboard", "Home dashboard"),
         ("User Management", "Manage users"),
-        ("System Settings", "Configure system settings"),
-        ("Reports", "View reports"),
-        ("Manage Hospital", "Manage hospital information"),
+        ("Manage Clients", "Manage Client Info"),
         ("Subscription", "Manage subscription"),
+        ("Reports", "View reports"),
+        ("System Settings", "Configure system settings"),
     ]
-    valid_pages = [page for page, _ in admin_nav_items]
+    valid_pages = [page for page, _ in admin_nav_items] + ["Profile"]
     _ensure_valid_current_page(valid_pages)
     _show_sidebar_header("Administrator")
 
     selected_page = _render_nav_buttons("admin_nav", admin_nav_items)
-    _render_logout()
+    _render_account("admin")
     return selected_page

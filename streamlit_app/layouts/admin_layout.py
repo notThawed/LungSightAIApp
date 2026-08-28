@@ -2,7 +2,8 @@ import streamlit as st
 from components.sidebar import show_admin_sidebar
 from components.navbar import show_top_navbar
 
-from pages.admin import dashboard, manage_user, configure_system_settings, manage_hospital, subscription, reports
+from pages.admin import dashboard, manage_user, configure_system_settings, subscription, reports
+from streamlit_app.pages.admin import manage_clients, profile
 
 def show_admin_layout():
 
@@ -29,9 +30,12 @@ def show_admin_layout():
     elif page == "Reports":
         reports.show()
 
-    elif page == "Manage Hospital":
-        manage_hospital.show()
+    elif page == "Manage Clients":
+        manage_clients.show()
 
     elif page == "Subscription":
         subscription.show()
+
+    elif page == "Profile":
+        profile.show()
         

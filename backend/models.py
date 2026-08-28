@@ -1,10 +1,12 @@
 from sqlalchemy import (
     Column,
     BigInteger,
+    Date,
     String,
     Boolean,
     DateTime,
-    ForeignKey
+    ForeignKey,
+    Text
 )
 
 from sqlalchemy.orm import relationship
@@ -45,14 +47,48 @@ class UserProfile(Base):
         primary_key=True
     )
 
+    employee_id = Column(
+        String(50),
+        unique=True,
+        nullable=False
+    )
+
     user_fname = Column(
         String(100),
         nullable=False
     )
 
+    user_mname = Column(
+        String(100),
+    )
+
     user_lname = Column(
         String(100),
         nullable=False
+    )
+
+    user_birthdate = Column(
+        Date
+    )
+
+    user_sex = Column(
+        String(20)
+    )
+
+    user_contact_number = Column(
+        String(30)
+    )
+
+    user_address = Column(
+        Text
+    )
+
+    user_department = Column(
+        String(100)
+    )
+
+    user_job_title = Column(
+        String(100)
     )
 
     role_id = Column(
@@ -78,6 +114,11 @@ class UserProfile(Base):
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
         nullable=False
+    )
+
+    last_login = Column(
+        DateTime(timezone=True),
+        nullable=True
     )
 
     role = relationship(
