@@ -1,33 +1,168 @@
-# auth/login.py
+from pathlib import Path
 
 import streamlit as st
-from auth.auth_manager import authenticate
+
+from auth.auth_manager import authenticate, login_as_demo_user, DEMO_USERS
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+LOGIN_CSS_PATH = (
+    PROJECT_ROOT
+    / "shared"
+    / "theme"
+    / "css_content"
+    / "login.css"
+)
+
+LOGO_PATH = (
+    PROJECT_ROOT
+    / "shared"
+    / "images"
+    / "LungSight Logo.png"
+)
+
+
+def _load_login_css() -> None:
+    if LOGIN_CSS_PATH.exists():
+        st.markdown(
+            f"<style>{LOGIN_CSS_PATH.read_text(encoding='utf-8')}</style>",
+            unsafe_allow_html=True,
+        )
 
 
 def show_login():
 
-    st.title("🫁 LungSight")
+    _load_login_css()
 
-    st.subheader("AI-Powered Chest X-Ray Analysis")
+    with st.container(key="login_shell"):
 
-    email = st.text_input("Email")
+        form_col, logo_col = st.columns(
+            [1, 1.05],
+            gap="large"
+        )
 
-    password = st.text_input(
-        "Password",
-        type="password"
-    )
+        # ============================================
+        # LOGIN FORM
+        # ============================================
 
-    if st.button("Login"):
+        with form_col:
 
-        user = authenticate(email, password)
+            with st.container(key="login_card"):
 
-        if user:
+                st.markdown(
+                    """
+                    <p class="ls-login-title">SIGN-IN</p>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-            st.session_state.logged_in = True
-            st.session_state.user = user
+                with st.form(
+                    "login_form",
+                    clear_on_submit=False
+                ):
 
-            st.rerun()
+                    email = st.text_input(
+                        "Email",
+                        placeholder="you@hospital.org"
+                    )
 
-        else:
+                    password = st.text_input(
+                        "Password",
+                        type="password",
+                        placeholder="Enter your password"
+                    )
 
-            st.error("Invalid email or password.")
+                    submitted = st.form_submit_button(
+                        "Sign in"
+                    )
+
+                st.markdown(
+                    """
+                    <p class="ls-login-subheader">
+                        AI-powered chest X-ray analysis
+                        for faster clinical decisions
+                    </p>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                st.markdown(
+                    """
+                    <div style="margin: 1.2rem 0 0.6rem; text-align: center; font-size: 0.78rem; font-weight: 700; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase;">
+                        — Quick Demo Access (3 Roles) —
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                demo_c1, demo_c2, demo_c3 = st.columns(3)
+
+                with demo_c1:
+                    if st.button("🩺 Radiologist", key="quick_rad", use_container_width=True, help="Login as Dr. Sarah Jenkins (Radiologist)"):
+                        login_as_demo_user("radiologist@lungsight.ai")
+                        st.rerun()
+
+                with demo_c2:
+                    if st.button("🩻 RadTech", key="quick_tech", use_container_width=True, help="Login as Alex Rivera (Radiologic Technologist)"):
+                        login_as_demo_user("radtech@lungsight.ai")
+                        st.rerun()
+
+                with demo_c3:
+                    if st.button("🏥 Admin", key="quick_adm", use_container_width=True, help="Login as Marcus Vance (Hospital Admin)"):
+                        login_as_demo_user("admin@lungsight.ai")
+                        st.rerun()
+
+                # ====================================
+                # AUTHENTICATION
+                # ====================================
+
+                if submitted:
+
+                    if not email or not password:
+
+                        st.error(
+                            "Please enter your email and password."
+                        )
+
+                    else:
+
+                        user = authenticate(
+                            email.strip(),
+                            password
+                        )
+
+                        if user:
+
+                            st.session_state.logged_in = True
+
+                            st.session_state.user = user
+
+                            st.rerun()
+
+                        else:
+
+                            st.error(
+                                "Invalid email or password."
+                            )
+
+        # ============================================
+        # LOGO
+        # ============================================
+
+        with logo_col:
+
+            with st.container(key="logo_panel"):
+
+                if LOGO_PATH.exists():
+
+                    st.image(
+                        str(LOGO_PATH),
+                        width=440
+                    )
+
+                else:
+
+                    st.warning(
+                        "LungSight logo could not be found."
+                    )

@@ -1,0 +1,9 @@
+# Streamlit configuration file
+[theme]
+base = "light"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true

@@ -1,5 +1,26 @@
 {
-  "colors":{"primary":"#0066FF","background":"#F8FAFC","text":"#222222"},
-  "radius":{"button":12},
-  "fonts":{"family":"Poppins"}
+  "name": "HMS Minimalist Clinical Design System",
+  "colors": {
+    "primary": "#007BFF",
+    "primary_dark": "#0069D9",
+    "primary_light": "#EBF5FF",
+    "background": "#F4F6F9",
+    "surface": "#FFFFFF",
+    "text": "#0F172A",
+    "text_secondary": "#64748B",
+    "border": "#E2E8F0",
+    "success": "#28A745",
+    "warning": "#FFC107",
+    "danger": "#DC2626",
+    "purple": "#6F42C1"
+  },
+  "radius": {
+    "card": 14,
+    "pill": 12,
+    "button": 8,
+    "input": 8
+  },
+  "fonts": {
+    "family": "Segoe UI, Inter, sans-serif"
+  }
 }
