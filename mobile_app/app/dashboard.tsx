@@ -1,174 +1,98 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
+
 import { router } from "expo-router";
-import { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 
-export default function DashboardScreen() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
+export default function Dashboard() {
   useEffect(() => {
-    const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      setSession(session);
-      setLoading(false);
-    };
-
-    getSession();
+    detectRole();
   }, []);
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
+  const detectRole = async () => {
+    // Get logged-in user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (error) {
-      Alert.alert("Logout failed", error.message);
+    if (userError) {
+      console.error("User error:", userError);
+      router.replace("/login");
       return;
     }
 
-    router.replace("/login");
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+
+    // Get user's role
+    const { data: profile, error: profileError } =
+      await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+    if (profileError) {
+      console.error("Profile error:", profileError);
+
+      await supabase.auth.signOut();
+
+      router.replace("/login");
+      return;
+    }
+
+    console.log("Logged-in user:", user.email);
+    console.log("Role:", profile.role);
+
+    // Send user to the correct application
+    switch (profile.role) {
+      case "physician":
+        router.replace("/physician");
+        break;
+
+      case "rad_tech":
+        router.replace("/rad_tech");
+        break;
+
+      default:
+        console.error(
+          "Unauthorized mobile role:",
+          profile.role
+        );
+
+        await supabase.auth.signOut();
+
+        router.replace("/login");
+    }
   };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  if (!session) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>Not authenticated.</Text>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => router.replace("/login")}
-        >
-          <Text style={styles.buttonText}>Go to Login</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Dashboard</Text>
+      <ActivityIndicator size="large" />
 
-      <Text style={styles.welcome}>
-        Welcome to LungSight
+      <Text style={styles.text}>
+        Loading LungSight...
       </Text>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Signed in as:</Text>
-        <Text style={styles.email}>
-          {session.user.email}
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>
-          LungSight Overview
-        </Text>
-
-        <Text style={styles.description}>
-          AI-assisted chest X-ray analysis and patient
-          management system.
-        </Text>
-      </View>
-
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={handleLogout}
-      >
-        <Text style={styles.buttonText}>Sign Out</Text>
-      </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-
+const styles = {
   container: {
     flex: 1,
-    padding: 24,
-    paddingTop: 70,
-    backgroundColor: "#f8fafc",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
   },
 
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-
-  welcome: {
-    fontSize: 18,
-    marginBottom: 30,
-    color: "#64748b",
-  },
-
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 15,
-  },
-
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-
-  email: {
-    fontSize: 15,
-    color: "#2563eb",
-  },
-
-  description: {
-    fontSize: 14,
-    color: "#64748b",
-    lineHeight: 21,
-  },
-
-  button: {
-    marginTop: 20,
-    backgroundColor: "#2563eb",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-
-  logoutButton: {
-    marginTop: 20,
-    backgroundColor: "#dc2626",
-    height: 52,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
+  text: {
+    marginTop: 15,
     fontSize: 16,
   },
-});
+};
