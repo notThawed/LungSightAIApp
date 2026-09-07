@@ -1,5 +1,5 @@
 from backend.fetches import get_all_users, get_all_roles, generate_employee_id, get_user
-from backend.crud import save_user, delete_user, update_user as update_user_db
+from backend.crud import create_user, delete_user, update_user as update_user_db
 from PyQt6.QtWidgets import QTableWidgetItem, QHeaderView
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtWidgets import QMessageBox
@@ -22,7 +22,7 @@ class ManageUsers:
         )
 
         self.window.confirm_button.clicked.connect(
-            self.create_user
+            self.save_user
         )
 
         self.window.users_delete_button.clicked.connect(self.remove_user)
@@ -144,7 +144,7 @@ class ManageUsers:
 
             table.setRowHidden(row, not show_row)
 
-    def create_user(self):
+    def save_user(self):
         #account information
         email = self.window.email.text().strip()
         password = self.window.password.text()
@@ -206,7 +206,7 @@ class ManageUsers:
             return
 
         try:
-            save_user(
+            create_user(
                 email=email,
                 password=password,
                 first_name=first_name,
