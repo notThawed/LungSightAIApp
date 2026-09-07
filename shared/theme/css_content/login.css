@@ -1,0 +1,198 @@
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap");
+
+:root {
+	--ls-accent: #12b8e6;
+	--ls-accent-strong: #0095bf;
+	--ls-warm: #ff5f58;
+	--ls-ink: #111827;
+	--ls-muted: #475569;
+	--ls-card: rgba(255, 255, 255, 0.9);
+	--ls-card-border: rgba(17, 24, 39, 0.1);
+	--ls-shadow: 0 20px 48px rgba(0, 42, 62, 0.18);
+	--ls-login-card-width: 520px;
+	--ls-login-card-min-height: 0px;
+	--ls-login-title-size: clamp(2.3rem, 4.8vw, 3.4rem);
+	--ls-login-title-size-mobile: clamp(1.8rem, 8.5vw, 2.6rem);
+}
+
+div[data-testid="stAppViewContainer"] {
+	background:
+		radial-gradient(circle at 12% 8%, rgba(18, 184, 230, 0.22), transparent 38%),
+		radial-gradient(circle at 88% 22%, rgba(255, 95, 88, 0.15), transparent 34%),
+		linear-gradient(155deg, #f7fcff 0%, #edf5fb 48%, #fff5f5 100%);
+}
+
+div[data-testid="stHeader"] {
+	background: transparent;
+}
+
+div[data-testid="stMainBlockContainer"] {
+	padding-top: clamp(1.6rem, 3vh, 2.4rem);
+}
+
+.st-key-login_shell {
+	max-width: 1100px;
+	margin: 0 auto;
+	margin-top: clamp(2.2rem, 9vh, 5.8rem);
+}
+
+.st-key-login_shell [data-testid="column"] {
+	align-self: center;
+}
+
+.st-key-login_card {
+	width: min(100%, var(--ls-login-card-width));
+	min-height: var(--ls-login-card-min-height);
+	margin: 0 auto;
+	padding: clamp(2.25rem, 2vw, 1.8rem);
+	border-radius: 24px;
+	border: 1px solid var(--ls-card-border);
+	background: var(--ls-card);
+	box-shadow: var(--ls-shadow);
+	backdrop-filter: blur(8px);
+	animation: login-card-rise 420ms ease-out;
+}
+
+.st-key-logo_panel {
+	padding: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	animation: login-card-rise 520ms ease-out;
+}
+
+.st-key-logo_panel .stImage {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 0;
+}
+
+.st-key-logo_panel .stImage img {
+	max-width: 100%;
+	height: auto;
+}
+
+.ls-login-title {
+	margin: 0.1rem 0 1rem;
+	text-align: center;
+	color: var(--ls-ink);
+	font-family: "Barlow Condensed", sans-serif;
+	font-size: var(--ls-login-title-size) !important;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	line-height: 1.1;
+}
+
+.ls-login-subheader {
+	margin: 0.95rem 0 0.2rem;
+	text-align: center;
+	color: var(--ls-muted);
+	font-family: "Manrope", sans-serif;
+	font-size: clamp(0.86rem, 1.25vw, 0.95rem);
+	font-weight: 500;
+	line-height: 1.45;
+}
+
+.st-key-login_card label {
+	font-family: "Barlow Condensed", sans-serif;
+	font-size: 1.02rem;
+	letter-spacing: 0.03em;
+	color: var(--ls-ink);
+}
+
+.st-key-login_card [data-testid="stTextInputRootElement"] {
+	border-radius: 14px;
+	border: 1px solid #ced8e3;
+	background: #ffffff;
+	transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.st-key-login_card [data-testid="stTextInputRootElement"]:focus-within {
+	border-color: var(--ls-accent);
+	box-shadow: 0 0 0 0.2rem rgba(18, 184, 230, 0.2);
+	transform: translateY(-1px);
+}
+
+.st-key-login_card input {
+	font-family: "Manrope", sans-serif;
+	color: var(--ls-ink);
+}
+
+.st-key-login_card input::placeholder {
+	color: #7b8ca0;
+}
+
+.st-key-login_card [data-testid="stFormSubmitButton"] {
+	margin-top: 0.5rem;
+}
+
+.st-key-login_card [data-testid="stFormSubmitButton"] button {
+	width: 100%;
+	border: none;
+	border-radius: 14px;
+	padding: 0.72rem 1rem;
+	color: #ffffff;
+	font-family: "Barlow Condensed", sans-serif;
+	font-size: 1.05rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	background: linear-gradient(90deg, var(--ls-accent-strong), var(--ls-accent), var(--ls-warm));
+	background-size: 200% auto;
+	transition: transform 180ms ease, filter 180ms ease, background-position 260ms ease;
+}
+
+.st-key-login_card [data-testid="stFormSubmitButton"] button:hover {
+	transform: translateY(-1px);
+	filter: saturate(1.08);
+	background-position: 100% center;
+}
+
+.st-key-login_card [data-testid="stFormSubmitButton"] button:active {
+	transform: translateY(0);
+}
+
+.st-key-login_card [data-testid="stAlert"] {
+	border-radius: 12px;
+	border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+@keyframes login-card-rise {
+	from {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (max-width: 900px) {
+	.st-key-login_shell [data-testid="stHorizontalBlock"] {
+		row-gap: 1rem;
+	}
+
+	.st-key-login_shell {
+		margin-top: clamp(1.1rem, 5vh, 2.2rem);
+	}
+
+	.st-key-login_card {
+		border-radius: 18px;
+		padding: 1.1rem;
+	}
+
+	.st-key-logo_panel {
+		padding: 0;
+	}
+
+	.ls-login-title {
+		font-size: var(--ls-login-title-size-mobile) !important;
+	}
+
+	.ls-login-subheader {
+		font-size: 0.86rem;
+	}
+}

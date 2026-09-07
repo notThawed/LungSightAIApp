@@ -1,0 +1,164 @@
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap");
+
+:root {
+	--ls-nav-bg: #ffffff;
+	--ls-nav-border: rgba(30, 41, 59, 0.08);
+	--ls-nav-shadow: 0 2px 12px rgba(15, 23, 42, 0.07);
+	--ls-nav-ink: #0f172a;
+	--ls-nav-muted: #51637a;
+	--ls-nav-accent: #0ea5c9;
+	--ls-nav-accent-strong: #0284a6;
+	--ls-nav-soft: #edf7fb;
+}
+
+/* Make navbar full width and lower it from the top */
+.st-key-top_navbar {
+	position: sticky;
+	top: 1rem;
+	z-index: 100;
+	margin-top: 1rem;
+	margin-bottom: 0.75rem;
+	padding: 1.5rem 2rem;
+	border-radius: 0;
+	background: var(--ls-nav-bg);
+	box-shadow: none;
+	width: 100%;
+	max-width: 100%;
+	left: 0;
+	right: 0;
+}
+
+/* Remove default Streamlit padding at the top */
+div[data-testid="stMainBlockContainer"] {
+	padding-top: 0 !important;
+	padding-left: 1rem !important;
+	padding-right: 1rem !important;
+}
+
+/* Remove top padding from the main app */
+section[data-testid="stAppViewBlockContainer"] {
+	padding-top: 0 !important;
+}
+
+/* Make the container take full width */
+.st-key-top_navbar [data-testid="stVerticalBlock"] {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+/* Ensure columns are full width */
+.st-key-top_navbar .stColumns {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+.ls-nav-left-wrap {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.ls-nav-brand-logo {
+	width: 2.4rem;
+	height: 2.4rem;
+	object-fit: cover;
+	border-radius: 50%;
+}
+
+.ls-nav-appname {
+	font-family: "Barlow Condensed", sans-serif;
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: var(--ls-nav-ink);
+	letter-spacing: 0.05em;
+	line-height: 1;
+	text-transform: uppercase;
+}
+
+.ls-nav-profile-wrap {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.ls-nav-avatar-image,
+.ls-nav-avatar-fallback {
+	width: 2.4rem;
+	height: 2.4rem;
+	border-radius: 999px;
+	object-fit: cover;
+	border: 1px solid rgba(2, 132, 166, 0.3);
+}
+
+.ls-nav-avatar-fallback {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(145deg, var(--ls-nav-accent-strong), var(--ls-nav-accent));
+	color: #ffffff;
+	font-family: "Barlow Condensed", sans-serif;
+	font-size: 1rem;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+}
+
+.ls-nav-user-text {
+	text-align: right;
+}
+
+.ls-nav-user-name {
+	font-family: "Manrope", sans-serif;
+	font-size: 0.9rem;
+	font-weight: 700;
+	color: var(--ls-nav-ink);
+	line-height: 1.15;
+}
+
+.ls-nav-user-role {
+	margin-top: 0.05rem;
+	font-family: "Manrope", sans-serif;
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--ls-nav-muted);
+}
+
+@media (max-width: 900px) {
+	.st-key-top_navbar {
+		top: 0.5rem;
+		margin-top: 0.5rem;
+		padding: 0.5rem 1rem;
+		margin-bottom: 0.75rem;
+		border-radius: 0;
+	}
+
+	div[data-testid="stMainBlockContainer"] {
+		padding-left: 0.5rem !important;
+		padding-right: 0.5rem !important;
+	}
+
+	.ls-nav-appname {
+		font-size: 1.2rem;
+	}
+
+	.ls-nav-brand-logo {
+		width: 2rem;
+		height: 2rem;
+	}
+
+	.ls-nav-avatar-image,
+	.ls-nav-avatar-fallback {
+		width: 2rem;
+		height: 2rem;
+	}
+
+	.ls-nav-user-name {
+		font-size: 0.8rem;
+	}
+
+	.ls-nav-user-role {
+		font-size: 0.65rem;
+	}
+}
