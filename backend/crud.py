@@ -1,6 +1,6 @@
 from backend.supabase_client import admin_supabase
 
-def create_user(
+def save_user(
     email,
     password,
     first_name,
