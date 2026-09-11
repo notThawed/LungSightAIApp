@@ -268,7 +268,7 @@ def show():
     with col8:
          metric_card(
               "AI Status",
-              0,
+              "Ok ra gaw",
                 "[]"
          )
 

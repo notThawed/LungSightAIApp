@@ -3,6 +3,7 @@ from pathlib import Path
 import streamlit as st
 
 from auth.auth_manager import authenticate
+from backend.subscriptions import get_all_subscription_plans
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -19,7 +20,7 @@ LOGO_PATH = (
     PROJECT_ROOT
     / "shared"
     / "images"
-    / "LungSight Logo.png"
+    / "LungSight_Logo-nobg.png"
 )
 
 
@@ -140,3 +141,63 @@ def show_login():
                     st.warning(
                         "LungSight logo could not be found."
                     )
+
+        st.divider()
+
+        st.header("Subscription Plans")
+
+        plans = get_all_subscription_plans()
+
+        if not plans:
+
+            st.warning(
+                "No subscription plans available at the moment."
+            )
+        else:
+            plan_columns = st.columns(
+                len(plans),
+                gap="medium"
+            )
+
+            for column, plan in zip(
+                plan_columns,
+                plans
+            ):
+
+                with column:
+
+                    st.subheader(
+                        plan["plan_name"]
+                    )
+
+                    st.write(
+                        plan["description"]
+                    )
+
+                    st.markdown(
+                        f"### ₱{plan['price_monthly']:,.2f}/month"
+                    )
+
+                    st.write(
+                        f"Up to {plan['max_users']} users"
+                    )
+
+                    st.write(
+                        f"Up to {plan['max_xrays_per_month']} X-rays per month"
+                    )
+
+                    if st.button(
+                        "Select Plan",
+                        key=f"select_plan_{plan['plan_id']}"
+                    ):
+                        st.session_state.selected_plan_id = (
+                            plan["plan_id"]
+                        )
+
+                        st.session_state.selected_plan_name = (
+                            plan["plan_name"]
+                        )
+
+                        st.success(
+                            f"You have selected the {plan['plan_name']} plan."
+                        )

@@ -30,13 +30,12 @@ supabase: Client = create_client(
     SUPABASE_KEY
 )
 
-
 # Admin client
-supabase_admin: Client = create_client(
+admin_supabase: Client = create_client(
     SUPABASE_URL,
     SUPABASE_SECRET_KEY
 )
 
 
 print("SUPABASE CLIENT LOADED")
-print("ADMIN CLIENT EXISTS:", supabase_admin is not None)
+print("ADMIN CLIENT EXISTS:", admin_supabase is not None)
