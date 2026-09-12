@@ -3,8 +3,6 @@ from pathlib import Path
 import streamlit as st
 
 from auth.auth_manager import authenticate
-from backend.subscriptions import get_all_subscription_plans
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 

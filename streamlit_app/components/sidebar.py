@@ -125,7 +125,6 @@ def show_admin_sidebar():
         ("Dashboard", "Home dashboard"),
         ("User Management", "Manage users"),
         ("Manage Clients", "Manage Client Info"),
-        ("Subscription", "Manage subscription"),
         ("Reports", "View reports"),
         ("System Settings", "Configure system settings"),
     ]
