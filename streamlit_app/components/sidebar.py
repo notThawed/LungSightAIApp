@@ -123,8 +123,9 @@ def show_admin_sidebar():
 
     admin_nav_items = [
         ("Dashboard", "Home dashboard"),
-        ("User Management", "Manage users"),
-        ("Manage Clients", "Manage Client Info"),
+        ("User Management", "Manage System Users"),
+        ("Manage Patients", "Manage Patients"),
+        ("Manage Examinations", "Health Assessments"),
         ("Reports", "View reports"),
         ("System Settings", "Configure system settings"),
     ]

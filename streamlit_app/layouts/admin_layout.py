@@ -3,7 +3,7 @@ from components.sidebar import show_admin_sidebar
 from components.navbar import show_top_navbar
 
 from pages.admin import dashboard, manage_user, configure_system_settings, reports
-from streamlit_app.pages.admin import manage_clients, profile
+from streamlit_app.pages.admin import manage_patients, profile, manage_examinations
 
 def show_admin_layout():
 
@@ -30,9 +30,13 @@ def show_admin_layout():
     elif page == "Reports":
         reports.show()
 
-    elif page == "Manage Clients":
-        manage_clients.show()
+    elif page == "Manage Patients":
+        manage_patients.show()
+
+    elif page == "Manage Examinations":
+        manage_examinations.show()
 
     elif page == "Profile":
         profile.show()
+
         
