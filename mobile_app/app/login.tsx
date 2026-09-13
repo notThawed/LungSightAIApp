@@ -37,7 +37,7 @@ export default function LoginScreen() {
     }
 
     if (data.user) {
-      router.replace("/dashboard");
+      router.replace("/role-router");
     }
   };
 
