@@ -14,6 +14,8 @@ def show_admin_layout():
         "User Management": "Manage user accounts, roles, and permissions.",
         "System Settings": "Configure system-wide settings and preferences.",
         "Reports": "Generate and view system reports and analytics.",
+        "Manage Patients": "Manage Patient informations",
+        "Manage Examinations": "Manage Patient Examinations",
         "Profile": "Update your profile and admin-specific account preferences.",
     }
     show_top_navbar(page_name=page, page_info=page_info.get(page, "Page information is not available."))

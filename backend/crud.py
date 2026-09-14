@@ -311,3 +311,51 @@ def delete_patient(patient_id):
     )
 
     return response.data
+
+def create_examination(
+    patient_id,
+    examination_type,
+    examination_date,
+    clinical_notes=None,
+    created_by=None
+):
+    examination_data = {
+        "patient_id": patient_id,
+        "examination_type": examination_type,
+        "examination_date": examination_date.isoformat(),
+        "clinical_notes": clinical_notes,
+        "created_by": created_by
+    }
+
+    response = (
+        admin_supabase
+        .table("examinations")
+        .insert(examination_data)
+        .execute()
+    )
+
+    return response.data
+
+
+def update_examination_clinical_notes(
+    examination_id,
+    clinical_notes
+):
+    """
+    Update the clinical notes of an examination.
+    """
+
+    response = (
+        admin_supabase
+        .table("examinations")
+        .update({
+            "clinical_notes": clinical_notes
+        })
+        .eq(
+            "examination_id",
+            examination_id
+        )
+        .execute()
+    )
+
+    return response.data

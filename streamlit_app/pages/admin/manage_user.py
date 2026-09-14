@@ -1,6 +1,6 @@
 import streamlit as st
 
-from datetime import date
+from datetime import date, datetime
 
 from backend.fetches import (
     get_all_users,
@@ -22,29 +22,11 @@ from backend.crud import (
 # ==========================================
 
 def validate_birthdate(birthdate):
-    """
-    Validate a user's birthdate.
-
-    Rules:
-    - Birthdate is required
-    - Cannot be in the future
-    - Cannot be before January 1, 1900
-    - User must be at least 18 years old
-    - User cannot be older than 120 years
-    """
-
-    # ------------------------------------------
-    # REQUIRED
-    # ------------------------------------------
 
     if birthdate is None:
         return False, "Birthdate is required."
 
     today = date.today()
-
-    # ------------------------------------------
-    # FUTURE DATE
-    # ------------------------------------------
 
     if birthdate > today:
 
@@ -52,10 +34,6 @@ def validate_birthdate(birthdate):
             False,
             "Birthdate cannot be in the future."
         )
-
-    # ------------------------------------------
-    # MINIMUM DATE
-    # ------------------------------------------
 
     minimum_date = date(
         1900,
@@ -69,10 +47,6 @@ def validate_birthdate(birthdate):
             False,
             "Please enter a valid birthdate."
         )
-
-    # ------------------------------------------
-    # CALCULATE AGE
-    # ------------------------------------------
 
     age = (
         today.year
@@ -89,10 +63,6 @@ def validate_birthdate(birthdate):
 
         age -= 1
 
-    # ------------------------------------------
-    # MINIMUM AGE
-    # ------------------------------------------
-
     if age < 18:
 
         return (
@@ -100,10 +70,6 @@ def validate_birthdate(birthdate):
             f"User must be at least 18 years old. "
             f"Current age: {age}."
         )
-
-    # ------------------------------------------
-    # MAXIMUM AGE
-    # ------------------------------------------
 
     if age > 120:
 
@@ -115,10 +81,69 @@ def validate_birthdate(birthdate):
 
     return True, ""
 
+def calculate_age(birthdate):
 
-# ==========================================
-# METRIC CARD
-# ==========================================
+    if not birthdate:
+        return None
+
+    try:
+        if isinstance(birthdate, datetime):
+            birthdate = birthdate.date()
+
+        elif isinstance(birthdate, str):
+            birthdate = date.fromisoformat(
+                birthdate[:10]
+            )
+        if not isinstance(birthdate, date):
+            return None
+        today = date.today()
+
+        age = (
+            today.year - birthdate.year
+        )
+
+        if (
+            today.month,
+            today.day
+        ) < (
+            birthdate.month,
+            birthdate.day
+        ):
+
+            age -= 1
+
+        return age
+
+    except (
+        ValueError,
+        TypeError
+    ):
+        return None
+
+def format_date(value):
+
+    if not value:
+        return "--"
+
+    try:
+        if isinstance(value, datetime):
+            return value.strftime(
+                "%B %d, %Y"
+            )
+        value_string = str(value)
+
+        parsed_date = date.fromisoformat(
+            value_string[:10]
+        )
+        return parsed_date.strftime(
+            "%B %d, %Y"
+        )
+
+    except (
+        ValueError,
+        TypeError
+    ):
+        return str(value)
 
 def metric_card(title, value, icon):
 
@@ -132,6 +157,35 @@ def metric_card(title, value, icon):
         """,
         unsafe_allow_html=True
     )
+
+def format_datetime(value):
+
+    if not value:
+        return "Never"
+
+    try:
+        if isinstance(value, datetime):
+            return value.strftime(
+                "%B %d, %Y at %I:%M %p"
+            )
+        value_string = str(value)
+        parsed_datetime = datetime.fromisoformat(
+            value_string.replace(
+                "Z",
+                "+00:00"
+            )
+        )
+
+        return parsed_datetime.strftime(
+            "%B %d, %Y at %I:%M %p"
+        )
+
+    except (
+        ValueError,
+        TypeError
+    ):
+        return str(value)
+
 
 
 # ==========================================
@@ -155,6 +209,7 @@ def render_users_table(users):
         2,
         2,
         1,
+        1,
         1
     ]
 
@@ -168,6 +223,7 @@ def render_users_table(users):
         "Clinical Role",
         "Status",
         "Last Login",
+        "",
         "",
         ""
     ]
@@ -248,8 +304,11 @@ def render_users_table(users):
         # ------------------------------------------
 
         last_login = (
-            user.get("last_login")
-            or "Never"
+            format_datetime(
+                            user.get(
+                                "last_login"
+                            )
+                        )
         )
 
         if last_login != "Never":
@@ -316,6 +375,15 @@ def render_users_table(users):
             show_delete_confirm(
                 user_id,
                 full_name
+            )
+
+        if row[7].button(
+            "View",
+            key=f"view_{user_id}",
+            help="View User"
+        ):
+            show_view_user(
+                user_id
             )
 
         st.divider()
@@ -1082,6 +1150,258 @@ def show_delete_confirm(
                     )
                 )
 
+@st.dialog("View User")
+def show_view_user(user_id):
+
+    user = get_user(
+        user_id
+    )
+
+    if not user:
+
+        st.error(
+            "User not found."
+        )
+
+        return
+
+    first_name = user.get("user_fname") or ""
+    middle_name = user.get("user_mname") or ""
+    last_name = user.get("user_lname") or ""
+
+    full_name = (
+        f"{first_name} "
+        f"{middle_name} "
+        f"{last_name}"
+    ).strip()
+
+    role_data = user.get("roles")
+
+    role_name = (
+        role_data.get("role_name")
+        if role_data
+        else "N/A"
+    )
+
+    status = (
+        "Active"
+        if user.get("is_active")
+        else "Inactive"
+    )
+
+    birthdate_value = user.get("user_birthdate")
+
+    formatted_birthdate = format_date(
+        birthdate_value
+    )
+
+    age = calculate_age(
+        birthdate_value
+    )
+
+    age_display = (
+        f"{age} years old"
+        if age is not None
+        else "--"
+    )
+
+    st.markdown(
+        f"### {full_name}'s Account Information"
+    )
+
+    st.divider()
+
+    col1, col2 = st.columns(2)
+
+
+    with col1:
+        st.markdown(
+            "**Employee ID**"
+        )
+
+        st.write(
+            user.get("employee_id")
+            or "--"
+        )
+
+    with col2:
+        st.markdown(
+            "**Account Status**"
+        )
+
+        st.write(
+            status
+        )
+    st.write("")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(
+            "**Email**"
+        )
+
+        st.write(
+            user.get("email")
+            or "--"
+        )
+
+    with col2:
+        st.markdown(
+            "**System Role**"
+        )
+
+        st.write(
+            role_name
+        )
+
+    st.divider()
+
+    st.markdown(
+        "### Personal Information"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        st.markdown(
+            "**First Name**"
+        )
+
+        st.write(
+            first_name
+        )
+
+    with col2:
+    
+            st.markdown(
+                "**Middle Name**"
+            )
+    
+            st.write(
+                middle_name
+            )
+
+    with col3:
+    
+            st.markdown(
+                "**Last Name**"
+            )
+    
+            st.write(
+                last_name
+            )
+    st.write("")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        st.markdown(
+            "**Sex**"
+        )
+
+        st.write(
+            user.get("user_sex")
+        )
+
+    with col2:
+
+        st.markdown(
+            "**Age**"
+        )
+
+        st.write(
+            age_display
+        )
+
+    with col3:
+
+        st.markdown(
+            "**Birthdate**"
+        )
+
+        st.write(
+            formatted_birthdate
+        )
+
+    st.divider()
+
+    st.markdown(
+        "### Contact Information"
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown(
+            "**Contact Number**"
+        )
+
+        st.write(
+            user.get("user_contact_number")
+            or "--"
+        )
+
+    with col2:
+        st.markdown(
+            "**Address**"
+        )
+        st.write(
+            user.get("user_address")
+            or "--"
+        )
+
+    st.divider()
+
+    st.markdown("### Account Activity")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.markdown(
+            "**Last Login**"
+        )
+
+        st.write(
+            format_datetime(
+                user.get(
+                    "last_login"
+                )
+            )
+        )
+
+    with col2:
+
+        st.markdown(
+            "**Created At**"
+        )
+
+        st.write(
+            format_datetime(
+                user.get(
+                    "created_at"
+                )
+            )
+        )
+
+    st.markdown(
+        "**Last Updated**"
+    )
+
+    st.write(
+        format_datetime(
+            user.get(
+                "updated_at"
+            )
+        )
+    )
+
+    if st.button(
+        "Return",
+        width="content"
+    ):
+        st.rerun()
 
 # ==========================================
 # MAIN PAGE

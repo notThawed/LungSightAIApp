@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-from backend.fetches import get_all_patients
+from backend.fetches import get_all_patients, generate_patient_id
 from datetime import date
 from backend.crud import create_patient, delete_patient, update_patient
 
@@ -201,7 +201,10 @@ def show_patient_table(patients, is_admin=True):
 
         for patient in patients:
 
-            patient_id = patient.get("patient_id")
+            patient_id = patient.get("patient_code")
+
+            if not patient_id:
+                patient_id = "Not Assigned"
 
             full_name = " ".join(
                 part for part in [
@@ -235,7 +238,7 @@ def show_patient_table(patients, is_admin=True):
             with col6:
                 if st.button(
                     "✏️",
-                    key=f"edit_{patient_id}",
+                    key=f"edit_{patient['patient_id']}",
                     help="Edit patient"
                 ):
                     show_edit_patient_dialog(patient)
@@ -243,7 +246,7 @@ def show_patient_table(patients, is_admin=True):
             with col7:
                 if st.button(
                     "🗑️",
-                    key=f"delete_{patient_id}",
+                    key=f"delete_{patient['patient_id']}",
                     help="Delete patient"
                 ):
                     show_delete_patient_dialog(patient)
