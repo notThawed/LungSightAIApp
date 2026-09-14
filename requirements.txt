@@ -1,0 +1,10 @@
+streamlit
+PyQt6
+fastapi
+uvicorn
+sqlalchemy
+pillow
+supabase
+psycopg2-binary
+python-dotenv
+pillow

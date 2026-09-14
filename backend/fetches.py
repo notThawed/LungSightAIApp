@@ -1,0 +1,377 @@
+from backend.supabase_client import supabase, admin_supabase
+
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+MANILA_TZ = ZoneInfo("Asia/Manila")
+
+
+# ==========================================
+# CONVERT TIMESTAMP TO PHILIPPINE TIME
+# ==========================================
+
+def convert_to_manila_time(timestamp):
+    """
+    Convert Supabase Auth timestamp to Philippine Standard Time.
+    """
+
+    if not timestamp:
+        return None
+
+    try:
+
+        # Supabase may already return a datetime object
+        if isinstance(timestamp, datetime):
+
+            # If the datetime has no timezone,
+            # assume it is UTC
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(
+                    tzinfo=ZoneInfo("UTC")
+                )
+
+            return timestamp.astimezone(
+                MANILA_TZ
+            )
+
+        # If Supabase returns a string instead
+        if isinstance(timestamp, str):
+
+            timestamp = timestamp.replace(
+                "Z",
+                "+00:00"
+            )
+
+            dt = datetime.fromisoformat(
+                timestamp
+            )
+
+            return dt.astimezone(
+                MANILA_TZ
+            )
+
+    except Exception as e:
+
+        print(
+            f"Failed to convert timestamp: {e}"
+        )
+
+    return timestamp
+
+
+# ==========================================
+# GET ALL USERS
+# ==========================================
+
+def get_all_users():
+
+    response = (
+        supabase
+        .table("user_profiles")
+        .select("""
+            user_id,
+            employee_id,
+            user_fname,
+            user_mname,
+            user_lname,
+            user_birthdate,
+            user_sex,
+            user_contact_number,
+            user_address,
+            role_id,
+            is_active,
+            created_at,
+            updated_at,
+
+            roles (
+                role_id,
+                role_name
+            )
+        """)
+        .order("user_lname")
+        .execute()
+    )
+
+    users = response.data or []
+
+
+    # ------------------------------------------
+    # GET AUTH INFORMATION
+    # ------------------------------------------
+
+    for user in users:
+
+        user["email"] = ""
+        user["last_login"] = None
+
+        try:
+
+            auth_response = (
+                admin_supabase
+                .auth
+                .admin
+                .get_user_by_id(
+                    user["user_id"]
+                )
+            )
+
+            if auth_response.user:
+
+                # EMAIL
+                user["email"] = (
+                    auth_response.user.email
+                    or ""
+                )
+
+                # LAST LOGIN
+                user["last_login"] = (
+                    convert_to_manila_time(
+                        auth_response.user.last_sign_in_at
+                    )
+                )
+
+        except Exception as e:
+
+            print(
+                f"Failed to fetch auth information "
+                f"for {user['user_id']}: {e}"
+            )
+
+    return users
+
+
+# ==========================================
+# GET ALL ROLES
+# ==========================================
+
+def get_all_roles():
+
+    response = (
+        supabase
+        .table("roles")
+        .select(
+            "role_id, role_name"
+        )
+        .order("role_id")
+        .execute()
+    )
+
+    return response.data or []
+
+
+# ==========================================
+# GENERATE EMPLOYEE ID
+# ==========================================
+
+def generate_employee_id():
+
+    current_year = datetime.now().year
+
+    response = (
+        supabase
+        .table("user_profiles")
+        .select("employee_id")
+        .like(
+            "employee_id",
+            f"EMP-{current_year}-%"
+        )
+        .order(
+            "employee_id",
+            desc=True
+        )
+        .limit(1)
+        .execute()
+    )
+
+    if not response.data:
+
+        return (
+            f"EMP-{current_year}-001"
+        )
+
+    last_id = response.data[0].get(
+        "employee_id"
+    )
+
+    if not last_id:
+
+        return (
+            f"EMP-{current_year}-001"
+        )
+
+    try:
+
+        number = int(
+            last_id.split("-")[-1]
+        )
+
+    except (ValueError, IndexError):
+
+        number = 0
+
+    return (
+        f"EMP-{current_year}-{number + 1:03d}"
+    )
+
+
+# ==========================================
+# GET SINGLE USER
+# ==========================================
+
+def get_user(user_id):
+
+    # ------------------------------------------
+    # GET PROFILE
+    # ------------------------------------------
+
+    profile_response = (
+        supabase
+        .table("user_profiles")
+        .select("""
+            *,
+            roles (
+                role_id,
+                role_name
+            )
+        """)
+        .eq(
+            "user_id",
+            user_id
+        )
+        .single()
+        .execute()
+    )
+
+    profile = profile_response.data
+
+    if not profile:
+        return None
+
+
+    # ------------------------------------------
+    # DEFAULT AUTH VALUES
+    # ------------------------------------------
+
+    profile["email"] = ""
+    profile["last_login"] = None
+
+
+    # ------------------------------------------
+    # GET AUTH USER
+    # ------------------------------------------
+
+    try:
+
+        auth_response = (
+            admin_supabase
+            .auth
+            .admin
+            .get_user_by_id(
+                user_id
+            )
+        )
+
+        if auth_response.user:
+
+            # EMAIL
+            profile["email"] = (
+                auth_response.user.email
+                or ""
+            )
+
+            # LAST LOGIN
+            profile["last_login"] = (
+                convert_to_manila_time(
+                    auth_response.user.last_sign_in_at
+                )
+            )
+
+    except Exception as e:
+
+        print(
+            f"Failed to fetch auth user: {e}"
+        )
+
+    return profile
+
+
+# ==========================================
+# GET USER COUNTS
+# ==========================================
+
+def get_user_counts():
+
+    users = get_all_users()
+
+    total_staff = 0
+    radiologist_count = 0
+    radiologic_technologist_count = 0
+
+    for user in users:
+
+        role_data = user.get("roles")
+
+        if not role_data:
+            continue
+
+        role_name = role_data.get(
+            "role_name"
+        )
+
+        if role_name == "Radiologist":
+
+            radiologist_count += 1
+            total_staff += 1
+
+        elif role_name == "Radiologic Technologist":
+
+            radiologic_technologist_count += 1
+            total_staff += 1
+
+        elif role_name == "Staff":
+
+            total_staff += 1
+
+    return {
+
+        "total_staff": total_staff,
+
+        "radiologist":
+            radiologist_count,
+
+        "radiologic_technologist":
+            radiologic_technologist_count,
+
+        "total_patients":
+            0
+    }
+
+# GET ALL PATIENTS
+
+def get_all_patients():
+    response = (
+        supabase
+        .table("patients")
+        .select(
+            """
+            patient_id,
+            first_name,
+            middle_name,
+            last_name,
+            suffix,
+            date_of_birth,
+            sex,
+            contact_number,
+            address,
+            emergency_contact_name,
+            emergency_contact_no,
+            status,
+            created_at
+            """
+        )
+        .order("last_name", desc=False)
+        .order("first_name", desc=False)
+        .execute()
+    )
+
+    return response.data
