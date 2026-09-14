@@ -125,7 +125,7 @@ def show_admin_sidebar():
         ("Dashboard", "Home dashboard"),
         ("User Management", "Manage System Users"),
         ("Manage Patients", "Manage Patients"),
-        ("Manage Examinations", "Health Assessments"),
+        ("Manage Examinations", "Manage Examinations"),
         ("Reports", "View reports"),
         ("System Settings", "Configure system settings"),
     ]
