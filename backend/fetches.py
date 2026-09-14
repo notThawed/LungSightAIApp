@@ -355,6 +355,7 @@ def get_all_patients():
         .select(
             """
             patient_id,
+            patient_code,
             first_name,
             middle_name,
             last_name,
@@ -375,3 +376,49 @@ def get_all_patients():
     )
 
     return response.data
+
+def generate_patient_id():
+
+    current_year = datetime.now().year
+    response = (
+        supabase
+        .table("patients")
+        .select("patient_code")
+        .like(
+            "patient_code",
+            f"LSP-{current_year}-%"
+        )
+        .order(
+            "patient_code",
+            desc=True
+        )
+        .limit(1)
+        .execute()
+    )
+
+    if not response.data:
+        return (
+            f"LSP-{current_year}-001"
+        )
+    last_id = response.data[0].get(
+        "patient_code"
+    )
+
+    if not last_id:
+
+        return (
+            f"LSP-{current_year}-001"
+        )
+    try:
+        number = int(
+            last_id.split("-")[-1]
+        )
+
+    except (
+        ValueError,
+        TypeError
+    ): number = 0
+
+    return(
+        f"LSP-{current_year}-{number + 1:03d}"
+    )
