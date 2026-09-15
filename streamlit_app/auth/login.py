@@ -3,6 +3,7 @@ from pathlib import Path
 import streamlit as st
 
 from auth.auth_manager import authenticate
+from auth.client_application import show_client_application
 
 from backend.subscription_utils import (
     get_active_subscription_plans
@@ -33,6 +34,14 @@ def _load_login_css() -> None:
             unsafe_allow_html=True,
         )
 
+@st.dialog(
+    "LungSight Hospital Application",
+    width="large"
+)
+def render_application_dialog():
+
+    show_client_application()
+
 def render_subscription_cards():
 
     plans = get_active_subscription_plans()
@@ -48,7 +57,7 @@ def render_subscription_cards():
     st.markdown(
         """
         <div style="text-align:center;">
-            <h2>Subscription Plans</h2>
+            <h2>Find Your Perfect Plan</h2>
             <p>
                 Choose the LungSight subscription plan
                 that best fits your hospital.
@@ -123,11 +132,7 @@ def render_subscription_cards():
                 st.divider()
 
                 st.markdown(
-                    f"### ₱{float(monthly):,.2f}"
-                )
-
-                st.caption(
-                    "per month"
+                    f"### ₱{float(monthly):,.2f} /month"
                 )
 
                 st.markdown(

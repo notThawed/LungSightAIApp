@@ -2,7 +2,7 @@ from components.sidebar import show_radtech_sidebar
 from components.navbar import show_top_navbar
 
 from pages.radtech import dashboard, analyze, geospatial, profile
-from pages.admin import manage_examinations, manage_patients
+from pages.system_administrator import manage_examinations, manage_patients
 
 
 def show_radtech_layout():
