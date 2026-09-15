@@ -127,6 +127,7 @@ def show_admin_sidebar():
         ("Manage Patients", "Manage Patients"),
         ("Manage Examinations", "Manage Examinations"),
         ("Medical Records", "Medical Records"),
+        ("Manage Subscriptions", "Manage Subscriptions"),
         ("Reports", "View reports"),
         ("System Settings", "Configure system settings"),
     ]

@@ -4,6 +4,10 @@ import streamlit as st
 
 from auth.auth_manager import authenticate
 
+from backend.subscription_utils import (
+    get_active_subscription_plans
+)
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 LOGIN_CSS_PATH = (
@@ -29,6 +33,162 @@ def _load_login_css() -> None:
             unsafe_allow_html=True,
         )
 
+def render_subscription_cards():
+
+    plans = get_active_subscription_plans()
+
+    if not plans:
+
+        st.info(
+            "Subscription plans are currently unavailable."
+        )
+
+        return
+
+    st.markdown(
+        """
+        <div style="text-align:center;">
+            <h2>Subscription Plans</h2>
+            <p>
+                Choose the LungSight subscription plan
+                that best fits your hospital.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ==========================================
+    # CREATE COLUMNS
+    # ==========================================
+
+    columns = st.columns(
+        len(plans)
+    )
+
+    for column, plan in zip(
+        columns,
+        plans
+    ):
+
+        with column:
+
+            plan_id = plan["plan_id"]
+
+            plan_name = plan["plan_name"]
+
+            description = (
+                plan.get("description")
+                or "LungSight subscription plan."
+            )
+
+            monthly = (
+                plan.get("price_monthly")
+                or 0
+            )
+
+            yearly = (
+                plan.get("price_yearly")
+                or 0
+            )
+
+            max_users = plan.get(
+                "max_users"
+            )
+
+            max_patients = plan.get(
+                "max_patients"
+            )
+
+            max_xrays = plan.get(
+                "max_xrays_per_month"
+            )
+
+            # ======================================
+            # CARD
+            # ======================================
+
+            with st.container(
+                border=True
+            ):
+
+                st.markdown(
+                    f"## {plan_name}"
+                )
+
+                st.caption(
+                    description
+                )
+
+                st.divider()
+
+                st.markdown(
+                    f"### ₱{float(monthly):,.2f}"
+                )
+
+                st.caption(
+                    "per month"
+                )
+
+                st.markdown(
+                    f"""
+                    **₱{float(yearly):,.2f} / year**
+                    """
+                )
+
+                st.divider()
+
+                users_text = (
+                    "Unlimited"
+                    if max_users is None
+                    else f"{max_users:,}"
+                )
+
+                patients_text = (
+                    "Unlimited"
+                    if max_patients is None
+                    else f"{max_patients:,}"
+                )
+
+                xrays_text = (
+                    "Unlimited"
+                    if max_xrays is None
+                    else f"{max_xrays:,}"
+                )
+
+                st.write(
+                    f"👥 **Users:** {users_text}"
+                )
+
+                st.write(
+                    f"👤 **Patients:** {patients_text}"
+                )
+
+                st.write(
+                    f"🩻 **X-rays/month:** {xrays_text}"
+                )
+
+                st.divider()
+
+                if st.button(
+                    "Select Plan",
+                    key=f"select_plan_{plan_id}",
+                    use_container_width=True
+                ):
+
+                    st.session_state[
+                        "selected_plan_id"
+                    ] = plan_id
+
+                    st.session_state[
+                        "selected_plan_name"
+                    ] = plan_name
+
+                    st.session_state[
+                        "show_application_form"
+                    ] = True
+
+                    st.rerun()
 
 def show_login():
 
@@ -139,3 +299,7 @@ def show_login():
                     st.warning(
                         "LungSight logo could not be found."
                     )
+
+    st.divider()
+
+    render_subscription_cards()
