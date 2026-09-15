@@ -89,7 +89,7 @@ def show_radtech_sidebar():
         ("Dashboard", "Home dashboard"),
         ("Analyze X-Ray", "Analyze X-ray"),
         ("Patient Records", "Patient records"),
-        ("Reports", "Reports"),
+        ("Manage Examinations", "Examinations"),
         ("Geospatial Map", "Geospatial map"),
     ]
     valid_pages = [page for page, _ in radtech_nav_items] + ["Profile"]
@@ -126,6 +126,7 @@ def show_admin_sidebar():
         ("User Management", "Manage System Users"),
         ("Manage Patients", "Manage Patients"),
         ("Manage Examinations", "Manage Examinations"),
+        ("Medical Records", "Medical Records"),
         ("Reports", "View reports"),
         ("System Settings", "Configure system settings"),
     ]

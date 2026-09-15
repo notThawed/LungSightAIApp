@@ -13,7 +13,8 @@ from backend.fetches import (
 from backend.crud import (
     create_user,
     update_user,
-    delete_user
+    delete_user,
+    reactivate_user
 )
 
 
@@ -365,17 +366,38 @@ def render_users_table(users):
         # ------------------------------------------
         # DELETE
         # ------------------------------------------
+        if user.get("is_active"):
+            # --------------------------------------
+            # ACTIVE USER → DEACTIVATE
+            # --------------------------------------
 
-        if row[6].button(
-            "Delete",
-            key=f"delete_{user_id}",
-            help="Delete user"
-        ):
+            if row[6].button(
+                "Delete",
+                key=f"delete_{user_id}",
+                help="Deactivate user"
+            ):
 
-            show_delete_confirm(
-                user_id,
-                full_name
-            )
+                show_delete_confirm(
+                    user_id,
+                    full_name
+                )
+
+        else:
+
+            # --------------------------------------
+            # INACTIVE USER → REACTIVATE
+            # --------------------------------------
+
+            if row[6].button(
+                "Reactivate",
+                key=f"reactivate_{user_id}",
+                help="Reactivate user"
+            ):
+
+                show_reactivate_confirm(
+                    user_id,
+                    full_name
+                )
 
         if row[7].button(
             "View",
@@ -1147,6 +1169,60 @@ def show_delete_confirm(
                     result.get(
                         "message",
                         "Failed to delete user."
+                    )
+                )
+
+@st.dialog("Reactivate User")
+def show_reactivate_confirm(
+    user_id,
+    full_name
+):
+
+    st.success(
+        f"Are you sure you want to reactivate "
+        f"**{full_name}**?"
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        if st.button(
+            "Cancel",
+            width="stretch"
+        ):
+            st.rerun()
+
+    with col2:
+
+        if st.button(
+            "Reactivate",
+            width="stretch",
+            type="primary"
+        ):
+
+            with st.spinner(
+                "Reactivating user..."
+            ):
+
+                result = reactivate_user(
+                    user_id
+                )
+
+            if result.get("success"):
+
+                st.session_state[
+                    "user_reactivated_success"
+                ] = True
+
+                st.rerun()
+
+            else:
+
+                st.error(
+                    result.get(
+                        "message",
+                        "Failed to reactivate user."
                     )
                 )
 

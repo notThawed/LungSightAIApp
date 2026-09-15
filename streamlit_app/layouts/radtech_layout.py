@@ -1,7 +1,8 @@
 from components.sidebar import show_radtech_sidebar
 from components.navbar import show_top_navbar
 
-from pages.radtech import dashboard, analyze, patient_records, reports, geospatial, profile
+from pages.radtech import dashboard, analyze, geospatial, profile
+from pages.admin import manage_examinations, manage_patients
 
 
 def show_radtech_layout():
@@ -12,7 +13,7 @@ def show_radtech_layout():
         "Dashboard": "Quick overview of workload, recent uploads, and key imaging status metrics.",
         "Analyze X-Ray": "Upload and run AI-assisted chest X-ray analysis to support screening and triage.",
         "Patient Records": "Browse patient imaging history and view archived case details.",
-        "Reports": "Generate and review summary reports for findings, trends, and outcomes.",
+        "Examinations": "Generate and review summary reports for findings, trends, and outcomes.",
         "Geospatial Map": "Inspect location-based imaging trends and regional case distributions.",
         "Profile": "Manage your account information and role-specific preferences.",
     }
@@ -28,11 +29,11 @@ def show_radtech_layout():
 
     elif page == "Patient Records":
 
-        patient_records.show()
+        manage_patients.show()
 
-    elif page == "Reports":
+    elif page == "Manage Examinations":
 
-        reports.show()
+        manage_examinations.show()
 
     elif page == "Geospatial Map":
 

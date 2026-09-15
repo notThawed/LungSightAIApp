@@ -194,28 +194,32 @@ def delete_user(user_id):
     try:
 
         # ------------------------------------------
-        # DELETE AUTH USER
+        # DEACTIVATE USER PROFILE
         # ------------------------------------------
 
-        admin_supabase.auth.admin.delete_user(
-            user_id
-        )
-
-        # ------------------------------------------
-        # DELETE PROFILE
-        # ------------------------------------------
-
-        (
+        response = (
             admin_supabase
             .table("user_profiles")
-            .delete()
+            .update({
+                "is_active": False
+            })
             .eq("user_id", user_id)
             .execute()
         )
 
+        # ------------------------------------------
+        # VERIFY UPDATE
+        # ------------------------------------------
+
+        if not response.data:
+            return {
+                "success": False,
+                "message": "User not found or could not be deactivated."
+            }
+
         return {
             "success": True,
-            "message": "User deleted successfully."
+            "message": "User deactivated successfully."
         }
 
     except Exception as e:
@@ -227,6 +231,37 @@ def delete_user(user_id):
 
 # PATIENT MANAGEMENT
 
+def reactivate_user(user_id):
+
+    try:
+
+        response = (
+            admin_supabase
+            .table("user_profiles")
+            .update({
+                "is_active": True
+            })
+            .eq("user_id", user_id)
+            .execute()
+        )
+
+        if not response.data:
+            return {
+                "success": False,
+                "message": "User not found or could not be reactivated."
+            }
+
+        return {
+            "success": True,
+            "message": "User reactivated successfully."
+        }
+
+    except Exception as e:
+
+        return {
+            "success": False,
+            "message": str(e)
+        }
 
 def create_patient(
     first_name,
@@ -359,3 +394,137 @@ def update_examination_clinical_notes(
     )
 
     return response.data
+
+def create_medical_record(
+    patient_id,
+    record_date,
+    record_type,
+    facility_name,
+    department=None,
+    attending_physician=None,
+    chief_complaint=None,
+    clinical_history=None,
+    diagnosis=None,
+    procedure_name=None,
+    findings=None,
+    impression=None,
+    treatment=None,
+    follow_up=None,
+    created_by=None
+):
+    try:
+
+        data = {
+            "patient_id": patient_id,
+            "record_date": record_date.isoformat(),
+            "record_type": record_type,
+            "facility_name": facility_name,
+            "department": department,
+            "attending_physician": attending_physician,
+            "chief_complaint": chief_complaint,
+            "clinical_history": clinical_history,
+            "diagnosis": diagnosis,
+            "procedure_name": procedure_name,
+            "findings": findings,
+            "impression": impression,
+            "treatment": treatment,
+            "follow_up": follow_up,
+            "record_status": "Completed",
+            "record_source": "External",
+            "created_by": created_by
+        }
+
+        response = (
+            admin_supabase
+            .table("medical_records")
+            .insert(data)
+            .execute()
+        )
+
+        if not response.data:
+            return {
+                "success": False,
+                "message": "Medical record could not be created."
+            }
+
+        return {
+            "success": True,
+            "message": "Medical record created successfully.",
+            "data": response.data[0]
+        }
+
+    except Exception as e:
+
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+def upload_medical_record_file(
+    medical_record_id,
+    uploaded_file,
+    image_type,
+    description=None
+):
+    try:
+        file_name = uploaded_file.name
+        file_bytes = uploaded_file.getvalue()
+
+        content_type = (
+            uploaded_file.type
+            or "application/octet-stream"
+        )
+
+        file_path = (
+            f"{medical_record_id}/{file_name}"
+        )
+
+        # Upload file to Supabase Storage
+        storage_response = (
+            admin_supabase
+            .storage
+            .from_("external-medical-records")
+            .upload(
+                path=file_path,
+                file=file_bytes,
+                file_options={
+                    "content-type": content_type
+                }
+            )
+        )
+
+        # Save file metadata in database
+        image_data = {
+            "medical_record_id": medical_record_id,
+            "image_type": image_type,
+            "image_url": file_path,
+            "description": description
+        }
+
+        db_response = (
+            admin_supabase
+            .table("medical_record_images")
+            .insert(image_data)
+            .execute()
+        )
+
+        if not db_response.data:
+            return {
+                "success": False,
+                "message": (
+                    "File uploaded, but the "
+                    "database record could not be created."
+                )
+            }
+
+        return {
+            "success": True,
+            "message": "File uploaded successfully.",
+            "data": db_response.data[0]
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e)
+        }

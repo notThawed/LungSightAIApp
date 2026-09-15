@@ -449,3 +449,63 @@ def get_examinations_by_patient(patient_id):
 
     return response.data or []
 
+def get_medical_records_by_patient(patient_id):
+    try:
+        response = (
+            admin_supabase
+            .table("medical_records")
+            .select("*")
+            .eq("patient_id", patient_id)
+            .order("record_date", desc=True)
+            .execute()
+        )
+
+        print("MEDICAL RECORD FETCH RESPONSE:", response.data)
+
+        return response.data or []
+
+    except Exception as e:
+        print(f"Error fetching medical records: {e}")
+        return []
+
+def get_medical_record_images(medical_record_id):
+    try:
+        response = (
+            admin_supabase
+            .table("medical_record_images")
+            .select("*")
+            .eq(
+                "medical_record_id",
+                medical_record_id
+            )
+            .order("uploaded_at", desc=False)
+            .execute()
+        )
+
+        return response.data or []
+
+    except Exception as e:
+        print(
+            f"Error fetching medical record images: {e}"
+        )
+        return []
+
+def get_medical_record_file_url(file_path):
+    try:
+        response = (
+            admin_supabase
+            .storage
+            .from_("external-medical-records")
+            .create_signed_url(
+                file_path,
+                3600
+            )
+        )
+
+        return response.get("signedURL")
+
+    except Exception as e:
+        print(
+            f"Error creating signed URL: {e}"
+        )
+        return None

@@ -23,7 +23,8 @@ def show():
         status_filter
     )
 
-    show_patient_table(patients)
+    role_id = st.session_state["user"].get("role_id")
+    show_patient_table(patients, role_id)
 
 
 def load_patients():
@@ -166,12 +167,32 @@ def filter_patients(patients, search, sex_filter, status_filter):
 
     return filtered
 
-def show_patient_table(patients, is_admin=True):
+def show_patient_table(patients, role_id):
     if not patients:
         st.info("No patients registered.")
         return
 
-    if is_admin:
+    # ==========================================================
+    # ROLE PERMISSIONS
+    # ==========================================================
+
+    # Role 1 = Superadmin
+    # Role 3 = Radiologist
+    # Role 4 = Radiologic Technologist
+
+    can_edit = role_id in [1, 3, 4]
+    can_delete = role_id == 1
+
+    # ==========================================================
+    # TABLE HEADER
+    # ==========================================================
+
+    if can_delete:
+
+        # ------------------------------------------------------
+        # SUPERADMIN TABLE
+        # ------------------------------------------------------
+
         col1, col2, col3, col4, col5, col6, col7 = st.columns(
             [1.5, 2.5, 1.5, 1, 2, 0.8, 0.8]
         )
@@ -197,64 +218,12 @@ def show_patient_table(patients, is_admin=True):
         with col7:
             st.markdown("**Delete**")
 
-        st.divider()
-
-        for patient in patients:
-
-            patient_id = patient.get("patient_code")
-
-            if not patient_id:
-                patient_id = "Not Assigned"
-
-            full_name = " ".join(
-                part for part in [
-                    patient.get("first_name"),
-                    patient.get("middle_name"),
-                    patient.get("last_name"),
-                    patient.get("suffix")
-                ]
-                if part
-            )
-
-            col1, col2, col3, col4, col5, col6, col7 = st.columns(
-                [1.5, 2.5, 1.5, 1, 2, 0.8, 0.8]
-            )
-
-            with col1:
-                st.write(patient_id)
-
-            with col2:
-                st.write(full_name)
-
-            with col3:
-                st.write(patient.get("date_of_birth"))
-
-            with col4:
-                st.write(patient.get("sex"))
-
-            with col5:
-                st.write(patient.get("contact_number") or "—")
-
-            with col6:
-                if st.button(
-                    "✏️",
-                    key=f"edit_{patient['patient_id']}",
-                    help="Edit patient"
-                ):
-                    show_edit_patient_dialog(patient)
-
-            with col7:
-                if st.button(
-                    "🗑️",
-                    key=f"delete_{patient['patient_id']}",
-                    help="Delete patient"
-                ):
-                    show_delete_patient_dialog(patient)
-
-            st.divider()
-
     else:
-        # RadTech table
+
+        # ------------------------------------------------------
+        # RADIOLOGIST / RADIOLOGIC TECHNOLOGIST TABLE
+        # ------------------------------------------------------
+
         col1, col2, col3, col4, col5, col6 = st.columns(
             [1.5, 2.5, 1.5, 1, 2, 0.8]
         )
@@ -277,50 +246,178 @@ def show_patient_table(patients, is_admin=True):
         with col6:
             st.markdown("**Edit**")
 
-        st.divider()
+    st.divider()
 
-        for patient in patients:
+    # ==========================================================
+    # PATIENT ROWS
+    # ==========================================================
 
-            patient_id = patient.get("patient_id")
+    for patient in patients:
 
-            full_name = " ".join(
-                part for part in [
-                    patient.get("first_name"),
-                    patient.get("middle_name"),
-                    patient.get("last_name"),
-                    patient.get("suffix")
-                ]
-                if part
+        patient_id = patient.get("patient_id")
+
+        patient_code = patient.get("patient_code")
+
+        if not patient_code:
+            patient_code = "Not Assigned"
+
+        full_name = " ".join(
+            part
+            for part in [
+                patient.get("first_name"),
+                patient.get("middle_name"),
+                patient.get("last_name"),
+                patient.get("suffix")
+            ]
+            if part
+        )
+
+        # ======================================================
+        # SUPERADMIN
+        # ======================================================
+
+        if can_delete:
+
+            col1, col2, col3, col4, col5, col6, col7 = st.columns(
+                [1.5, 2.5, 1.5, 1, 2, 0.8, 0.8]
             )
+
+            # --------------------------------------------------
+            # PATIENT ID
+            # --------------------------------------------------
+
+            with col1:
+                st.write(patient_code)
+
+            # --------------------------------------------------
+            # PATIENT NAME
+            # --------------------------------------------------
+
+            with col2:
+                st.write(full_name)
+
+            # --------------------------------------------------
+            # DATE OF BIRTH
+            # --------------------------------------------------
+
+            with col3:
+                st.write(
+                    patient.get("date_of_birth")
+                )
+
+            # --------------------------------------------------
+            # SEX
+            # --------------------------------------------------
+
+            with col4:
+                st.write(
+                    patient.get("sex")
+                )
+
+            # --------------------------------------------------
+            # CONTACT NUMBER
+            # --------------------------------------------------
+
+            with col5:
+                st.write(
+                    patient.get("contact_number") or "—"
+                )
+
+            # --------------------------------------------------
+            # EDIT
+            # --------------------------------------------------
+
+            with col6:
+
+                if can_edit:
+
+                    if st.button(
+                        "✏️",
+                        key=f"edit_{patient_id}",
+                        help="Edit patient"
+                    ):
+                        show_edit_patient_dialog(patient)
+
+            # --------------------------------------------------
+            # DELETE
+            # --------------------------------------------------
+
+            with col7:
+
+                if st.button(
+                    "🗑️",
+                    key=f"delete_{patient_id}",
+                    help="Delete patient"
+                ):
+                    show_delete_patient_dialog(patient)
+
+        # ======================================================
+        # RADIOLOGIST / RADIOLOGIC TECHNOLOGIST
+        # ======================================================
+
+        else:
 
             col1, col2, col3, col4, col5, col6 = st.columns(
                 [1.5, 2.5, 1.5, 1, 2, 0.8]
             )
 
+            # --------------------------------------------------
+            # PATIENT ID
+            # --------------------------------------------------
+
             with col1:
-                st.write(patient_id)
+                st.write(patient_code)
+
+            # --------------------------------------------------
+            # PATIENT NAME
+            # --------------------------------------------------
 
             with col2:
                 st.write(full_name)
 
+            # --------------------------------------------------
+            # DATE OF BIRTH
+            # --------------------------------------------------
+
             with col3:
-                st.write(patient.get("date_of_birth"))
+                st.write(
+                    patient.get("date_of_birth")
+                )
+
+            # --------------------------------------------------
+            # SEX
+            # --------------------------------------------------
 
             with col4:
-                st.write(patient.get("sex"))
+                st.write(
+                    patient.get("sex")
+                )
+
+            # --------------------------------------------------
+            # CONTACT NUMBER
+            # --------------------------------------------------
 
             with col5:
-                st.write(patient.get("contact_number") or "—")
+                st.write(
+                    patient.get("contact_number") or "—"
+                )
+
+            # --------------------------------------------------
+            # EDIT ONLY
+            # --------------------------------------------------
 
             with col6:
-                if st.button(
-                    "✏️",
-                    key=f"edit_{patient_id}",
-                    help="Edit patient"
-                ):
-                    show_edit_patient_dialog(patient)
 
-            st.divider()
+                if can_edit:
+
+                    if st.button(
+                        "✏️",
+                        key=f"edit_{patient_id}",
+                        help="Edit patient"
+                    ):
+                        show_edit_patient_dialog(patient)
+
+        st.divider()
     
 
 @st.dialog("Edit Patient")
