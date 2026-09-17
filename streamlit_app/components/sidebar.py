@@ -139,3 +139,74 @@ def show_admin_sidebar():
     selected_page = _render_nav_buttons("admin_nav", admin_nav_items)
     _render_account("admin")
     return selected_page
+
+def show_staff_sidebar():
+    _load_sidebar_css()
+
+    staff_nav_items = [
+        ("Dashboard", "Home dashboard"),
+        ("Patient Management", "Manage Patients"),
+        ("Examinations", "Manage Examinations"),
+        ("Patient Records", "Patient records"),
+        ("Geospatial Map", "Geospatial map"),
+    ]
+
+    valid_pages = [
+        page for page, _ in staff_nav_items
+    ] + ["Profile"]
+
+    _ensure_valid_current_page(
+        valid_pages
+    )
+
+    _show_sidebar_header(
+        "Staff"
+    )
+
+    selected_page = _render_nav_buttons(
+        "staff_nav",
+        staff_nav_items
+    )
+
+    _render_account(
+        "staff"
+    )
+
+    return selected_page
+
+
+def show_hospital_admin_sidebar():
+    _load_sidebar_css()
+
+    hospital_admin_nav_items = [
+        ("Dashboard", "Home dashboard"),
+        ("User Management", "Manage Hospital Users"),
+        ("Manage Patients", "Manage Patients"),
+        ("Manage Examinations", "Monitor Examinations"),
+        ("Medical Records", "Medical records"),
+        ("Reports", "View reports"),
+        ("Subscription", "View Subscription"),
+    ]
+
+    valid_pages = [
+        page for page, _ in hospital_admin_nav_items
+    ] + ["Profile"]
+
+    _ensure_valid_current_page(
+        valid_pages
+    )
+
+    _show_sidebar_header(
+        "Hospital Administrator"
+    )
+
+    selected_page = _render_nav_buttons(
+        "hospital_admin_nav",
+        hospital_admin_nav_items
+    )
+
+    _render_account(
+        "hospital_admin"
+    )
+
+    return selected_page
