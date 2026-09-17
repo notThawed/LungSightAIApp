@@ -21,8 +21,36 @@ APPLICATION_STEPS = [
 
 def initialize_application(plan):
 
-    # Only initialize if a new application does not exist
-    if "client_application" not in st.session_state:
+    # --------------------------------------------------------
+    # If the selected plan changed, create a new application
+    # --------------------------------------------------------
+
+    current_plan_id = plan.get("plan_id")
+
+    existing_application = st.session_state.get(
+        "client_application"
+    )
+
+    existing_plan_id = None
+
+    if existing_application:
+
+        existing_plan_id = (
+            existing_application
+            .get("subscription", {})
+            .get("plan_id")
+        )
+
+    # --------------------------------------------------------
+    # Initialize only when:
+    # 1. No application exists
+    # 2. A different plan was selected
+    # --------------------------------------------------------
+
+    if (
+        existing_application is None
+        or existing_plan_id != current_plan_id
+    ):
 
         st.session_state.client_application = {
 
@@ -47,6 +75,13 @@ def initialize_application(plan):
             "agreement": {},
         }
 
+        # Start at Step 1
+        st.session_state.client_application_step = 0
+
+    # --------------------------------------------------------
+    # Safety fallback
+    # --------------------------------------------------------
+
     if "client_application_step" not in st.session_state:
 
         st.session_state.client_application_step = 0
@@ -68,6 +103,21 @@ def clear_application():
         None
     )
 
+    st.session_state.pop(
+        "selected_plan",
+        None
+    )
+
+    st.session_state.pop(
+        "show_application_form",
+        None
+    )
+
+    st.session_state.pop(
+        "application_submitted",
+        None
+    )
+
 
 # ============================================================
 # PROGRESS INDICATOR
@@ -82,7 +132,7 @@ def render_progress():
     total_steps = len(APPLICATION_STEPS)
 
     st.markdown(
-        f"### Step {current_step + 1} of {total_steps}"
+        "### Hospital Application"
     )
 
     st.progress(
@@ -90,7 +140,9 @@ def render_progress():
     )
 
     st.caption(
-        APPLICATION_STEPS[current_step]
+        f"Step {current_step + 1} of "
+        f"{total_steps} — "
+        f"{APPLICATION_STEPS[current_step]}"
     )
 
 
@@ -116,6 +168,22 @@ def render_hospital_information():
         ]
     )
 
+    hospital_types = [
+        "Government Hospital",
+        "Private Hospital",
+        "Medical Center",
+        "Other",
+    ]
+
+    current_hospital_type = existing_data.get(
+        "hospital_type",
+        "Government Hospital"
+    )
+
+    if current_hospital_type not in hospital_types:
+
+        current_hospital_type = hospital_types[0]
+
     with st.form(
         "hospital_information_form"
     ):
@@ -131,33 +199,9 @@ def render_hospital_information():
 
         hospital_type = st.selectbox(
             "Hospital Type *",
-            [
-                "Government Hospital",
-                "Private Hospital",
-                "Medical Center",
-                "Other",
-            ],
-            index=(
-                [
-                    "Government Hospital",
-                    "Private Hospital",
-                    "Medical Center",
-                    "Other",
-                ].index(
-                    existing_data.get(
-                        "hospital_type",
-                        "Government Hospital"
-                    )
-                )
-                if existing_data.get(
-                    "hospital_type"
-                ) in [
-                    "Government Hospital",
-                    "Private Hospital",
-                    "Medical Center",
-                    "Other",
-                ]
-                else 0
+            hospital_types,
+            index=hospital_types.index(
+                current_hospital_type
             )
         )
 
@@ -203,7 +247,7 @@ def render_hospital_information():
         st.divider()
 
         submitted = st.form_submit_button(
-            "Continue",
+            "Next",
             use_container_width=True
         )
 
@@ -264,6 +308,7 @@ def render_hospital_information():
                 website.strip(),
         }
 
+        # Move to Step 2
         st.session_state.client_application_step = 1
 
         st.rerun()
@@ -348,7 +393,7 @@ def render_authorized_representative():
 
         st.divider()
 
-        back_col, continue_col = st.columns(2)
+        back_col, next_col = st.columns(2)
 
         with back_col:
 
@@ -357,10 +402,10 @@ def render_authorized_representative():
                 use_container_width=True
             )
 
-        with continue_col:
+        with next_col:
 
-            continue_button = st.form_submit_button(
-                "Continue",
+            next_button = st.form_submit_button(
+                "Next",
                 use_container_width=True
             )
 
@@ -370,7 +415,7 @@ def render_authorized_representative():
 
         st.rerun()
 
-    if continue_button:
+    if next_button:
 
         if not first_name.strip():
 
@@ -435,6 +480,7 @@ def render_authorized_representative():
                 email.strip(),
         }
 
+        # Move to Step 3
         st.session_state.client_application_step = 2
 
         st.rerun()
@@ -539,7 +585,7 @@ def render_subscription_confirmation():
         "activation will be subject to application approval."
     )
 
-    back_col, continue_col = st.columns(2)
+    back_col, next_col = st.columns(2)
 
     with back_col:
 
@@ -553,12 +599,12 @@ def render_subscription_confirmation():
 
             st.rerun()
 
-    with continue_col:
+    with next_col:
 
         if st.button(
-            "Confirm & Continue",
+            "Next",
             use_container_width=True,
-            key="subscription_continue"
+            key="subscription_next"
         ):
 
             st.session_state.client_application_step = 3
@@ -641,7 +687,7 @@ def render_hospital_administrator():
 
         st.divider()
 
-        back_col, continue_col = st.columns(2)
+        back_col, next_col = st.columns(2)
 
         with back_col:
 
@@ -650,10 +696,10 @@ def render_hospital_administrator():
                 use_container_width=True
             )
 
-        with continue_col:
+        with next_col:
 
-            continue_button = st.form_submit_button(
-                "Continue",
+            next_button = st.form_submit_button(
+                "Next",
                 use_container_width=True
             )
 
@@ -663,7 +709,7 @@ def render_hospital_administrator():
 
         st.rerun()
 
-    if continue_button:
+    if next_button:
 
         if not first_name.strip():
 
@@ -717,6 +763,7 @@ def render_hospital_administrator():
                 contact_number.strip(),
         }
 
+        # Move to Step 5
         st.session_state.client_application_step = 4
 
         st.rerun()
@@ -767,7 +814,7 @@ def render_agreement():
 
     st.divider()
 
-    back_col, continue_col = st.columns(2)
+    back_col, next_col = st.columns(2)
 
     with back_col:
 
@@ -781,12 +828,12 @@ def render_agreement():
 
             st.rerun()
 
-    with continue_col:
+    with next_col:
 
         if st.button(
-            "Continue",
+            "Next",
             use_container_width=True,
-            key="agreement_continue"
+            key="agreement_next"
         ):
 
             if not agreed:
@@ -977,9 +1024,7 @@ def render_review_submit():
         "### 5. Agreement"
     )
 
-    if application["agreement"].get(
-        "agreed"
-    ):
+    if application["agreement"].get("agreed"):
 
         st.success(
             "Service agreement accepted."
@@ -1020,9 +1065,7 @@ def render_review_submit():
             key="submit_application"
         ):
 
-            st.session_state[
-                "application_submitted"
-            ] = True
+            st.session_state.application_submitted = True
 
             st.rerun()
 
@@ -1055,8 +1098,8 @@ def render_application_submitted():
     )
 
     st.info(
-        "For now, this is a test submission. "
-        "No database record or user account has been created yet."
+        "Test submission rani paker"
+        "Unya na ang database"
     )
 
     if st.button(
@@ -1066,29 +1109,28 @@ def render_application_submitted():
 
         clear_application()
 
-        st.session_state.pop(
-            "application_submitted",
-            None
-        )
-
         st.rerun()
 
 
 # ============================================================
-# MAIN DIALOG
+# MAIN APPLICATION DIALOG
 # ============================================================
 
 @st.dialog(
-    "Hospital Application",
+    "LungSight Hospital Application",
     width="large"
 )
 def show_client_application(plan):
 
+    # --------------------------------------------------------
+    # Initialize
+    # --------------------------------------------------------
+
     initialize_application(plan)
 
-    # ========================================================
-    # SUBMISSION SCREEN
-    # ========================================================
+    # --------------------------------------------------------
+    # Submitted screen
+    # --------------------------------------------------------
 
     if st.session_state.get(
         "application_submitted",
@@ -1099,9 +1141,9 @@ def show_client_application(plan):
 
         return
 
-    # ========================================================
-    # PROGRESS
-    # ========================================================
+    # --------------------------------------------------------
+    # Progress
+    # --------------------------------------------------------
 
     render_progress()
 
@@ -1111,9 +1153,9 @@ def show_client_application(plan):
         st.session_state.client_application_step
     )
 
-    # ========================================================
-    # STEP ROUTING
-    # ========================================================
+    # --------------------------------------------------------
+    # Route current step
+    # --------------------------------------------------------
 
     if current_step == 0:
 

@@ -3,10 +3,13 @@ from pathlib import Path
 import streamlit as st
 
 from auth.auth_manager import authenticate
-from auth.client_application import show_client_application
 
 from backend.subscription_utils import (
     get_active_subscription_plans
+)
+
+from streamlit_app.auth.client_application import ( 
+    show_client_application, clear_application
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -34,13 +37,6 @@ def _load_login_css() -> None:
             unsafe_allow_html=True,
         )
 
-@st.dialog(
-    "LungSight Hospital Application",
-    width="large"
-)
-def render_application_dialog():
-
-    show_client_application()
 
 def render_subscription_cards():
 
@@ -181,17 +177,12 @@ def render_subscription_cards():
                     use_container_width=True
                 ):
 
-                    st.session_state[
-                        "selected_plan_id"
-                    ] = plan_id
+                    st.session_state["selected_plan_id"] = plan_id
+                    st.session_state["show_application_form"] = True
+                    clear_application()
 
-                    st.session_state[
-                        "selected_plan_name"
-                    ] = plan_name
-
-                    st.session_state[
-                        "show_application_form"
-                    ] = True
+                    st.session_state["selected_plan_id"] = plan_id
+                    st.session_state["show_application_form"] = True
 
                     st.rerun()
 
@@ -308,3 +299,27 @@ def show_login():
     st.divider()
 
     render_subscription_cards()
+
+    if st.session_state.get(
+        "show_application_form", False
+    ):
+        selected_plan_id = st.session_state.get(
+            "selected_plan_id"
+        )
+
+        if selected_plan_id:
+            plans = get_active_subscription_plans()
+
+            selected_plan = next (
+                (
+                    plan
+                    for plan in plans
+                    if plan["plan_id"] == selected_plan_id
+                ),
+                None
+            )
+
+            if selected_plan:
+                show_client_application(
+                    selected_plan
+                )

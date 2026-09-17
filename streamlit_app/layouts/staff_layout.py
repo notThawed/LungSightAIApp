@@ -1,9 +1,9 @@
 from components.sidebar import show_physician_sidebar
 from components.navbar import show_top_navbar
 
-from pages.hospital_administrator import dashboard
+from pages.staff import dashboard
 
-def show_hospital_admin_layout():
+def show_staff_layout():
 
     page = show_physician_sidebar()
 

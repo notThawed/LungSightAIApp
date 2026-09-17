@@ -4,7 +4,9 @@ from auth.login import show_login
 
 from layouts.physician_layout import show_physician_layout
 from layouts.radtech_layout import show_radtech_layout
-from layouts.system_admin_layout import show_admin_layout
+from layouts.system_admin_layout import show_system_admin_layout
+from layouts.staff_layout import show_staff_layout
+from layouts.hospital_admin_layout import show_hospital_admin_layout
 
 
 st.set_page_config(
@@ -64,25 +66,17 @@ elif role == "Radiologic Technologist":
 
 elif role == "Hospital Admin":
 
-    show_admin_layout()
+    show_hospital_admin_layout()
 
 
 elif role == "Superadmin":
 
-    # For now, use the admin layout.
-    # We can create a dedicated superadmin layout later.
-
-    show_admin_layout()
+    show_system_admin_layout()
 
 
 elif role == "Staff":
 
-    # We can create a staff layout later.
-
-    st.info(
-        "Staff dashboard is not yet implemented."
-    )
-
+    show_staff_layout()
 
 else:
 
