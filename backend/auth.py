@@ -38,8 +38,12 @@ def login_user(email, password):
             """
             user_id,
             user_fname,
+            user_mname,
             user_lname,
             role_id,
+            hospital_id,
+            employee_id,
+            user_contact_number,
             is_active,
             roles (
                 role_id,
@@ -47,7 +51,10 @@ def login_user(email, password):
             )
             """
         )
-        .eq("user_id", user_id)
+        .eq(
+            "user_id",
+            user_id
+        )
         .execute()
     )
 
@@ -74,7 +81,7 @@ def login_user(email, password):
     # 4. CHECK ACCOUNT STATUS
     # ============================================
 
-    if not profile["is_active"]:
+    if not profile.get("is_active", False):
 
         supabase.auth.sign_out()
 
@@ -99,24 +106,74 @@ def login_user(email, password):
     role_name = role["role_name"]
 
     # ============================================
-    # 6. RETURN USER
+    # 6. GET HOSPITAL ID
     # ============================================
 
-    return {
-        "user_id": user_id,
-        "email": response.user.email,
+    hospital_id = profile.get(
+        "hospital_id"
+    )
 
-        "name": (
-            f"{profile['user_fname']} "
-            f"{profile['user_lname']}"
-        ),
+    # ============================================
+    # 7. RETURN USER
+    # ============================================
 
-        "first_name": profile["user_fname"],
-        "last_name": profile["user_lname"],
+    user = {
 
-        "role": role_name,
-        "role_id": profile["role_id"]
+        "user_id":
+            user_id,
+
+        "email":
+            response.user.email,
+
+        "name":
+            (
+                f"{profile.get('user_fname', '')} "
+                f"{profile.get('user_lname', '')}"
+            ).strip(),
+
+        "first_name":
+            profile.get("user_fname"),
+
+        "middle_name":
+            profile.get("user_mname"),
+
+        "last_name":
+            profile.get("user_lname"),
+
+        "role":
+            role_name,
+
+        "role_id":
+            profile.get("role_id"),
+
+        "hospital_id":
+            hospital_id,
+
+        "employee_id":
+            profile.get("employee_id"),
+
+        "user_contact_number":
+            profile.get("user_contact_number"),
+
+        "is_active":
+            profile.get("is_active"),
+
     }
+
+    # ============================================
+    # DEBUG INFORMATION
+    # ============================================
+
+    print("====================================")
+    print("LUNGSIGHT USER")
+    print("User ID:", user.get("user_id"))
+    print("Name:", user.get("name"))
+    print("Role:", user.get("role"))
+    print("Hospital ID:", user.get("hospital_id"))
+    print("Employee ID:", user.get("employee_id"))
+    print("====================================")
+
+    return user
 
 
 def logout_user():

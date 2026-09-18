@@ -1,5 +1,9 @@
 import streamlit as st
 
+from backend.application_utils import (
+    create_hospital_application
+)
+
 
 # ============================================================
 # APPLICATION STEPS
@@ -68,6 +72,7 @@ def initialize_application(plan):
                 "max_xrays_per_month": plan.get(
                     "max_xrays_per_month"
                 ),
+                "billing_cycle": "Monthly",
             },
 
             "administrator": {},
@@ -115,6 +120,11 @@ def clear_application():
 
     st.session_state.pop(
         "application_submitted",
+        None
+    )
+
+    st.session_state.pop(
+        "application_billing_cycle",
         None
     )
 
@@ -502,17 +512,52 @@ def render_subscription_confirmation():
         "this hospital application."
     )
 
-    subscription = (
-        st.session_state.client_application[
-            "subscription"
-        ]
-    )
+    subscription = st.session_state.client_application[
+        "subscription"
+    ]
 
     st.markdown(
         f"## {subscription.get('plan_name', 'Subscription Plan')}"
     )
 
     st.divider()
+
+    # --------------------------------------------------------
+    # BILLING CYCLE
+    # --------------------------------------------------------
+
+    current_billing_cycle = subscription.get(
+        "billing_cycle",
+        "Monthly"
+    )
+
+    billing_cycle = st.radio(
+        "Billing Cycle",
+        ["Monthly", "Yearly"],
+        index=(
+            0
+            if current_billing_cycle == "Monthly"
+            else 1
+        ),
+        horizontal=True,
+        key="application_billing_cycle"
+    )
+
+    # --------------------------------------------------------
+    # SAVE BILLING CYCLE
+    # --------------------------------------------------------
+
+    st.session_state.client_application[
+        "subscription"
+    ][
+        "billing_cycle"
+    ] = billing_cycle
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # PRICES
+    # --------------------------------------------------------
 
     col1, col2 = st.columns(2)
 
@@ -531,6 +576,10 @@ def render_subscription_confirmation():
         )
 
     st.divider()
+
+    # --------------------------------------------------------
+    # PLAN LIMITS
+    # --------------------------------------------------------
 
     st.markdown(
         "### Plan Limits"
@@ -585,6 +634,10 @@ def render_subscription_confirmation():
         "activation will be subject to application approval."
     )
 
+    # --------------------------------------------------------
+    # NAVIGATION
+    # --------------------------------------------------------
+
     back_col, next_col = st.columns(2)
 
     with back_col:
@@ -606,6 +659,13 @@ def render_subscription_confirmation():
             use_container_width=True,
             key="subscription_next"
         ):
+
+            # Make sure the latest billing cycle is saved
+            st.session_state.client_application[
+                "subscription"
+            ][
+                "billing_cycle"
+            ] = billing_cycle
 
             st.session_state.client_application_step = 3
 
@@ -974,6 +1034,11 @@ def render_review_submit():
     )
 
     st.write(
+        f"**Billing Cycle:** "
+        f"{subscription.get('billing_cycle', 'Monthly')}"
+    )
+
+    st.write(
         f"**Monthly Price:** "
         f"₱{float(subscription.get('price_monthly') or 0):,.2f}"
     )
@@ -1065,9 +1130,117 @@ def render_review_submit():
             key="submit_application"
         ):
 
-            st.session_state.application_submitted = True
+            hospital = application["hospital"]
+            representative = application["representative"]
+            subscription = application["subscription"]
+            administrator = application["administrator"]
+            agreement = application["agreement"]
 
-            st.rerun()
+            # ------------------------------------------------
+            # IMPORTANT:
+            # Retrieve billing cycle from the dictionary.
+            # Do NOT use st.radio() here.
+            # ------------------------------------------------
+
+            billing_cycle = subscription.get(
+                "billing_cycle",
+                "Monthly"
+            )
+
+            result = create_hospital_application(
+
+                hospital_name=hospital.get(
+                    "hospital_name"
+                ),
+
+                hospital_type=hospital.get(
+                    "hospital_type"
+                ),
+
+                hospital_address=hospital.get(
+                    "address"
+                ),
+
+                hospital_contact_number=hospital.get(
+                    "contact_number"
+                ),
+
+                hospital_email=hospital.get(
+                    "hospital_email"
+                ),
+
+                hospital_website=hospital.get(
+                    "website"
+                ),
+
+                applicant_first_name=representative.get(
+                    "first_name"
+                ),
+
+                applicant_middle_name=representative.get(
+                    "middle_name"
+                ),
+
+                applicant_last_name=representative.get(
+                    "last_name"
+                ),
+
+                applicant_email=representative.get(
+                    "email"
+                ),
+
+                applicant_contact_number=representative.get(
+                    "contact_number"
+                ),
+
+                applicant_position=representative.get(
+                    "position"
+                ),
+
+                selected_plan_id=subscription.get(
+                    "plan_id"
+                ),
+
+                billing_cycle=billing_cycle,
+
+                admin_first_name=administrator.get(
+                    "first_name"
+                ),
+
+                admin_middle_name=administrator.get(
+                    "middle_name"
+                ),
+
+                admin_last_name=administrator.get(
+                    "last_name"
+                ),
+
+                admin_email=administrator.get(
+                    "email"
+                ),
+
+                admin_contact_number=administrator.get(
+                    "contact_number"
+                ),
+
+                agreement_accepted=agreement.get(
+                    "agreed",
+                    False
+                ),
+            )
+
+            if result["success"]:
+
+                st.session_state.application_submitted = True
+
+                st.rerun()
+
+            else:
+
+                st.error(
+                    f"Unable to submit Application: "
+                    f"{result['message']}"
+                )
 
 
 # ============================================================
@@ -1098,7 +1271,7 @@ def render_application_submitted():
     )
 
     st.info(
-        "Test submission rani paker"
+        "Test submission rani paker "
         "Unya na ang database"
     )
 

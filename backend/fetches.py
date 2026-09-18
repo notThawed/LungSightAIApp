@@ -168,7 +168,7 @@ def generate_employee_id():
     current_year = datetime.now().year
 
     response = (
-        supabase
+        admin_supabase
         .table("user_profiles")
         .select("employee_id")
         .like(

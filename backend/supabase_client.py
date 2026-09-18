@@ -39,3 +39,4 @@ admin_supabase: Client = create_client(
 
 print("SUPABASE CLIENT LOADED")
 print("ADMIN CLIENT EXISTS:", admin_supabase is not None)
+

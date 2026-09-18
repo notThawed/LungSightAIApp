@@ -254,3 +254,133 @@ def get_inactive_subscription_plans():
     )
 
     return response.data or []
+
+
+
+def create_hospital_subscription(
+    hospital_id,
+    plan_id,
+    billing_cycle
+):
+
+    try:
+
+        # ----------------------------------------------------
+        # Validate Hospital
+        # ----------------------------------------------------
+
+        if not hospital_id:
+
+            return {
+                "success": False,
+                "message": "Hospital ID is required."
+            }
+
+        # ----------------------------------------------------
+        # Validate Plan
+        # ----------------------------------------------------
+
+        if not plan_id:
+
+            return {
+                "success": False,
+                "message": "Subscription plan is required."
+            }
+
+        # ----------------------------------------------------
+        # Validate Billing Cycle
+        # ----------------------------------------------------
+
+        if billing_cycle not in [
+            "Monthly",
+            "Yearly"
+        ]:
+
+            return {
+                "success": False,
+                "message": "Invalid billing cycle."
+            }
+
+        # ----------------------------------------------------
+        # Check if subscription already exists
+        # ----------------------------------------------------
+
+        existing_response = (
+            admin_supabase
+            .table("hospital_subscriptions")
+            .select("hospital_subscription_id")
+            .eq(
+                "hospital_id",
+                hospital_id
+            )
+            .execute()
+        )
+
+        if existing_response.data:
+
+            return {
+                "success": False,
+                "message": (
+                    "A subscription already exists "
+                    "for this hospital."
+                )
+            }
+
+        # ----------------------------------------------------
+        # Create Subscription
+        # ----------------------------------------------------
+
+        subscription_data = {
+
+            "hospital_id":
+                hospital_id,
+
+            "plan_id":
+                plan_id,
+
+            "billing_cycle":
+                billing_cycle,
+
+            "status":
+                "Pending Setup"
+        }
+
+        response = (
+            admin_supabase
+            .table("hospital_subscriptions")
+            .insert(subscription_data)
+            .execute()
+        )
+
+        # ----------------------------------------------------
+        # Check result
+        # ----------------------------------------------------
+
+        if not response.data:
+
+            return {
+                "success": False,
+                "message": (
+                    "Failed to create hospital subscription."
+                )
+            }
+
+        # ----------------------------------------------------
+        # Success
+        # ----------------------------------------------------
+
+        return {
+            "success": True,
+            "message": (
+                "Hospital subscription created "
+                "successfully."
+            ),
+            "subscription": response.data[0]
+        }
+
+    except Exception as e:
+
+        return {
+            "success": False,
+            "message": str(e)
+        }
