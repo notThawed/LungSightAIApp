@@ -295,6 +295,15 @@ def render_hospital_information():
 
             return
 
+        if "@" not in hospital_email:
+
+            st.error(
+                "Please enter a valid email address "
+                "(missing '@')."
+            )
+
+            return
+
         st.session_state.client_application[
             "hospital"
         ] = {
@@ -465,6 +474,12 @@ def render_authorized_representative():
                 "Email address is required."
             )
 
+            return
+
+        if "@" not in email:
+            st.error(
+                "Invalid email put @"
+            )
             return
 
         st.session_state.client_application[

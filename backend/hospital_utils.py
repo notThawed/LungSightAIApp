@@ -1,11 +1,33 @@
 from datetime import datetime, timezone
 
+import os
+import re
+
 from backend.supabase_client import (
     admin_supabase
 )
 
 from backend.fetches import generate_employee_id
 
+REDIRECT_URL = os.getenv(
+    "INVITE_REDIRECT_URL",
+    "http://localhost:8501/app/static/redirect.html"
+)
+
+EMAIL_REGEX = re.compile(
+    r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$"
+)
+
+def is_valid_email(value):
+
+    if not value:
+        return False
+
+    return bool(
+        EMAIL_REGEX.match(
+            value.strip()
+        )
+    )
 
 # ============================================================
 # GET HOSPITAL BY ID
@@ -352,6 +374,16 @@ def create_hospital_admin(
                 )
             }
 
+        if not is_valid_email(email):
+
+            return {
+                "success": False,
+                "message": (
+                    "Hospital administrator "
+                    "email is not a valid email address."
+                )
+            }
+
         if not hospital_id:
 
             return {
@@ -362,58 +394,39 @@ def create_hospital_admin(
             }
 
         # ----------------------------------------------------
-        # 3. Create Supabase Auth user
+        # 3. Send invitation via Supabase
         # ----------------------------------------------------
 
-        auth_response = (
+        invite_response = (
             admin_supabase
             .auth
             .admin
-            .create_user({
-
-                "email":
-                    email,
-
-                # Temporary password for now.
-                # We can replace this with a proper
-                # invitation/password setup flow later.
-                "password":
-                    "ChangeMe123!",
-
-                "email_confirm":
-                    True,
-
-                "user_metadata": {
-
-                    "first_name":
-                        first_name,
-
-                    "middle_name":
-                        middle_name,
-
-                    "last_name":
-                        last_name,
-
-                    "role":
-                        "Hospital Admin",
-
-                    "hospital_id":
-                        hospital_id,
-                }
-            })
+            .invite_user_by_email(
+                email,
+                options={
+                    "redirect_to": REDIRECT_URL,
+                    "data": {
+                        "first_name":  first_name,
+                        "middle_name": middle_name,
+                        "last_name":   last_name,
+                        "role":        "Hospital Admin",
+                        "hospital_id": hospital_id,
+                    },
+                },
+            )
         )
 
-        if not auth_response.user:
+        if not invite_response.user:
 
             return {
                 "success": False,
                 "message": (
-                    "Failed to create Hospital "
-                    "Administrator account."
+                    "Failed to send Hospital "
+                    "Administrator invitation email."
                 )
             }
 
-        user_id = auth_response.user.id
+        user_id = invite_response.user.id
 
         # ----------------------------------------------------
         # 4. Generate Employee ID
@@ -424,8 +437,8 @@ def create_hospital_admin(
         if not employee_id:
 
             # If employee ID generation fails,
-            # remove the Auth user so we don't leave
-            # an incomplete account behind.
+            # remove the invited Auth user so we don't
+            # leave an incomplete account behind.
 
             try:
 
@@ -440,8 +453,8 @@ def create_hospital_admin(
             return {
                 "success": False,
                 "message": (
-                    "Hospital Administrator account "
-                    "was created, but an Employee ID "
+                    "Hospital Administrator invitation "
+                    "was sent, but an Employee ID "
                     "could not be generated."
                 )
             }
@@ -554,8 +567,9 @@ def create_hospital_admin(
             return {
                 "success": False,
                 "message": (
-                    "Hospital Admin account was created, "
-                    "but the user profile could not be created."
+                    "Hospital Admin invitation was sent, "
+                    "but the user profile could not be created. "
+                    "The invite has been rolled back — you can retry."
                 )
             }
 
@@ -569,8 +583,8 @@ def create_hospital_admin(
                 True,
 
             "message": (
-                "Hospital Administrator account "
-                "created successfully."
+                "Hospital Administrator invitation "
+                f"sent to {email}."
             ),
 
             "user_id":
@@ -585,9 +599,21 @@ def create_hospital_admin(
 
     except Exception as e:
 
+        message = str(e)
+
+        # Normalize the common duplicate-email error
+        if (
+            "already been registered" in message
+            or "already exists" in message
+        ):
+
+            message = (
+                "A user with this email already exists."
+            )
+
         return {
             "success": False,
-            "message": str(e)
+            "message": message
         }
 
 def is_hospital_setup_completed(hospital_id):

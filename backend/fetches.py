@@ -85,6 +85,7 @@ def get_all_users():
 
             roles (
                 role_name
+            ),
 
             hospitals (
                 hospital_id,
