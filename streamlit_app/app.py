@@ -15,6 +15,19 @@ st.set_page_config(
     layout="wide",
 )
 
+# ==================================================
+# INVITE / SET PASSWORD ROUTE
+# ==================================================
+
+# Supabase puts the invite token in the URL fragment
+# (#access_token=...). Streamlit can't read fragments,
+# so this JS snippet reloads the page with the token
+# moved into query params (?access_token=...).
+
+if st.query_params.get("access_token"):
+    from screens.set_password import show as show_set_password
+    show_set_password()
+    st.stop()
 
 # ==================================================
 # SESSION STATE

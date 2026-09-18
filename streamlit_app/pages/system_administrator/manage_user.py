@@ -700,7 +700,6 @@ def show_add_user_form():
 
                 result = create_user(
                     email=email.strip(),
-                    password="LungSight123!",
                     first_name=first_name.strip(),
                     middle_name=middle_name.strip(),
                     last_name=last_name.strip(),

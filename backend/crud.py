@@ -7,7 +7,6 @@ from backend.supabase_client import admin_supabase
 
 def create_user(
     email,
-    password,
     first_name,
     middle_name,
     last_name,
@@ -17,94 +16,68 @@ def create_user(
     sex,
     contact_number,
     address,
-    hospital_id = None,
+    hospital_id,
 ):
-    auth_user = None
-
     try:
         # ------------------------------------------
-        # CREATE SUPABASE AUTH ACCOUNT
+        # 1. SEND INVITE VIA SUPABASE
         # ------------------------------------------
 
-        auth_response = (
-            admin_supabase.auth.admin.create_user(
-                {
-                    "email": email,
-                    "password": password,
-                    "email_confirm": True
-                }
-            )
+        invite_response = admin_supabase.auth.admin.invite_user_by_email(
+            email,
+            options={
+                "redirect_to": "http://localhost:8501/app/static/redirect.html",
+                "data": {
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "employee_id": employee_id,
+                },
+            },
         )
 
-        auth_user = auth_response.user
+        if not invite_response.user:
+            return {
+                "success": False,
+                "message": "Failed to send invitation email.",
+            }
 
-        if not auth_user:
-            raise Exception(
-                "Failed to create Auth account."
-            )
-
-        user_id = auth_user.id
+        user_id = invite_response.user.id
 
         # ------------------------------------------
-        # CREATE USER PROFILE
+        # 2. INSERT USER_PROFILES ROW
         # ------------------------------------------
 
         profile_data = {
             "user_id": user_id,
-            "employee_id": employee_id,
             "user_fname": first_name,
             "user_mname": middle_name,
             "user_lname": last_name,
             "user_birthdate": (
                 birth_date.isoformat()
-                if birth_date
-                else None
+                if birth_date else None
             ),
+            "employee_id": employee_id,
+            "role_id": role_id,
             "user_sex": sex,
             "user_contact_number": contact_number,
             "user_address": address,
-            "role_id": role_id,
             "hospital_id": hospital_id,
-            "is_active": True
+            "is_active": True,
         }
 
-        profile_response = (
-            admin_supabase
-            .table("user_profiles")
-            .insert(profile_data)
-            .execute()
-        )
+        admin_supabase.table("user_profiles").insert(
+            profile_data
+        ).execute()
 
         return {
             "success": True,
-            "user_id": user_id,
-            "email": email,
-            "data": profile_response.data
+            "message": f"Invitation sent to {email}",
         }
 
     except Exception as e:
-
-        # ------------------------------------------
-        # ROLLBACK AUTH ACCOUNT
-        # ------------------------------------------
-
-        if auth_user:
-
-            try:
-                admin_supabase.auth.admin.delete_user(
-                    auth_user.id
-                )
-
-            except Exception as rollback_error:
-
-                print(
-                    "Failed to rollback Auth user:",
-                    rollback_error
-                )
-
         return {
             "success": False,
-            "message": str(e)
+            "message": str(e),
         }
 
 
