@@ -16,6 +16,7 @@ APPLICATION_STEPS = [
     "Hospital Administrator",
     "Agreement",
     "Review & Submit",
+    "Payment",
 ]
 
 
@@ -91,6 +92,20 @@ def initialize_application(plan):
 
         st.session_state.client_application_step = 0
 
+    # --------------------------------------------------------
+    # Clear leftover payment state on a fresh application
+    # --------------------------------------------------------
+
+    if existing_application is None:
+
+        for key in (
+            "application_id",
+            "checkout_url",
+            "payment_success",
+        ):
+
+            st.session_state.pop(key, None)
+
 
 # ============================================================
 # CLEAR APPLICATION
@@ -125,6 +140,21 @@ def clear_application():
 
     st.session_state.pop(
         "application_billing_cycle",
+        None
+    )
+
+    st.session_state.pop(
+        "application_id",
+        None
+    )
+
+    st.session_state.pop(
+        "checkout_url",
+        None
+    )
+
+    st.session_state.pop(
+        "payment_success",
         None
     )
 
@@ -477,9 +507,12 @@ def render_authorized_representative():
             return
 
         if "@" not in email:
+
             st.error(
-                "Invalid email put @"
+                "Please enter a valid email address "
+                "(missing '@')."
             )
+
             return
 
         st.session_state.client_application[
@@ -810,6 +843,15 @@ def render_hospital_administrator():
 
             return
 
+        if "@" not in email:
+
+            st.error(
+                "Please enter a valid email address "
+                "(missing '@')."
+            )
+
+            return
+
         if not contact_number.strip():
 
             st.error(
@@ -944,7 +986,7 @@ def render_review_submit():
 
     st.caption(
         "Please review the information below before "
-        "submitting your hospital application."
+        "proceeding to payment."
     )
 
     application = (
@@ -1053,15 +1095,24 @@ def render_review_submit():
         f"{subscription.get('billing_cycle', 'Monthly')}"
     )
 
-    st.write(
-        f"**Monthly Price:** "
-        f"₱{float(subscription.get('price_monthly') or 0):,.2f}"
+    billing_cycle = subscription.get(
+        "billing_cycle",
+        "Monthly"
     )
 
-    st.write(
-        f"**Yearly Price:** "
-        f"₱{float(subscription.get('price_yearly') or 0):,.2f}"
-    )
+    if billing_cycle == "Yearly":
+
+        st.write(
+            f"**Amount Due:** "
+            f"₱{float(subscription.get('price_yearly') or 0):,.2f}"
+        )
+
+    else:
+
+        st.write(
+            f"**Amount Due:** "
+            f"₱{float(subscription.get('price_monthly') or 0):,.2f}"
+        )
 
     st.divider()
 
@@ -1139,123 +1190,300 @@ def render_review_submit():
     with submit_col:
 
         if st.button(
-            "Submit Application",
+            "Proceed to Payment",
             use_container_width=True,
             type="primary",
-            key="submit_application"
+            key="review_submit"
+        ):
+
+            st.session_state.client_application_step = 6
+
+            st.rerun()
+
+
+# ============================================================
+# STEP 7
+# PAYMENT
+# ============================================================
+
+def render_payment_step():
+
+    from backend.payments import (
+        create_checkout_session,
+        get_payment_status,
+    )
+
+    st.subheader("Payment")
+
+    st.caption(
+        "Complete payment to submit your hospital application."
+    )
+
+    application = st.session_state.client_application
+    subscription = application["subscription"]
+
+    billing_cycle = subscription.get(
+        "billing_cycle",
+        "Monthly"
+    )
+
+    if billing_cycle == "Yearly":
+
+        amount = float(
+            subscription.get("price_yearly") or 0
+        )
+
+    else:
+
+        amount = float(
+            subscription.get("price_monthly") or 0
+        )
+
+    st.markdown(
+        f"### {subscription.get('plan_name', 'Plan')}"
+    )
+
+    st.write(
+        f"**Billing cycle:** {billing_cycle}"
+    )
+
+    st.metric(
+        "Amount due",
+        f"₱{amount:,.2f}"
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # If we already created an application, reuse it
+    # --------------------------------------------------------
+
+    application_id = st.session_state.get(
+        "application_id"
+    )
+
+    if not application_id:
+
+        if st.button(
+            "Proceed to Payment",
+            type="primary",
+            use_container_width=True,
+            key="start_checkout",
         ):
 
             hospital = application["hospital"]
             representative = application["representative"]
-            subscription = application["subscription"]
             administrator = application["administrator"]
             agreement = application["agreement"]
 
-            # ------------------------------------------------
-            # IMPORTANT:
-            # Retrieve billing cycle from the dictionary.
-            # Do NOT use st.radio() here.
-            # ------------------------------------------------
+            with st.spinner(
+                "Preparing your application..."
+            ):
 
-            billing_cycle = subscription.get(
-                "billing_cycle",
-                "Monthly"
+                app_result = create_hospital_application(
+
+                    hospital_name=hospital.get(
+                        "hospital_name"
+                    ),
+
+                    hospital_type=hospital.get(
+                        "hospital_type"
+                    ),
+
+                    hospital_address=hospital.get(
+                        "address"
+                    ),
+
+                    hospital_contact_number=hospital.get(
+                        "contact_number"
+                    ),
+
+                    hospital_email=hospital.get(
+                        "hospital_email"
+                    ),
+
+                    hospital_website=hospital.get(
+                        "website"
+                    ),
+
+                    applicant_first_name=representative.get(
+                        "first_name"
+                    ),
+
+                    applicant_middle_name=representative.get(
+                        "middle_name"
+                    ),
+
+                    applicant_last_name=representative.get(
+                        "last_name"
+                    ),
+
+                    applicant_email=representative.get(
+                        "email"
+                    ),
+
+                    applicant_contact_number=representative.get(
+                        "contact_number"
+                    ),
+
+                    applicant_position=representative.get(
+                        "position"
+                    ),
+
+                    selected_plan_id=subscription.get(
+                        "plan_id"
+                    ),
+
+                    billing_cycle=billing_cycle,
+
+                    admin_first_name=administrator.get(
+                        "first_name"
+                    ),
+
+                    admin_middle_name=administrator.get(
+                        "middle_name"
+                    ),
+
+                    admin_last_name=administrator.get(
+                        "last_name"
+                    ),
+
+                    admin_email=administrator.get(
+                        "email"
+                    ),
+
+                    admin_contact_number=administrator.get(
+                        "contact_number"
+                    ),
+
+                    agreement_accepted=agreement.get(
+                        "agreed",
+                        False
+                    ),
+
+                    application_status="Draft",
+
+                    payment_status="unpaid",
+                )
+
+            if not app_result.get("success"):
+
+                st.error(
+                    app_result.get(
+                        "message",
+                        "Failed to create application."
+                    )
+                )
+
+                return
+
+            application_id = app_result["application_id"]
+
+            st.session_state.application_id = application_id
+
+            with st.spinner(
+                "Creating checkout session..."
+            ):
+
+                pay_result = create_checkout_session(
+                    application_id
+                )
+
+            if not pay_result.get("success"):
+
+                st.error(
+                    pay_result.get(
+                        "message",
+                        "Failed to create checkout session."
+                    )
+                )
+
+                return
+
+            st.session_state.checkout_url = (
+                pay_result["checkout_url"]
             )
 
-            result = create_hospital_application(
+            st.rerun()
 
-                hospital_name=hospital.get(
-                    "hospital_name"
-                ),
+    # --------------------------------------------------------
+    # Show checkout link and refresh button
+    # --------------------------------------------------------
 
-                hospital_type=hospital.get(
-                    "hospital_type"
-                ),
+    if st.session_state.get("checkout_url"):
 
-                hospital_address=hospital.get(
-                    "address"
-                ),
+        st.success(
+            "Checkout session ready. "
+            "Complete payment in the new tab."
+        )
 
-                hospital_contact_number=hospital.get(
-                    "contact_number"
-                ),
+        st.markdown(
+            f"[**Open PayMongo Checkout →**]"
+            f"({st.session_state.checkout_url})",
+            unsafe_allow_html=True,
+        )
 
-                hospital_email=hospital.get(
-                    "hospital_email"
-                ),
+        st.info(
+            "After paying, click **Refresh Status** below. "
+            "Your application will be submitted once payment "
+            "is confirmed by PayMongo."
+        )
 
-                hospital_website=hospital.get(
-                    "website"
-                ),
+        if st.button(
+            "Refresh Status",
+            use_container_width=True,
+            key="refresh_payment_status",
+        ):
 
-                applicant_first_name=representative.get(
-                    "first_name"
-                ),
+            status = get_payment_status(application_id)
 
-                applicant_middle_name=representative.get(
-                    "middle_name"
-                ),
+            if status.get("paid"):
 
-                applicant_last_name=representative.get(
-                    "last_name"
-                ),
-
-                applicant_email=representative.get(
-                    "email"
-                ),
-
-                applicant_contact_number=representative.get(
-                    "contact_number"
-                ),
-
-                applicant_position=representative.get(
-                    "position"
-                ),
-
-                selected_plan_id=subscription.get(
-                    "plan_id"
-                ),
-
-                billing_cycle=billing_cycle,
-
-                admin_first_name=administrator.get(
-                    "first_name"
-                ),
-
-                admin_middle_name=administrator.get(
-                    "middle_name"
-                ),
-
-                admin_last_name=administrator.get(
-                    "last_name"
-                ),
-
-                admin_email=administrator.get(
-                    "email"
-                ),
-
-                admin_contact_number=administrator.get(
-                    "contact_number"
-                ),
-
-                agreement_accepted=agreement.get(
-                    "agreed",
-                    False
-                ),
-            )
-
-            if result["success"]:
-
-                st.session_state.application_submitted = True
+                st.session_state.payment_success = True
 
                 st.rerun()
 
             else:
 
-                st.error(
-                    f"Unable to submit Application: "
-                    f"{result['message']}"
+                st.warning(
+                    f"Payment status: "
+                    f"{status.get('status')}. "
+                    "Please wait a moment and try again."
                 )
+
+
+# ============================================================
+# PAYMENT SUCCESS
+# ============================================================
+
+def render_payment_success():
+
+    st.success(
+        "Application submitted — payment received."
+    )
+
+    st.markdown(
+        """
+        ### What happens next?
+
+        1. Your application is now in the review queue.
+        2. The LungSight team will verify your hospital
+           details.
+        3. Once approved, an invitation will be sent to
+           the hospital administrator's email address.
+        4. The administrator clicks the link, sets a
+           password, and can start using LungSight.
+        """
+    )
+
+    if st.button(
+        "Close",
+        use_container_width=True,
+    ):
+
+        clear_application()
+
+        st.rerun()
 
 
 # ============================================================
@@ -1279,15 +1507,11 @@ def render_application_submitted():
 
         1. Your hospital record will be created.
         2. The selected subscription will be assigned.
-        3. The hospital administrator account will be created.
+        3. The hospital administrator account will be
+           created.
         4. Login credentials will be sent to the
            administrator's registered email address.
         """
-    )
-
-    st.info(
-        "Test submission rani paker "
-        "Unya na ang database"
     )
 
     if st.button(
@@ -1317,7 +1541,20 @@ def show_client_application(plan):
     initialize_application(plan)
 
     # --------------------------------------------------------
-    # Submitted screen
+    # Payment success screen (highest priority)
+    # --------------------------------------------------------
+
+    if st.session_state.get(
+        "payment_success",
+        False
+    ):
+
+        render_payment_success()
+
+        return
+
+    # --------------------------------------------------------
+    # Legacy submitted screen
     # --------------------------------------------------------
 
     if st.session_state.get(
@@ -1368,3 +1605,7 @@ def show_client_application(plan):
     elif current_step == 5:
 
         render_review_submit()
+
+    elif current_step == 6:
+
+        render_payment_step()

@@ -10,6 +10,42 @@ from backend.application_utils import (
 
 
 # ============================================================
+# PAYMENT BADGE HELPERS
+# ============================================================
+
+def render_payment_badge(payment_status):
+
+    if payment_status == "paid":
+
+        st.success("Payment: Paid")
+
+    elif payment_status == "pending":
+
+        st.warning("Payment: Pending")
+
+    elif payment_status == "refunded":
+
+        st.info("Payment: Refunded")
+
+    else:
+
+        st.error("Payment: Unpaid")
+
+
+def payment_status_label(payment_status):
+
+    return {
+        "paid": "Paid",
+        "pending": "Pending",
+        "refunded": "Refunded",
+        "unpaid": "Unpaid",
+    }.get(
+        payment_status,
+        "Unknown"
+    )
+
+
+# ============================================================
 # APPLICATION DETAILS DIALOG
 # ============================================================
 
@@ -45,6 +81,11 @@ def show_application_details(application_id):
         "Unknown"
     )
 
+    payment_status = application.get(
+        "payment_status",
+        "unpaid"
+    )
+
     st.markdown(
         f"## {hospital_name}"
     )
@@ -72,6 +113,8 @@ def show_application_details(application_id):
         st.info(
             f"Application Status: {application_status}"
         )
+
+    render_payment_badge(payment_status)
 
     st.divider()
 
@@ -203,6 +246,11 @@ def show_application_details(application_id):
             f"{application.get('application_status', '-')}"
         )
 
+        st.write(
+            f"**Payment Status:** "
+            f"{payment_status_label(payment_status)}"
+        )
+
     st.divider()
 
     # ========================================================
@@ -291,11 +339,90 @@ def show_application_details(application_id):
     st.divider()
 
     # ========================================================
+    # PAYMENT INFORMATION
+    # ========================================================
+
+    st.markdown(
+        "### 6. Payment Information"
+    )
+
+    from backend.supabase_client import admin_supabase
+
+    payment_row = (
+        admin_supabase
+        .table("payments")
+        .select(
+            "payment_id, status, amount, currency, "
+            "billing_cycle, payment_method, "
+            "provider_reference, paid_at, created_at"
+        )
+        .eq(
+            "application_id",
+            application_id
+        )
+        .order(
+            "created_at",
+            desc=True
+        )
+        .limit(1)
+        .execute()
+    )
+
+    payment = payment_row.data[0] if payment_row.data else None
+
+    if not payment:
+
+        st.info(
+            "No payment record associated with this application."
+        )
+
+    else:
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            st.write(
+                f"**Payment Status:** "
+                f"{payment.get('status', '-').title()}"
+            )
+
+            st.write(
+                f"**Amount:** "
+                f"₱{float(payment.get('amount') or 0):,.2f} "
+                f"{payment.get('currency', '')}"
+            )
+
+            st.write(
+                f"**Billing Cycle:** "
+                f"{payment.get('billing_cycle', '-')}"
+            )
+
+        with col2:
+
+            st.write(
+                f"**Payment Method:** "
+                f"{payment.get('payment_method') or '-'}"
+            )
+
+            st.write(
+                f"**Paid At:** "
+                f"{payment.get('paid_at') or '-'}"
+            )
+
+            st.write(
+                f"**Reference:** "
+                f"{payment.get('provider_reference') or '-'}"
+            )
+
+    st.divider()
+
+    # ========================================================
     # APPLICATION INFORMATION
     # ========================================================
 
     st.markdown(
-        "### 6. Application Information"
+        "### 7. Application Information"
     )
 
     col1, col2 = st.columns(2)
@@ -361,8 +488,13 @@ def show_approve_dialog(application_id):
         "this hospital"
     )
 
+    payment_status = application.get(
+        "payment_status",
+        "unpaid"
+    )
+
     st.markdown(
-        f"### Approve Application?"
+        "### Approve Application?"
     )
 
     st.write(
@@ -370,14 +502,37 @@ def show_approve_dialog(application_id):
         f"application for **{hospital_name}**?"
     )
 
+    # --------------------------------------------------------
+    # PAYMENT SAFETY CHECK
+    # --------------------------------------------------------
+
+    if payment_status != "paid":
+
+        st.error(
+            f"This application has not been paid yet "
+            f"(status: {payment_status_label(payment_status)}). "
+            "You cannot approve an unpaid application."
+        )
+
+        st.divider()
+
+        if st.button(
+            "Close",
+            use_container_width=True,
+            key=f"close_unpaid_{application_id}"
+        ):
+
+            st.rerun()
+
+        return
+
+    st.success(
+        "Payment confirmed. This application is ready for approval."
+    )
+
     st.info(
         "The application status will be changed to "
         "**Approved**."
-    )
-
-    st.warning(
-        "Please make sure you have reviewed the "
-        "application information before approving it."
     )
 
     st.divider()
@@ -450,6 +605,11 @@ def show_reject_dialog(application_id):
         "this hospital"
     )
 
+    payment_status = application.get(
+        "payment_status",
+        "unpaid"
+    )
+
     st.markdown(
         "### Reject Application?"
     )
@@ -462,6 +622,14 @@ def show_reject_dialog(application_id):
     st.warning(
         "The application will be marked as **Rejected**."
     )
+
+    if payment_status == "paid":
+
+        st.error(
+            "This application has already been paid. "
+            "Rejecting it will require a refund to be "
+            "processed manually through PayMongo."
+        )
 
     st.caption(
         "Rejected applications can be reviewed later "
@@ -641,6 +809,11 @@ def render_application_card(
         "Unknown"
     )
 
+    payment_status = application.get(
+        "payment_status",
+        "unpaid"
+    )
+
     applicant_name = " ".join(
         filter(
             None,
@@ -687,6 +860,10 @@ def render_application_card(
                 f"{applicant_name or '-'}"
             )
 
+            st.caption(
+                f"Submitted: {created_at}"
+            )
+
         # ----------------------------------------------------
         # STATUS
         # ----------------------------------------------------
@@ -717,9 +894,7 @@ def render_application_card(
                     f"Status: {application_status}"
                 )
 
-            st.caption(
-                f"Submitted: {created_at}"
-            )
+            render_payment_badge(payment_status)
 
         # ----------------------------------------------------
         # ACTIONS
@@ -738,7 +913,7 @@ def render_application_card(
                 )
 
             # ------------------------------------------------
-            # PENDING ACTIONS
+            # PENDING ACTIONS (only if paid)
             # ------------------------------------------------
 
             if show_actions:
@@ -747,7 +922,13 @@ def render_application_card(
                     "Approve",
                     type="primary",
                     use_container_width=True,
-                    key=f"approve_{application_id}"
+                    key=f"approve_{application_id}",
+                    disabled=(payment_status != "paid"),
+                    help=(
+                        None
+                        if payment_status == "paid"
+                        else "Cannot approve an unpaid application."
+                    ),
                 ):
 
                     show_approve_dialog(
@@ -805,7 +986,17 @@ def show():
     # GET APPLICATIONS
     # ========================================================
 
-    applications = get_all_hospital_applications()
+    all_applications = get_all_hospital_applications()
+
+    # --------------------------------------------------------
+    # Exclude Drafts (pre-payment, not yet submitted)
+    # --------------------------------------------------------
+
+    applications = [
+        application
+        for application in all_applications
+        if application.get("application_status") != "Draft"
+    ]
 
     # ========================================================
     # FILTER APPLICATIONS
@@ -887,7 +1078,8 @@ def show():
         )
 
         st.caption(
-            "Applications waiting for System Administrator review."
+            "Applications waiting for System Administrator review. "
+            "Only paid applications can be approved."
         )
 
         if not pending_applications:

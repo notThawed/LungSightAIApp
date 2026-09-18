@@ -16,24 +16,22 @@ def create_hospital_application(
     hospital_contact_number,
     hospital_email,
     hospital_website,
-
     applicant_first_name,
     applicant_middle_name,
     applicant_last_name,
     applicant_email,
     applicant_contact_number,
     applicant_position,
-
     selected_plan_id,
     billing_cycle,
-
     admin_first_name,
     admin_middle_name,
     admin_last_name,
     admin_email,
     admin_contact_number,
-
-    agreement_accepted,
+    agreement_accepted=False,
+    application_status="Pending",   # ← NEW
+    payment_status="unpaid",        # ← NEW
 ):
     try:
 
@@ -95,7 +93,8 @@ def create_hospital_application(
             # APPLICATION STATUS
             # ------------------------------------------------
 
-            "application_status": "Pending",
+            "application_status": application_status,
+            "payment_status": payment_status,
         }
 
         response = (
@@ -107,8 +106,8 @@ def create_hospital_application(
 
         return {
             "success": True,
-            "message": "Hospital application submitted successfully.",
-            "data": response.data,
+            "message": "Application submitted successfully.",
+            "application_id": response.data[0]["application_id"],
         }
 
     except Exception as e:
@@ -164,7 +163,6 @@ def get_hospital_application(application_id):
     except Exception:
 
         return None
-
 
 # ============================================================
 # APPROVE HOSPITAL APPLICATION
