@@ -8,6 +8,14 @@ from layouts.system_admin_layout import show_system_admin_layout
 from layouts.staff_layout import show_staff_layout
 from layouts.hospital_admin_layout import show_hospital_admin_layout
 
+from backend.hospital_utils import (
+    is_hospital_setup_completed
+)
+
+from pages.hospital_administrator import (
+    setup_wizard
+)
+
 
 st.set_page_config(
     page_title="LungSight",
@@ -78,6 +86,17 @@ elif role == "Radiologic Technologist":
 
 
 elif role == "Hospital Admin":
+
+    hospital_id = user.get(
+        "hospital_id"
+    )
+
+    setup_completed = is_hospital_setup_completed(hospital_id)
+
+    if not setup_completed:
+        setup_wizard.show()
+
+        st.stop()
 
     show_hospital_admin_layout()
 

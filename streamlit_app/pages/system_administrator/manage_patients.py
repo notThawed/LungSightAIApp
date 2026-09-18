@@ -471,9 +471,7 @@ def show_patient_table(patients, role_id):
             # --------------------------------------------------
 
             with col7:
-
                 if can_edit:
-
                     if st.button(
                         "✏️",
                         key=f"edit_{patient_id}",

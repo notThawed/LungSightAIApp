@@ -84,14 +84,14 @@ def get_all_users():
             hospital_id,
 
             roles (
-                role_id,
                 role_name
-            ),
 
             hospitals (
                 hospital_id,
                 hospital_name,
                 hospital_code
+=======
+>>>>>>> 904f549741bad9fd0372ee4478c613f4e2fac26c
             )
         """)
         .order("user_lname")
