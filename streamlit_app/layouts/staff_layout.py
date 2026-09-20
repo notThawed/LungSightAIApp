@@ -3,6 +3,8 @@ from components.navbar import show_top_navbar
 
 from pages.staff import dashboard
 
+from pages.hospital_administrator import subscription_gate
+
 def show_staff_layout():
 
     page = show_staff_sidebar()
@@ -11,6 +13,7 @@ def show_staff_layout():
         "Dashboard": "Track your patient workload, case highlights, and current diagnostic activity."
     }
     show_top_navbar(page_name=page, page_info=page_info.get(page, "Page information is not available."))
+    subscription_gate.render_subscription_warnings(can_renew=False)
 
     if page == "Dashboard":
 

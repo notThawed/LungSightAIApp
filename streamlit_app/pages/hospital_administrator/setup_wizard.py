@@ -3,7 +3,11 @@ import streamlit as st
 from backend.hospital_utils import (
     get_hospital_by_id,
     update_hospital_information,
-    complete_hospital_setup
+    complete_hospital_setup,
+)
+
+from backend.subscription_utils import (
+    get_hospital_subscription_details,
 )
 
 
@@ -12,15 +16,10 @@ from backend.hospital_utils import (
 # ============================================================
 
 SETUP_STEPS = [
-
     "Hospital Profile",
-
-    "Administrator Profile",
-
-    "Hospital Configuration",
-
+    "Your Administrator Account",
+    "Your Subscription",
     "Review & Confirm",
-
 ]
 
 
@@ -41,9 +40,7 @@ def initialize_setup():
 
 def get_current_user():
 
-    return st.session_state.get(
-        "user"
-    )
+    return st.session_state.get("user")
 
 
 # ============================================================
@@ -58,17 +55,13 @@ def get_current_hospital():
 
         return None
 
-    hospital_id = user.get(
-        "hospital_id"
-    )
+    hospital_id = user.get("hospital_id")
 
     if not hospital_id:
 
         return None
 
-    return get_hospital_by_id(
-        hospital_id
-    )
+    return get_hospital_by_id(hospital_id)
 
 
 # ============================================================
@@ -77,13 +70,9 @@ def get_current_hospital():
 
 def render_progress():
 
-    current_step = (
-        st.session_state.setup_step
-    )
+    current_step = st.session_state.setup_step
 
-    total_steps = len(
-        SETUP_STEPS
-    )
+    total_steps = len(SETUP_STEPS)
 
     st.progress(
         (current_step + 1) / total_steps
@@ -103,96 +92,60 @@ def render_progress():
 
 def render_hospital_profile(hospital):
 
-    st.subheader(
-        "Hospital Profile"
-    )
+    st.subheader("Hospital Profile")
 
     st.caption(
-        "Review and confirm your hospital's "
-        "information."
+        "Review and confirm your hospital's information."
     )
 
     hospital_name = st.text_input(
         "Hospital Name *",
-        value=hospital.get(
-            "hospital_name",
-            ""
-        ),
-        key="setup_hospital_name"
+        value=hospital.get("hospital_name", ""),
+        key="setup_hospital_name",
     )
 
     hospital_type_options = [
-
         "Government Hospital",
-
         "Private Hospital",
-
         "Medical Center",
-
         "Other",
-
     ]
 
-    current_type = hospital.get(
-        "hospital_type"
-    )
+    current_type = hospital.get("hospital_type")
 
     if current_type not in hospital_type_options:
 
-        current_type = (
-            hospital_type_options[0]
-        )
+        current_type = hospital_type_options[0]
 
     hospital_type = st.selectbox(
         "Hospital Type *",
         hospital_type_options,
-        index=hospital_type_options.index(
-            current_type
-        ),
-        key="setup_hospital_type"
+        index=hospital_type_options.index(current_type),
+        key="setup_hospital_type",
     )
 
     address = st.text_area(
         "Complete Address *",
-        value=hospital.get(
-            "address",
-            ""
-        ),
-        key="setup_hospital_address"
+        value=hospital.get("address", ""),
+        key="setup_hospital_address",
     )
 
     contact_number = st.text_input(
         "Contact Number",
-        value=hospital.get(
-            "contact_number",
-            ""
-        ) or "",
-        key="setup_hospital_contact"
+        value=hospital.get("contact_number", "") or "",
+        key="setup_hospital_contact",
     )
 
     email = st.text_input(
         "Hospital Email",
-        value=hospital.get(
-            "email",
-            ""
-        ) or "",
-        key="setup_hospital_email"
+        value=hospital.get("email", "") or "",
+        key="setup_hospital_email",
     )
-
-    # --------------------------------------------------------
-    # Website
-    #
-    # Only show this if your hospitals table eventually
-    # contains a website column.
-    # --------------------------------------------------------
 
     website = st.text_input(
         "Hospital Website",
-        value=hospital.get(
-            "website",
-            ""
-        ) or "",
-        key="setup_hospital_website"
+        value=hospital.get("website", "") or "",
+        key="setup_hospital_website",
     )
 
     st.divider()
@@ -201,60 +154,41 @@ def render_hospital_profile(hospital):
         "Save & Continue",
         type="primary",
         use_container_width=True,
-        key="setup_hospital_next"
+        key="setup_hospital_next",
     ):
 
         if not hospital_name.strip():
 
-            st.error(
-                "Hospital name is required."
-            )
+            st.error("Hospital name is required.")
 
             return
 
         if not address.strip():
 
-            st.error(
-                "Hospital address is required."
-            )
+            st.error("Hospital address is required.")
 
             return
 
-        # ----------------------------------------------------
-        # Update hospital
-        # ----------------------------------------------------
-
         result = update_hospital_information(
 
-            hospital_id=hospital.get(
-                "hospital_id"
-            ),
+            hospital_id=hospital.get("hospital_id"),
 
-            hospital_name=
-                hospital_name,
+            hospital_name=hospital_name,
 
-            hospital_type=
-                hospital_type,
+            hospital_type=hospital_type,
 
-            address=
-                address,
+            address=address,
 
-            contact_number=
-                contact_number,
+            contact_number=contact_number,
 
-            email=
-                email,
+            email=email,
 
-            website=
-                website,
-
+            website=website,
         )
 
         if not result["success"]:
 
-            st.error(
-                result["message"]
-            )
+            st.error(result["message"])
 
             return
 
@@ -265,20 +199,19 @@ def render_hospital_profile(hospital):
 
 # ============================================================
 # STEP 2
-# ADMINISTRATOR PROFILE
+# YOUR ADMINISTRATOR ACCOUNT (READ-ONLY)
 # ============================================================
 
 def render_administrator_profile():
 
     user = get_current_user()
 
-    st.subheader(
-        "Administrator Profile"
-    )
+    st.subheader("Your Administrator Account")
 
     st.caption(
-        "Review the information associated with "
-        "your Hospital Administrator account."
+        "This is the account you're currently signed in as. "
+        "Contact your system administrator if any details "
+        "are incorrect."
     )
 
     if not user:
@@ -289,55 +222,36 @@ def render_administrator_profile():
 
         return
 
-    first_name = st.text_input(
-        "First Name *",
-        value=user.get(
-            "user_fname",
-            ""
-        ) or "",
-        key="setup_admin_first_name"
+    # --------------------------------------------------------
+    # Build full name
+    # --------------------------------------------------------
+
+    full_name = " ".join(
+        filter(
+            None,
+            [
+                user.get("first_name"),
+                user.get("middle_name"),
+                user.get("last_name"),
+            ],
+        )
     )
 
-    middle_name = st.text_input(
-        "Middle Name",
-        value=user.get(
-            "user_mname",
-            ""
-        ) or "",
-        key="setup_admin_middle_name"
-    )
+    if not full_name:
 
-    last_name = st.text_input(
-        "Last Name *",
-        value=user.get(
-            "user_lname",
-            ""
-        ) or "",
-        key="setup_admin_last_name"
-    )
+        full_name = user.get("name") or "-"
 
-    email = st.text_input(
-        "Email",
-        value=user.get(
-            "email",
-            ""
-        ) or "",
-        disabled=True,
-        key="setup_admin_email"
-    )
+    # --------------------------------------------------------
+    # Display
+    # --------------------------------------------------------
 
-    contact_number = st.text_input(
-        "Contact Number",
-        value=user.get(
-            "user_contact_number",
-            ""
-        ) or "",
-        key="setup_admin_contact"
-    )
+    st.write(f"**Name:** {full_name}")
 
-    st.info(
-        "Your administrator account was created "
-        "during the hospital approval process."
+    st.write(f"**Email:** {user.get('email', '-')}")
+
+    st.write(
+        f"**Contact Number:** "
+        f"{user.get('contact_number') or '-'}"
     )
 
     st.divider()
@@ -349,7 +263,7 @@ def render_administrator_profile():
         if st.button(
             "Back",
             use_container_width=True,
-            key="setup_admin_back"
+            key="setup_admin_back",
         ):
 
             st.session_state.setup_step = 0
@@ -359,46 +273,11 @@ def render_administrator_profile():
     with next_col:
 
         if st.button(
-            "Save & Continue",
+            "Continue",
             type="primary",
             use_container_width=True,
-            key="setup_admin_next"
+            key="setup_admin_next",
         ):
-
-            if not first_name.strip():
-
-                st.error(
-                    "First name is required."
-                )
-
-                return
-
-            if not last_name.strip():
-
-                st.error(
-                    "Last name is required."
-                )
-
-                return
-
-            st.session_state.setup_admin_data = {
-
-                "first_name":
-                    first_name.strip(),
-
-                "middle_name":
-                    middle_name.strip(),
-
-                "last_name":
-                    last_name.strip(),
-
-                "email":
-                    email.strip(),
-
-                "contact_number":
-                    contact_number.strip(),
-
-            }
 
             st.session_state.setup_step = 2
 
@@ -407,77 +286,153 @@ def render_administrator_profile():
 
 # ============================================================
 # STEP 3
-# HOSPITAL CONFIGURATION
+# YOUR SUBSCRIPTION (READ-ONLY)
 # ============================================================
 
-def render_hospital_configuration():
+def render_subscription_summary(hospital):
 
-    st.subheader(
-        "Hospital Configuration"
-    )
+    st.subheader("Your Subscription")
 
     st.caption(
-        "Configure the basic LungSight workflow "
-        "for your hospital."
+        "Here's the LungSight plan your hospital is "
+        "subscribed to."
     )
+
+    subscription = get_hospital_subscription_details(
+        hospital.get("hospital_id")
+    )
+
+    if not subscription:
+
+        st.warning(
+            "No subscription information could be found "
+            "for your hospital. Please contact support."
+        )
+
+        st.divider()
+
+        if st.button(
+            "Back",
+            use_container_width=True,
+            key="setup_subscription_back",
+        ):
+
+            st.session_state.setup_step = 1
+
+            st.rerun()
+
+        return
+
+    # --------------------------------------------------------
+    # Plan header
+    # --------------------------------------------------------
 
     st.markdown(
-        "### Clinical Workflow"
+        f"## {subscription.get('plan_name') or 'Subscription Plan'}"
     )
 
-    department = st.selectbox(
-        "Primary Department",
-        [
-            "Radiology",
-            "Radiology / Imaging",
-            "Other",
-        ],
-        key="setup_department"
-    )
+    description = subscription.get("description")
 
-    physician_review_required = st.toggle(
-        "Require Physician Review",
-        value=True,
-        key="setup_physician_review"
-    )
+    if description:
 
-    st.caption(
-        "AI analysis is intended to support clinical "
-        "review. Physician confirmation remains part "
-        "of the workflow."
-    )
+        st.caption(description)
 
     st.divider()
 
-    st.markdown(
-        "### System Preferences"
-    )
+    # --------------------------------------------------------
+    # Billing cycle + price
+    # --------------------------------------------------------
 
-    ai_assistance = st.toggle(
-        "Enable AI Assistance",
-        value=True,
-        key="setup_ai_assistance"
-    )
+    billing_cycle = subscription.get("billing_cycle", "Monthly")
 
-    st.caption(
-        "AI assistance provides analysis to support "
-        "authorized healthcare professionals."
-    )
+    if billing_cycle == "Yearly":
+
+        amount = float(
+            subscription.get("price_yearly") or 0
+        )
+
+        price_label = "₱{:,.2f} / year".format(amount)
+
+    else:
+
+        amount = float(
+            subscription.get("price_monthly") or 0
+        )
+
+        price_label = "₱{:,.2f} / month".format(amount)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.metric("Billing Cycle", billing_cycle)
+
+    with col2:
+
+        st.metric("Price", price_label)
+
+    # --------------------------------------------------------
+    # Dates
+    # --------------------------------------------------------
+
+    st.markdown("### Subscription Period")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.write(
+            f"**Start Date:** "
+            f"{subscription.get('start_date') or '-'}"
+        )
+
+    with col2:
+
+        st.write(
+            f"**End Date:** "
+            f"{subscription.get('end_date') or '-'}"
+        )
+
+    # --------------------------------------------------------
+    # Plan limits
+    # --------------------------------------------------------
+
+    st.markdown("### Plan Limits")
+
+    col1, col2, col3 = st.columns(3)
+
+    max_users = subscription.get("max_users")
+
+    max_patients = subscription.get("max_patients")
+
+    max_xrays = subscription.get("max_xrays_per_month")
+
+    with col1:
+
+        st.metric(
+            "Maximum Users",
+            "Unlimited" if max_users is None else f"{max_users:,}",
+        )
+
+    with col2:
+
+        st.metric(
+            "Maximum Patients",
+            "Unlimited" if max_patients is None else f"{max_patients:,}",
+        )
+
+    with col3:
+
+        st.metric(
+            "Monthly X-rays",
+            "Unlimited" if max_xrays is None else f"{max_xrays:,}",
+        )
 
     st.divider()
 
-    st.session_state.setup_configuration = {
-
-        "department":
-            department,
-
-        "physician_review_required":
-            physician_review_required,
-
-        "ai_assistance":
-            ai_assistance,
-
-    }
+    # --------------------------------------------------------
+    # Navigation
+    # --------------------------------------------------------
 
     back_col, next_col = st.columns(2)
 
@@ -486,7 +441,7 @@ def render_hospital_configuration():
         if st.button(
             "Back",
             use_container_width=True,
-            key="setup_config_back"
+            key="setup_subscription_back",
         ):
 
             st.session_state.setup_step = 1
@@ -496,10 +451,10 @@ def render_hospital_configuration():
     with next_col:
 
         if st.button(
-            "Save & Continue",
+            "Continue",
             type="primary",
             use_container_width=True,
-            key="setup_config_next"
+            key="setup_subscription_next",
         ):
 
             st.session_state.setup_step = 3
@@ -514,22 +469,18 @@ def render_hospital_configuration():
 
 def render_review(hospital):
 
-    st.subheader(
-        "Review & Confirm"
-    )
+    st.subheader("Review & Confirm")
 
     st.caption(
-        "Review your setup information before "
-        "activating your LungSight hospital account."
+        "Review your setup information before activating "
+        "your LungSight hospital account."
     )
 
     # ========================================================
     # HOSPITAL
     # ========================================================
 
-    st.markdown(
-        "### Hospital Profile"
-    )
+    st.markdown("### Hospital Profile")
 
     st.write(
         f"**Hospital Name:** "
@@ -559,78 +510,35 @@ def render_review(hospital):
     st.divider()
 
     # ========================================================
-    # ADMINISTRATOR
+    # ADMINISTRATOR (read-only, from logged-in user)
     # ========================================================
 
-    st.markdown(
-        "### Administrator"
-    )
+    st.markdown("### Your Administrator Account")
 
-    admin_data = st.session_state.get(
-        "setup_admin_data",
-        {}
-    )
+    user = get_current_user() or {}
 
-    full_name = " ".join(
+    admin_full_name = " ".join(
         filter(
             None,
             [
-                admin_data.get(
-                    "first_name"
-                ),
-                admin_data.get(
-                    "middle_name"
-                ),
-                admin_data.get(
-                    "last_name"
-                ),
-            ]
+                user.get("first_name"),
+                user.get("middle_name"),
+                user.get("last_name"),
+            ],
         )
     )
 
-    st.write(
-        f"**Name:** "
-        f"{full_name or '-'}"
-    )
+    if not admin_full_name:
 
-    st.write(
-        f"**Email:** "
-        f"{admin_data.get('email', '-')}"
-    )
+        admin_full_name = user.get("name") or "-"
+
+    st.write(f"**Name:** {admin_full_name}")
+
+    st.write(f"**Email:** {user.get('email', '-')}")
 
     st.write(
         f"**Contact Number:** "
-        f"{admin_data.get('contact_number', '-')}"
-    )
-
-    st.divider()
-
-    # ========================================================
-    # CONFIGURATION
-    # ========================================================
-
-    st.markdown(
-        "### Hospital Configuration"
-    )
-
-    configuration = st.session_state.get(
-        "setup_configuration",
-        {}
-    )
-
-    st.write(
-        f"**Primary Department:** "
-        f"{configuration.get('department', '-')}"
-    )
-
-    st.write(
-        f"**Physician Review Required:** "
-        f"{'Yes' if configuration.get('physician_review_required') else 'No'}"
-    )
-
-    st.write(
-        f"**AI Assistance:** "
-        f"{'Enabled' if configuration.get('ai_assistance') else 'Disabled'}"
+        f"{user.get('contact_number') or '-'}"
     )
 
     st.divider()
@@ -639,16 +547,43 @@ def render_review(hospital):
     # SUBSCRIPTION
     # ========================================================
 
-    st.markdown(
-        "### Subscription"
+    st.markdown("### Your Subscription")
+
+    subscription = get_hospital_subscription_details(
+        hospital.get("hospital_id")
     )
 
-    st.info(
-        "Your hospital subscription is currently "
-        "Inactive. Completing the setup will activate "
-        "the subscription associated with your approved "
-        "hospital application."
-    )
+    if subscription:
+
+        st.write(
+            f"**Plan:** "
+            f"{subscription.get('plan_name') or '-'}"
+        )
+
+        st.write(
+            f"**Billing Cycle:** "
+            f"{subscription.get('billing_cycle') or '-'}"
+        )
+
+        billing_cycle = subscription.get("billing_cycle")
+
+        if billing_cycle == "Yearly":
+
+            amount = float(
+                subscription.get("price_yearly") or 0
+            )
+
+        else:
+
+            amount = float(
+                subscription.get("price_monthly") or 0
+            )
+
+        st.write(f"**Price:** ₱{amount:,.2f}")
+
+    else:
+
+        st.warning("Subscription information not available.")
 
     st.divider()
 
@@ -659,7 +594,7 @@ def render_review(hospital):
     confirmation = st.checkbox(
         "I have reviewed the information above and "
         "confirm that it is correct.",
-        key="setup_final_confirmation"
+        key="setup_final_confirmation",
     )
 
     st.divider()
@@ -671,7 +606,7 @@ def render_review(hospital):
         if st.button(
             "Back",
             use_container_width=True,
-            key="setup_review_back"
+            key="setup_review_back",
         ):
 
             st.session_state.setup_step = 2
@@ -684,64 +619,34 @@ def render_review(hospital):
             "Complete Setup",
             type="primary",
             use_container_width=True,
-            key="setup_complete"
+            key="setup_complete",
         ):
 
             if not confirmation:
 
                 st.error(
-                    "Please confirm that the information "
-                    "is correct before completing setup."
+                    "Please confirm that the information is "
+                    "correct before completing setup."
                 )
 
                 return
 
-            # ------------------------------------------------
-            # Complete setup
-            # ------------------------------------------------
-
             result = complete_hospital_setup(
-                hospital.get(
-                    "hospital_id"
-                )
+                hospital.get("hospital_id")
             )
 
             if not result["success"]:
 
-                st.error(
-                    result["message"]
-                )
+                st.error(result["message"])
 
                 return
 
-            # ------------------------------------------------
-            # Store completion state
-            # ------------------------------------------------
-
             st.session_state.setup_completed = True
 
-            # ------------------------------------------------
-            # Clear wizard state
-            # ------------------------------------------------
+            st.session_state.pop("setup_step", None)
 
             st.session_state.pop(
-                "setup_step",
-                None
-            )
-
-            st.session_state.pop(
-                "setup_admin_data",
-                None
-            )
-
-            st.session_state.pop(
-                "setup_configuration",
-                None
-            )
-
-            st.session_state.pop(
-                "setup_final_confirmation",
-                None
+                "setup_final_confirmation", None
             )
 
             st.success(
@@ -785,10 +690,7 @@ def show():
     # Already completed
     # --------------------------------------------------------
 
-    if hospital.get(
-        "setup_completed",
-        False
-    ):
+    if hospital.get("setup_completed", False):
 
         st.success(
             "Hospital setup has already been completed."
@@ -800,9 +702,7 @@ def show():
     # Header
     # --------------------------------------------------------
 
-    st.title(
-        "Welcome to LungSight"
-    )
+    st.title("Welcome to LungSight")
 
     st.write(
         "Let's complete your hospital setup before "
@@ -823,15 +723,11 @@ def show():
     # Current step
     # --------------------------------------------------------
 
-    current_step = (
-        st.session_state.setup_step
-    )
+    current_step = st.session_state.setup_step
 
     if current_step == 0:
 
-        render_hospital_profile(
-            hospital
-        )
+        render_hospital_profile(hospital)
 
     elif current_step == 1:
 
@@ -839,10 +735,8 @@ def show():
 
     elif current_step == 2:
 
-        render_hospital_configuration()
+        render_subscription_summary(hospital)
 
     elif current_step == 3:
 
-        render_review(
-            hospital
-        )
+        render_review(hospital)

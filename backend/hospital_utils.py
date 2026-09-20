@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date, timedelta
 
 import os
 import re
@@ -215,7 +215,77 @@ def complete_hospital_setup(hospital_id):
             }
 
         # ----------------------------------------------------
-        # 3. Mark setup as completed
+        # 3. Fetch the hospital's subscription
+        # ----------------------------------------------------
+
+        subscription_response = (
+            admin_supabase
+            .table("hospital_subscriptions")
+            .select(
+                "hospital_subscription_id, "
+                "billing_cycle, "
+                "status"
+            )
+            .eq(
+                "hospital_id",
+                hospital_id
+            )
+            .single()
+            .execute()
+        )
+
+        subscription = subscription_response.data
+
+        if not subscription:
+
+            return {
+                "success": False,
+                "message": (
+                    "No subscription found for this "
+                    "hospital. Cannot complete setup."
+                )
+            }
+
+        # ----------------------------------------------------
+        # 4. Make sure the subscription is Pending Setup
+        # ----------------------------------------------------
+
+        if subscription.get("status") != "Pending Setup":
+
+            return {
+                "success": False,
+                "message": (
+                    "Subscription is not pending setup "
+                    f"(current status: "
+                    f"{subscription.get('status')})."
+                )
+            }
+
+        # ----------------------------------------------------
+        # 5. Compute subscription dates
+        # ----------------------------------------------------
+
+        billing_cycle = subscription.get(
+            "billing_cycle"
+        )
+
+        if billing_cycle == "Yearly":
+
+            period_days = 365
+
+        else:
+
+            # Default to Monthly
+            period_days = 30
+
+        today = date.today()
+
+        end_date = today + timedelta(
+            days=period_days
+        )
+
+        # ----------------------------------------------------
+        # 6. Mark hospital setup as completed
         # ----------------------------------------------------
 
         completed_at = datetime.now(
@@ -252,14 +322,8 @@ def complete_hospital_setup(hospital_id):
             }
 
         # ----------------------------------------------------
-        # 4. Activate hospital subscription
-        # ----------------------------------------------------
-        #
-        # For now, this activates the Inactive subscription
-        # belonging to this hospital.
-        #
-        # Later, we can make this more strict by identifying
-        # the exact subscription created from the application.
+        # 7. Activate hospital subscription
+        #    and set the billing period
         # ----------------------------------------------------
 
         subscription_response = (
@@ -269,6 +333,12 @@ def complete_hospital_setup(hospital_id):
 
                 "status":
                     "Active",
+
+                "start_date":
+                    today.isoformat(),
+
+                "end_date":
+                    end_date.isoformat(),
 
                 "updated_at":
                     completed_at,
@@ -280,13 +350,24 @@ def complete_hospital_setup(hospital_id):
             )
             .eq(
                 "status",
-                "Inactive"
+                "Pending Setup"
             )
             .execute()
         )
 
+        if not subscription_response.data:
+
+            return {
+                "success": False,
+                "message": (
+                    "Hospital setup was marked as "
+                    "completed, but the subscription "
+                    "could not be activated."
+                )
+            }
+
         # ----------------------------------------------------
-        # 5. Return success
+        # 8. Return success
         # ----------------------------------------------------
 
         return {

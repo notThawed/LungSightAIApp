@@ -3,8 +3,8 @@ from components.navbar import show_top_navbar
 
 from pages.system_administrator import manage_user, manage_patients
 
+from pages.hospital_administrator import dashboard, subscription_gate
 
-from pages.hospital_administrator import dashboard
 
 def show_hospital_admin_layout():
 
@@ -15,6 +15,8 @@ def show_hospital_admin_layout():
     }
     show_top_navbar(page_name=page, page_info=page_info.get(page, "Page information is not available."))
 
+    subscription_gate.render_subscription_warnings(can_renew=True)
+
     if page == "Dashboard":
         dashboard.show()
 
@@ -23,4 +25,3 @@ def show_hospital_admin_layout():
 
     if page == "Manage Patients":
         manage_patients.show()
-    

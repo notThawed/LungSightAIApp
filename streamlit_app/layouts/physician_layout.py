@@ -2,6 +2,7 @@ from components.sidebar import show_physician_sidebar
 from components.navbar import show_top_navbar
 
 from pages.physician import dashboard, patient_queue, review_patient, records, profile
+from pages.hospital_administrator import subscription_gate
 
 def show_physician_layout():
 
@@ -15,6 +16,8 @@ def show_physician_layout():
         "Profile": "Update your profile and physician-specific account preferences.",
     }
     show_top_navbar(page_name=page, page_info=page_info.get(page, "Page information is not available."))
+
+    subscription_gate.render_subscription_warnings(can_renew=False)
 
     if page == "Dashboard":
 

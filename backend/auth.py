@@ -38,7 +38,9 @@ def login_user(email, password):
             """
             user_id,
             user_fname,
+            user_mname,
             user_lname,
+            user_contact_number,
             role_id,
             hospital_id,
             is_active,
@@ -113,7 +115,10 @@ def login_user(email, password):
         ),
 
         "first_name": profile["user_fname"],
+        "middle_name": profile.get("user_mname"),
         "last_name": profile["user_lname"],
+
+        "contact_number": profile.get("user_contact_number"),
 
         "role": role_name,
         "role_id": profile["role_id"],

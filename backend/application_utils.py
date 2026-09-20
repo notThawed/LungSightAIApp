@@ -392,7 +392,10 @@ def approve_hospital_application(application_id):
                     plan_id,
 
                 billing_cycle=
-                    billing_cycle
+                    billing_cycle,
+
+                application_id=
+                    application_id
             )
         )
 

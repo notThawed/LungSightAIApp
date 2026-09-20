@@ -4,6 +4,7 @@ from components.navbar import show_top_navbar
 from pages.radtech import dashboard, analyze, geospatial, profile
 from pages.system_administrator import manage_examinations, manage_patients
 
+from pages.hospital_administrator import subscription_gate
 
 def show_radtech_layout():
 
@@ -19,6 +20,8 @@ def show_radtech_layout():
     }
     show_top_navbar(page_name=page, page_info=page_info.get(page, "Page information is not available."))
 
+    subscription_gate.render_subscription_warnings(can_renew=False)
+    
     if page == "Dashboard":
 
         dashboard.show()

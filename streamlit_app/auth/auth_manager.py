@@ -38,15 +38,22 @@ def authenticate(email, password):
 
 
 def logout():
-
     try:
         logout_user()
-
     except Exception as e:
         print(f"Logout error: {e}")
 
     st.session_state.logged_in = False
     st.session_state.user = None
+
+    # ----------------------------------------------------
+    # Clear cached subscription state so the next login
+    # re-fetches from the database
+    # ----------------------------------------------------
+
+    st.session_state.pop("subscription_context", None)
+
+    st.session_state.pop("grace_info", None)
 
 
 def is_authenticated():

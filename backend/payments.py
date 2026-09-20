@@ -254,3 +254,278 @@ def get_payment_status(application_id):
             "paid": False,
             "message": str(e),
         }
+
+
+def create_renewal_checkout_session(hospital_subscription_id):
+    """
+    Creates a PayMongo checkout session to renew an existing
+    hospital subscription.
+
+    The plan and billing cycle are taken from the subscription
+    row — the user does not choose.
+
+    Returns:
+        {
+            "success": True,
+            "checkout_url": str,
+            "payment_id": uuid,
+            "amount": float,
+            "currency": "PHP",
+            "billing_cycle": str,
+        }
+        or
+        {
+            "success": False,
+            "message": str,
+        }
+    """
+
+    try:
+
+        # ------------------------------------------
+        # 1. Fetch the subscription
+        # ------------------------------------------
+
+        sub_response = (
+            admin_supabase
+            .table("hospital_subscriptions")
+            .select(
+                "hospital_subscription_id,"
+                "hospital_id,"
+                "plan_id,"
+                "billing_cycle,"
+                "status"
+            )
+            .eq(
+                "hospital_subscription_id",
+                hospital_subscription_id
+            )
+            .single()
+            .execute()
+        )
+
+        subscription = sub_response.data
+
+        if not subscription:
+
+            return {
+                "success": False,
+                "message": "Subscription not found."
+            }
+
+        hospital_id = subscription["hospital_id"]
+        plan_id     = subscription["plan_id"]
+        billing_cycle = subscription["billing_cycle"]
+
+        if billing_cycle not in ["Monthly", "Yearly"]:
+
+            return {
+                "success": False,
+                "message": "Invalid billing cycle on subscription."
+            }
+
+        # ------------------------------------------
+        # 2. Fetch the plan for pricing
+        # ------------------------------------------
+
+        plan_response = (
+            admin_supabase
+            .table("subscription_plans")
+            .select(
+                "plan_id, plan_name,"
+                "price_monthly, price_yearly"
+            )
+            .eq("plan_id", plan_id)
+            .single()
+            .execute()
+        )
+
+        plan = plan_response.data
+
+        if not plan:
+
+            return {
+                "success": False,
+                "message": "Subscription plan not found."
+            }
+
+        if billing_cycle == "Yearly":
+            amount = float(plan["price_yearly"])
+        else:
+            amount = float(plan["price_monthly"])
+
+        amount_cents = int(round(amount * 100))
+
+        # ------------------------------------------
+        # 3. Insert a pending payment row
+        # ------------------------------------------
+
+        payment_row = (
+            admin_supabase
+            .table("payments")
+            .insert({
+                "application_id":          None,
+                "hospital_id":             hospital_id,
+                "hospital_subscription_id": hospital_subscription_id,
+                "plan_id":                 plan_id,
+                "provider":                "paymongo",
+                "amount":                  amount,
+                "currency":                "PHP",
+                "billing_cycle":           billing_cycle,
+                "payment_type":            "renewal",
+                "status":                  "pending",
+            })
+            .execute()
+        )
+
+        if not payment_row.data:
+
+            return {
+                "success": False,
+                "message": "Could not create payment record."
+            }
+
+        payment_id = payment_row.data[0]["payment_id"]
+
+        # ------------------------------------------
+        # 4. Create PayMongo checkout session
+        # ------------------------------------------
+
+        payload = {
+            "data": {
+                "attributes": {
+                    "line_items": [{
+                        "currency": "PHP",
+                        "amount":   amount_cents,
+                        "name":     f"{plan['plan_name']} — Renewal",
+                        "quantity": 1,
+                        "description": (
+                            f"{billing_cycle} renewal of "
+                            f"{plan['plan_name']} subscription"
+                        ),
+                    }],
+                    "payment_method_types": [
+                        "card",
+                        "gcash",
+                        "paymaya",
+                    ],
+                    "success_url": PAYMENT_SUCCESS_URL,
+                    "cancel_url":  PAYMENT_FAILED_URL,
+                    "description": (
+                        f"LungSight renewal — "
+                        f"{plan['plan_name']} ({billing_cycle})"
+                    ),
+                    "send_email_receipt": True,
+                    "metadata": {
+                        "hospital_subscription_id": hospital_subscription_id,
+                        "payment_id":               payment_id,
+                        "payment_type":             "renewal",
+                    },
+                }
+            }
+        }
+
+        auth = (PAYMONGO_SECRET_KEY, "")
+
+        pm_response = requests.post(
+            f"{PAYMONGO_API_BASE}/checkout_sessions",
+            json=payload,
+            auth=auth,
+            timeout=20,
+        )
+
+        pm_response.raise_for_status()
+
+        pm_data = pm_response.json()["data"]
+
+        checkout_url = pm_data["attributes"]["checkout_url"]
+        checkout_id  = pm_data["id"]
+
+        # ------------------------------------------
+        # 5. Save the provider reference
+        # ------------------------------------------
+
+        admin_supabase.table("payments").update({
+            "provider_reference": checkout_id,
+            "updated_at":         datetime.now(timezone.utc).isoformat(),
+        }).eq("payment_id", payment_id).execute()
+
+        # ------------------------------------------
+        # 6. Return success
+        # ------------------------------------------
+
+        return {
+            "success":       True,
+            "checkout_url":  checkout_url,
+            "payment_id":    payment_id,
+            "amount":        amount,
+            "currency":      "PHP",
+            "billing_cycle": billing_cycle,
+        }
+
+    except requests.HTTPError as http_err:
+
+        return {
+            "success": False,
+            "message": (
+                f"PayMongo error: "
+                f"{http_err.response.text}"
+            ),
+        }
+
+    except Exception as e:
+
+        return {
+            "success": False,
+            "message": str(e),
+        }
+
+
+def get_renewal_status(payment_id):
+    """
+    Returns the current status of a renewal payment row.
+
+    Used by the "Refresh Status" button on the renewal
+    success screen.
+    """
+
+    try:
+
+        response = (
+            admin_supabase
+            .table("payments")
+            .select(
+                "status, paid_at, amount, currency"
+            )
+            .eq(
+                "payment_id",
+                payment_id
+            )
+            .single()
+            .execute()
+        )
+
+        row = response.data
+
+        if not row:
+
+            return {
+                "status": "none",
+                "paid":   False,
+            }
+
+        return {
+            "status":   row["status"],
+            "paid":     row["status"] == "paid",
+            "paid_at":  row.get("paid_at"),
+            "amount":   row.get("amount"),
+            "currency": row.get("currency"),
+        }
+
+    except Exception as e:
+
+        return {
+            "status":  "error",
+            "paid":    False,
+            "message": str(e),
+        }
