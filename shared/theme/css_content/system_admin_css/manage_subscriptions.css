@@ -1,0 +1,65 @@
+/* ==========================================================
+   SYSTEM ADMIN - MANAGE SUBSCRIPTIONS
+   shared/theme/css_content/system_admin_css/manage_subscriptions.css
+   Plan cards. Cards, pills, limits grid, buttons and dialogs
+   come from base.css.
+   ========================================================== */
+
+[class*="st-key-sa_card_plan_"] {
+  gap: 0.5rem;
+  padding: 1.1rem 1.25rem 1.15rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[class*="st-key-sa_card_plan_"]:hover {
+  border-color: #BCD3D8;
+  box-shadow: 0 10px 24px -16px rgba(18, 40, 58, 0.35);
+}
+
+[class*="st-key-sa_card_plan_"] .sa-plan-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+[class*="st-key-sa_card_plan_"] .sa-plan-name {
+  margin: 0;
+  font-family: var(--sa-font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--sa-ink);
+}
+
+[class*="st-key-sa_card_plan_"] .sa-plan-desc {
+  min-height: 2.6rem;             /* keeps cards in a row the same height */
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  color: var(--sa-slate);
+}
+
+[class*="st-key-sa_card_plan_"] .sa-plan-price {
+  margin: 0.6rem 0 0;
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--sa-ink);
+}
+
+[class*="st-key-sa_card_plan_"] .sa-plan-price small {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--sa-slate);
+}
+
+[class*="st-key-sa_card_plan_"] .sa-plan-yearly {
+  margin: 0.1rem 0 0.7rem;
+  font-size: 0.85rem;
+  color: var(--sa-slate);
+}
+
+/* the "add plan" form card */
+.st-key-sa_card_add_plan {
+  max-width: 760px;
+}

@@ -1,0 +1,106 @@
+/* ==========================================================
+   SYSTEM ADMIN - DASHBOARD
+   shared/theme/css_content/system_admin_css/dashboard.css
+   Only what is unique to the dashboard. Everything else
+   (metric cards, cards, buttons) comes from base.css.
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   Dashboard shell
+   ---------------------------------------------------------- */
+
+.st-key-sa_page {
+  padding-bottom: 0.5rem;
+}
+
+.st-key-sa_page [data-testid="stHorizontalBlock"] {
+  gap: 0.9rem;
+}
+
+/* ----------------------------------------------------------
+   Chart / map / table cards: keep them aligned and compact
+   ---------------------------------------------------------- */
+
+.st-key-sa_card_chart,
+.st-key-sa_card_calendar,
+.st-key-sa_card_map,
+.st-key-sa_card_hospitals {
+  min-height: 340px;
+}
+
+.st-key-sa_card_chart [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-sa_card_calendar [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-sa_card_map [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-sa_card_hospitals [data-testid="stVerticalBlockBorderWrapper"] {
+  padding-top: 0.25rem;
+}
+
+.st-key-sa_card_chart .stChart,
+.st-key-sa_card_map .stMap,
+.st-key-sa_card_hospitals .stDataFrame {
+  margin-top: 0.3rem;
+}
+
+/* ----------------------------------------------------------
+   Calendar
+   ---------------------------------------------------------- */
+
+.st-key-sa_page .sa-cal {
+  margin-bottom: 0.6rem;
+}
+
+.st-key-sa_page .sa-cal-title {
+  margin: 0 0 0.6rem;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+}
+
+.st-key-sa_page .sa-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.st-key-sa_page .sa-cal-head {
+  padding-bottom: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--sa-slate);
+}
+
+.st-key-sa_page .sa-cal-day {
+  padding: 0.35rem 0;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--sa-ink);
+}
+
+.st-key-sa_page .sa-cal-today {
+  background: var(--sa-teal);
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.st-key-sa_page .sa-cal-empty {
+  visibility: hidden;
+}
+
+/* ----------------------------------------------------------
+   Responsive dashboard adjustments
+   ---------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .st-key-sa_page [data-testid="stHorizontalBlock"] {
+    flex-wrap: wrap;
+  }
+
+  .st-key-sa_card_chart,
+  .st-key-sa_card_calendar,
+  .st-key-sa_card_map,
+  .st-key-sa_card_hospitals {
+    min-height: auto;
+  }
+}

@@ -1,0 +1,319 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+
+/* ==========================================================
+   LungSight login page
+   Change the colors here and the whole page follows.
+   ========================================================== */
+
+:root {
+  --film:      #F2F6F7;   /* page background, like a lightbox */
+  --white:     #FFFFFF;
+  --ink:       #12283A;   /* main text */
+  --slate:     #5A6F7F;   /* secondary text */
+  --mist:      #DDE8EB;   /* borders */
+  --teal:      #0F7C88;   /* main accent */
+  --teal-dark: #0B626C;   /* accent on hover */
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+
+/* ----------------------------------------------------------
+   Page
+   ---------------------------------------------------------- */
+
+.stApp {
+  background: var(--film);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+#MainMenu,
+footer,
+[data-testid="stHeader"] {
+  display: none;
+}
+
+.block-container {
+  max-width: 1080px;
+  padding-top: 3.5rem;
+  padding-bottom: 4rem;
+}
+
+
+/* ----------------------------------------------------------
+   Sign-in card (left)
+   ---------------------------------------------------------- */
+
+.st-key-login_card {
+  background: var(--white);
+  border: 1px solid var(--mist);
+  border-radius: 14px;
+  padding: 2.5rem 2.25rem;
+  box-shadow: 0 12px 32px -14px rgba(18, 40, 58, 0.18);
+}
+
+.st-key-login_card .ls-login-title {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--ink);
+  margin: 0 0 0.4rem;
+}
+
+.st-key-login_card .ls-login-subtitle {
+  color: var(--slate);
+  font-size: 0.98rem;
+  margin: 0 0 1.75rem;
+}
+
+/* remove Streamlit's default form border */
+.st-key-login_card [data-testid="stForm"] {
+  border: none;
+  padding: 0;
+}
+
+.st-key-login_card label p {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--ink);
+}
+
+/* text boxes */
+.st-key-login_card [data-testid="stTextInputRootElement"],
+.st-key-login_card div[data-baseweb="input"] {
+  background: var(--film);
+  border: 1px solid var(--mist);
+  border-radius: 8px;
+}
+
+.st-key-login_card div[data-baseweb="base-input"] {
+  background: transparent;
+}
+
+.st-key-login_card input {
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+.st-key-login_card [data-testid="stTextInputRootElement"]:focus-within,
+.st-key-login_card div[data-baseweb="input"]:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.18);
+}
+
+/* sign-in button */
+.st-key-login_card [data-testid="stFormSubmitButton"] button {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.7rem 1rem;
+  background: var(--teal);
+  border: none;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.st-key-login_card [data-testid="stFormSubmitButton"] button p {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.st-key-login_card [data-testid="stFormSubmitButton"] button:hover {
+  background: var(--teal-dark);
+}
+
+.st-key-login_card [data-testid="stFormSubmitButton"] button:focus-visible {
+  outline: 3px solid rgba(15, 124, 136, 0.4);
+  outline-offset: 2px;
+}
+
+
+/* ----------------------------------------------------------
+   Logo panel (right)
+   Corner marks are borrowed from radiograph film.
+   ---------------------------------------------------------- */
+
+.st-key-logo_panel {
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  border: 1px solid var(--mist);
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 40%, #FFFFFF 0%, #E9F1F3 60%, #DCE8EB 100%);
+}
+
+.st-key-logo_panel::before,
+.st-key-logo_panel::after {
+  content: "";
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 0 solid var(--teal);
+}
+
+.st-key-logo_panel::before {
+  top: 14px;
+  left: 14px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.st-key-logo_panel::after {
+  bottom: 14px;
+  right: 14px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+.st-key-logo_panel .ls-logo-tagline {
+  max-width: 28ch;
+  margin: 0 auto;
+  color: var(--slate);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+
+/* ----------------------------------------------------------
+   Subscription plans
+   ---------------------------------------------------------- */
+
+.st-key-plans_section {
+  margin-top: 3.5rem;
+}
+
+.st-key-plans_section .ls-plans-title {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--ink);
+  margin: 0 0 0.4rem;
+}
+
+.st-key-plans_section .ls-plans-subtitle {
+  text-align: center;
+  color: var(--slate);
+  max-width: 52ch;
+  margin: 0 auto 1.5rem;
+}
+
+[class*="st-key-plan_card_"] {
+  background: var(--white);
+  border: 1px solid var(--mist);
+  border-radius: 14px;
+  padding: 1.75rem 1.5rem;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-name {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-desc {
+  color: var(--slate);
+  font-size: 0.92rem;
+  min-height: 3rem;          /* keeps cards the same height */
+  margin: 0.25rem 0 0.75rem;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-price {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-price small {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--slate);
+}
+
+[class*="st-key-plan_card_"] .ls-plan-yearly {
+  color: var(--slate);
+  font-size: 0.9rem;
+  margin: 0.1rem 0 1rem;
+}
+
+/* limits shown as label / value rows */
+[class*="st-key-plan_card_"] .ls-plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+  border-top: 1px solid var(--mist);
+}
+
+[class*="st-key-plan_card_"] .ls-plan-features li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--mist);
+  font-size: 0.92rem;
+  color: var(--slate);
+}
+
+[class*="st-key-plan_card_"] .ls-plan-features b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* "Select plan" is outlined so the Sign in button stays the main action */
+[class*="st-key-plan_card_"] button {
+  width: 100%;
+  background: transparent;
+  border: 1.5px solid var(--teal);
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+[class*="st-key-plan_card_"] button p {
+  color: var(--teal);
+  font-weight: 600;
+}
+
+[class*="st-key-plan_card_"] button:hover {
+  background: var(--teal);
+}
+
+[class*="st-key-plan_card_"] button:hover p {
+  color: #FFFFFF;
+}
+
+[class*="st-key-plan_card_"] button:focus-visible {
+  outline: 3px solid rgba(15, 124, 136, 0.4);
+  outline-offset: 2px;
+}
+
+
+/* ----------------------------------------------------------
+   Small screens
+   ---------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .block-container {
+    padding-top: 2rem;
+  }
+
+  .st-key-login_card {
+    padding: 1.75rem 1.25rem;
+  }
+
+  .st-key-logo_panel {
+    padding: 2rem 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

@@ -1,0 +1,1107 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+
+/* ==========================================================
+   SHARED
+   Fonts, colors and the dialog window.
+   Used by both sides below. Change the colors here and
+   the client application AND the manage applications page follow.
+   ========================================================== */
+
+:root {
+  --ap-film:      #F2F6F7;
+  --ap-white:     #FFFFFF;
+  --ap-ink:       #12283A;
+  --ap-slate:     #5A6F7F;
+  --ap-mist:      #DDE8EB;
+  --ap-teal:      #0F7C88;
+  --ap-teal-dark: #0B626C;
+  --ap-teal-soft: #E8F4F6;
+  --ap-teal-light:#6FD0D9;   /* teal for use on dark backgrounds */
+  --ap-ink-muted: #A9BAC7;   /* muted text for use on dark backgrounds */
+  --ap-green:     #2E8B6A;
+  --ap-green-soft:#EAF6F1;
+
+  --ap-font-display: 'Fraunces', Georgia, serif;
+  --ap-font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+
+/* ----------------------------------------------------------
+   The dialog window
+   ---------------------------------------------------------- */
+
+[data-testid="stDialog"] [role="dialog"] {
+  border-radius: 16px;
+  font-family: var(--ap-font-body);
+  max-height: calc(100vh - 2rem);     /* never taller than the screen */
+  overflow-y: auto;                   /* scroll inside instead */
+}
+
+[data-testid="stDialog"] [role="dialog"] h2 {
+  font-family: var(--ap-font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+}
+
+
+/* ==========================================================
+   CLIENT APPLICATION SIDE
+   streamlit_app/auth/client_application.py
+   The hospital application form that opens from the login page.
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   Everything inside the application
+   ---------------------------------------------------------- */
+
+.st-key-application {
+  gap: 0.9rem;
+  color: var(--ap-ink);
+}
+
+.st-key-application [data-testid="stVerticalBlock"] {
+  gap: 0.75rem;
+}
+
+.st-key-application [data-testid="stHorizontalBlock"] {
+  gap: 0.75rem;
+}
+
+/* inside the scroll areas (agreement, review) boxes must keep their full
+   height instead of being squeezed to fit */
+.st-key-application [data-testid="stLayoutWrapper"],
+.st-key-application [data-testid="stElementContainer"] {
+  flex-shrink: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Progress tracker
+   ---------------------------------------------------------- */
+
+.st-key-application .ls-progress {
+  background: var(--ap-film);
+  border: 1px solid var(--ap-mist);
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem 0.8rem;
+}
+
+.st-key-application .ls-progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.st-key-application .ls-progress-title {
+  font-family: var(--ap-font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ap-ink);
+  margin: 0;
+}
+
+.st-key-application .ls-progress-meta {
+  font-size: 0.82rem;
+  color: var(--ap-slate);
+  margin: 0.2rem 0 0;
+}
+
+.st-key-application .ls-progress-percent {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ap-teal);
+  text-align: right;
+}
+
+.st-key-application .ls-progress-percent small {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--ap-slate);
+}
+
+.st-key-application .ls-bar {
+  height: 6px;
+  margin: 0.75rem 0 0.9rem;
+  background: var(--ap-mist);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.st-key-application .ls-bar-fill {
+  height: 100%;
+  background: var(--ap-teal);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* the dots */
+.st-key-application .ls-steps {
+  display: flex;
+}
+
+.st-key-application .ls-step {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+}
+
+/* line that joins a dot to the previous one */
+.st-key-application .ls-step::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--ap-mist);
+}
+
+.st-key-application .ls-step:first-child::before {
+  display: none;
+}
+
+.st-key-application .ls-step-done::before,
+.st-key-application .ls-step-current::before {
+  background: var(--ap-teal);
+}
+
+.st-key-application .ls-dot {
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--ap-white);
+  border: 2px solid var(--ap-mist);
+  color: var(--ap-slate);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.st-key-application .ls-step-done .ls-dot {
+  background: var(--ap-teal);
+  border-color: var(--ap-teal);
+  color: #FFFFFF;
+}
+
+.st-key-application .ls-step-current .ls-dot {
+  border-color: var(--ap-teal);
+  color: var(--ap-teal);
+  box-shadow: 0 0 0 4px rgba(15, 124, 136, 0.16);
+}
+
+.st-key-application .ls-step-name {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--ap-slate);
+}
+
+.st-key-application .ls-step-done .ls-step-name {
+  color: var(--ap-teal-dark);
+}
+
+.st-key-application .ls-step-current .ls-step-name {
+  color: var(--ap-ink);
+  font-weight: 700;
+}
+
+
+/* ----------------------------------------------------------
+   Step heading
+   ---------------------------------------------------------- */
+
+.st-key-application .ls-step-header {
+  margin: 0.35rem 0 0.2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.st-key-application .ls-step-title {
+  font-family: var(--ap-font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+  margin: 0;
+}
+
+.st-key-application .ls-step-caption {
+  font-size: 0.9rem;
+  color: var(--ap-slate);
+  margin: 0.15rem 0 0;
+}
+
+.st-key-application .ls-required {
+  padding-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--ap-slate);
+  white-space: nowrap;
+}
+
+
+/* ----------------------------------------------------------
+   Form fields
+   ---------------------------------------------------------- */
+
+.st-key-application [data-testid="stForm"] {
+  border: none;
+  padding: 0;
+}
+
+.st-key-application label p {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+}
+
+/* Text boxes. Newer Streamlit versions use the data-testid names,
+   older ones use data-baseweb, so both are listed. */
+.st-key-application [data-testid="stTextInputRootElement"],
+.st-key-application [data-testid="stTextAreaRootElement"],
+.st-key-application [data-testid="stSelectbox"] [role="group"],
+.st-key-application div[data-baseweb="input"],
+.st-key-application div[data-baseweb="textarea"],
+.st-key-application div[data-baseweb="select"] > div {
+  background: var(--ap-film);
+  border: 1px solid var(--ap-mist);
+  border-radius: 8px;
+}
+
+.st-key-application input,
+.st-key-application textarea,
+.st-key-application div[data-baseweb="base-input"] {
+  background: transparent;
+  color: var(--ap-ink);
+  font-family: var(--ap-font-body);
+}
+
+.st-key-application [data-testid="stTextInputRootElement"]:focus-within,
+.st-key-application [data-testid="stTextAreaRootElement"]:focus-within,
+.st-key-application [data-testid="stSelectbox"] [role="group"]:focus-within,
+.st-key-application div[data-baseweb="input"]:focus-within,
+.st-key-application div[data-baseweb="textarea"]:focus-within,
+.st-key-application div[data-baseweb="select"] > div:focus-within {
+  border-color: var(--ap-teal);
+  box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.18);
+}
+
+
+/* ----------------------------------------------------------
+   Buttons
+   !important is used on background/border because Streamlit
+   repaints buttons on hover, focus and click.
+   ---------------------------------------------------------- */
+
+.st-key-application [data-testid^="stBaseButton"],
+.st-key-application [data-testid^="stBaseLinkButton"] {
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+/* main action (Next, Pay, ...) */
+.st-key-application [data-testid^="stBaseButton-primary"],
+.st-key-application [data-testid^="stBaseLinkButton-primary"] {
+  background: var(--ap-teal) !important;
+  border: 1px solid var(--ap-teal) !important;
+}
+
+.st-key-application [data-testid^="stBaseButton-primary"] p,
+.st-key-application [data-testid^="stBaseLinkButton-primary"] p {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.st-key-application [data-testid^="stBaseButton-primary"]:hover,
+.st-key-application [data-testid^="stBaseLinkButton-primary"]:hover {
+  background: var(--ap-teal-dark) !important;
+  border-color: var(--ap-teal-dark) !important;
+}
+
+/* quiet action (Back, Refresh, Edit) */
+.st-key-application [data-testid^="stBaseButton-secondary"] {
+  background: var(--ap-white) !important;
+  border: 1px solid var(--ap-mist) !important;
+}
+
+.st-key-application [data-testid^="stBaseButton-secondary"] p {
+  color: var(--ap-slate);
+  font-weight: 600;
+}
+
+.st-key-application [data-testid^="stBaseButton-secondary"]:hover {
+  border-color: var(--ap-teal) !important;
+}
+
+.st-key-application [data-testid^="stBaseButton-secondary"]:hover p {
+  color: var(--ap-teal);
+}
+
+.st-key-application [data-testid^="stBaseButton"]:focus-visible,
+.st-key-application [data-testid^="stBaseLinkButton"]:focus-visible {
+  outline: 3px solid rgba(15, 124, 136, 0.4);
+  outline-offset: 2px;
+}
+
+
+/* ----------------------------------------------------------
+   Label / value rows (plan limits, review, payment)
+   ---------------------------------------------------------- */
+
+.st-key-application .ls-rows {
+  border-top: 1px solid var(--ap-mist);
+}
+
+.st-key-application .ls-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--ap-mist);
+  font-size: 0.9rem;
+  color: var(--ap-slate);
+}
+
+.st-key-application .ls-row:last-child {
+  border-bottom: none;
+}
+
+.st-key-application .ls-row b {
+  color: var(--ap-ink);
+  font-weight: 600;
+  text-align: right;
+}
+
+.st-key-application .ls-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--ap-mist);
+  color: var(--ap-slate);
+}
+
+.st-key-application .ls-total b {
+  font-size: 1.6rem;
+  color: var(--ap-ink);
+}
+
+
+/* ----------------------------------------------------------
+   Selected plan box (step 3)
+   Dark card, so the text colors inside are light.
+   ---------------------------------------------------------- */
+
+.st-key-plan_summary {
+  gap: 0.4rem;
+  padding: 1.25rem 1.5rem 1.4rem;
+  background: var(--ap-ink);
+  border: 1px solid var(--ap-ink);
+  border-radius: 14px;
+  box-shadow: inset 0 4px 0 var(--ap-teal-light), 0 14px 32px -16px rgba(18, 40, 58, 0.55);
+}
+
+.st-key-plan_summary .ls-plan-label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ap-ink-muted);
+}
+
+.st-key-plan_summary .ls-plan-name {
+  margin: 0 0 0.6rem;
+  font-family: var(--ap-font-display);
+  font-size: 1.7rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #FFFFFF;
+}
+
+/* Billing cycle radio: light text, no light hover box */
+.st-key-plan_summary [data-testid="stWidgetLabel"] p,
+.st-key-plan_summary [data-testid="stRadio"] label p {
+  color: #FFFFFF;
+}
+
+.st-key-plan_summary [data-testid="stRadio"] label {
+  background: transparent;
+}
+
+.st-key-plan_summary [data-testid="stRadio"] label:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.st-key-plan_summary .ls-plan-price {
+  margin: 0.25rem 0 0;
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #FFFFFF;
+}
+
+.st-key-plan_summary .ls-plan-price small {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--ap-ink-muted);
+}
+
+.st-key-plan_summary .ls-plan-savings {
+  display: inline-block;
+  margin: 0;
+  padding: 0.2rem 0.6rem;
+  background: rgba(127, 221, 180, 0.15);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #7FDDB4;
+}
+
+.st-key-plan_summary .ls-limits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.st-key-plan_summary .ls-limit b {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.st-key-plan_summary .ls-limit span {
+  font-size: 0.8rem;
+  color: var(--ap-ink-muted);
+}
+
+
+/* ----------------------------------------------------------
+   Payment box (step 7)
+   ---------------------------------------------------------- */
+
+.st-key-payment_summary {
+  gap: 0.25rem;
+  padding: 1rem 1.5rem 1.8rem;
+  background: var(--ap-white);
+  border: 1px solid var(--ap-mist);
+  border-radius: 14px;
+  box-shadow: inset 0 4px 0 var(--ap-teal), 0 10px 28px -16px rgba(18, 40, 58, 0.25);
+}
+
+.st-key-payment_summary .ls-rows {
+  border-top: none;
+}
+
+
+/* ----------------------------------------------------------
+   Review boxes (step 6)
+   ---------------------------------------------------------- */
+
+[class*="st-key-section_"] {
+  gap: 0.25rem;
+  padding: 0.7rem 1rem 1.4rem;      /* extra bottom room: Streamlit trims 1rem under HTML blocks */
+  background: var(--ap-white);
+  border: 1px solid var(--ap-mist);
+  border-radius: 12px;
+}
+
+[class*="st-key-section_"] .ls-review-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ap-ink);
+}
+
+[class*="st-key-section_"] .ls-row {
+  padding: 0.3rem 0;
+  font-size: 0.85rem;
+}
+
+[class*="st-key-section_"] [data-testid^="stBaseButton"] {
+  min-height: 0;
+  padding: 0.15rem 0.5rem;
+}
+
+[class*="st-key-section_"] [data-testid^="stBaseButton"] p {
+  font-size: 0.82rem;
+}
+
+
+/* ----------------------------------------------------------
+   Note boxes
+   ---------------------------------------------------------- */
+
+.st-key-application .ls-note {
+  margin-bottom: 1.1rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--ap-film);
+  border: 1px solid var(--ap-mist);
+  border-left: 3px solid var(--ap-teal);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--ap-slate);
+}
+
+.st-key-application .ls-note-success {
+  background: var(--ap-green-soft);
+  border-color: #CBE8DC;
+  border-left-color: var(--ap-green);
+}
+
+.st-key-application [data-testid="stAlert"] {
+  border-radius: 8px;
+}
+
+
+/* ----------------------------------------------------------
+   Small screens
+   ---------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .st-key-application .ls-step-name,
+  .st-key-application .ls-progress-percent small {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-key-application * {
+    transition: none !important;
+  }
+}
+
+
+/* ==========================================================
+   MANAGE APPLICATIONS SIDE
+   streamlit_app/pages/system_administrator/manage_applications.py
+   The system administrator's page: metrics, application cards,
+   and the details / invoice / approve / reject / delete dialogs.
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   Page
+   ---------------------------------------------------------- */
+
+.st-key-ma_page {
+  max-width: 1040px;            /* keeps the page from stretching across wide screens */
+  margin: 0 auto;
+  gap: 1rem;
+  color: var(--ap-ink);
+  font-family: var(--ap-font-body);
+}
+
+.st-key-ma_page .ma-page-title {
+  margin: 0;
+  font-family: var(--ap-font-display);
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ap-ink);
+}
+
+.st-key-ma_page .ma-page-caption {
+  margin: 0.2rem 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--ap-slate);
+}
+
+
+/* ----------------------------------------------------------
+   Metric cards
+   ---------------------------------------------------------- */
+
+.st-key-ma_page .ma-metric {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.15rem;
+  background: var(--ap-white);
+  border: 1px solid var(--ap-mist);
+  border-radius: 12px;
+}
+
+.st-key-ma_page .ma-metric-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--ap-film);
+  color: var(--ap-slate);
+
+  /* draws the icon name (e.g. "hourglass_top") as a Material icon */
+  font-family: "Material Symbols Rounded";
+  font-size: 1.5rem;
+  font-weight: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  font-feature-settings: "liga";
+}
+
+.st-key-ma_page .ma-metric-amber .ma-metric-icon { background: #FFF4DC; color: #A86B00; }
+.st-key-ma_page .ma-metric-green .ma-metric-icon { background: var(--ap-green-soft); color: var(--ap-green); }
+.st-key-ma_page .ma-metric-red   .ma-metric-icon { background: #FDECEA; color: #B3402F; }
+
+.st-key-ma_page .ma-metric-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_page .ma-metric-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ap-ink);
+}
+
+
+/* ----------------------------------------------------------
+   Tabs (page and dialogs)
+   ---------------------------------------------------------- */
+
+.st-key-ma_page [role="tab"] p,
+.st-key-ma_dialog [role="tab"] p {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_page [role="tab"][aria-selected="true"] p,
+.st-key-ma_dialog [role="tab"][aria-selected="true"] p {
+  color: var(--ap-teal);
+}
+
+.st-key-ma_page [data-baseweb="tab-highlight"],
+.st-key-ma_dialog [data-baseweb="tab-highlight"] {
+  background-color: var(--ap-teal);
+}
+
+
+/* ----------------------------------------------------------
+   Application cards
+   ---------------------------------------------------------- */
+
+.st-key-ma_page [class*="st-key-app_card_"] {
+  gap: 0.7rem;
+  padding: 0.9rem 1.1rem 1rem;
+  background: var(--ap-white);
+  border: 1px solid var(--ap-mist);
+  border-radius: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.st-key-ma_page [class*="st-key-app_card_"]:hover {
+  border-color: #BCD3D8;
+  box-shadow: 0 10px 24px -16px rgba(18, 40, 58, 0.35);
+}
+
+.st-key-ma_page .ma-card-top {
+  margin-bottom: 0.6rem;        /* Streamlit trims 1rem under HTML blocks */
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.st-key-ma_page .ma-card-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ap-ink);
+}
+
+.st-key-ma_page .ma-card-meta {
+  margin: 0.1rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_page .ma-empty {
+  padding: 1.5rem 1rem;
+  border: 1px dashed var(--ap-mist);
+  border-radius: 12px;
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--ap-slate);
+}
+
+
+/* ----------------------------------------------------------
+   Status pills (cards and details header)
+   ---------------------------------------------------------- */
+
+.ma-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ma-pill {
+  display: inline-block;
+  padding: 0.18rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ma-pill-green { background: var(--ap-green-soft); color: #23745A; }
+.ma-pill-amber { background: #FFF4DC; color: #8A5A00; }
+.ma-pill-red   { background: #FDECEA; color: #B3402F; }
+.ma-pill-blue  { background: #E8F1FB; color: #2A5FA8; }
+.ma-pill-grey  { background: #EEF2F4; color: var(--ap-slate); }
+
+
+/* ----------------------------------------------------------
+   Buttons (page and dialogs)
+   !important is used on background/border because Streamlit
+   repaints buttons on hover, focus and click.
+   ---------------------------------------------------------- */
+
+.st-key-ma_page [data-testid^="stBaseButton"],
+.st-key-ma_dialog [data-testid^="stBaseButton"] {
+  min-height: 2.1rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.st-key-ma_page [data-testid^="stBaseButton"] p,
+.st-key-ma_dialog [data-testid^="stBaseButton"] p {
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+/* main action */
+.st-key-ma_page [data-testid^="stBaseButton-primary"],
+.st-key-ma_dialog [data-testid^="stBaseButton-primary"] {
+  background: var(--ap-teal) !important;
+  border: 1px solid var(--ap-teal) !important;
+}
+
+.st-key-ma_page [data-testid^="stBaseButton-primary"] p,
+.st-key-ma_dialog [data-testid^="stBaseButton-primary"] p {
+  color: #FFFFFF;
+}
+
+.st-key-ma_page [data-testid^="stBaseButton-primary"]:hover,
+.st-key-ma_dialog [data-testid^="stBaseButton-primary"]:hover {
+  background: var(--ap-teal-dark) !important;
+  border-color: var(--ap-teal-dark) !important;
+}
+
+.st-key-ma_page [data-testid^="stBaseButton-primary"]:disabled {
+  background: #C9D8DC !important;
+  border-color: #C9D8DC !important;
+}
+
+/* quiet action */
+.st-key-ma_page [data-testid^="stBaseButton-secondary"],
+.st-key-ma_dialog [data-testid^="stBaseButton-secondary"] {
+  background: var(--ap-white) !important;
+  border: 1px solid var(--ap-mist) !important;
+}
+
+.st-key-ma_page [data-testid^="stBaseButton-secondary"] p,
+.st-key-ma_dialog [data-testid^="stBaseButton-secondary"] p {
+  color: var(--ap-slate);
+}
+
+.st-key-ma_page [data-testid^="stBaseButton-secondary"] [data-testid="stIconMaterial"] {
+  font-size: 1.1rem;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_page [data-testid^="stBaseButton-secondary"]:hover,
+.st-key-ma_dialog [data-testid^="stBaseButton-secondary"]:hover {
+  border-color: var(--ap-teal) !important;
+}
+
+.st-key-ma_page [data-testid^="stBaseButton-secondary"]:hover p,
+.st-key-ma_dialog [data-testid^="stBaseButton-secondary"]:hover p,
+.st-key-ma_page [data-testid^="stBaseButton-secondary"]:hover [data-testid="stIconMaterial"] {
+  color: var(--ap-teal);
+}
+
+.st-key-ma_page [data-testid^="stBaseButton"]:focus-visible,
+.st-key-ma_dialog [data-testid^="stBaseButton"]:focus-visible {
+  outline: 3px solid rgba(15, 124, 136, 0.4);
+  outline-offset: 2px;
+}
+
+/* Reject / Delete on the cards turn red on hover */
+[class*="st-key-reject_"] [data-testid^="stBaseButton"]:hover,
+[class*="st-key-delete_"] [data-testid^="stBaseButton"]:hover {
+  border-color: #E5B5B0 !important;
+  background: #FDF5F4 !important;
+}
+
+[class*="st-key-reject_"] [data-testid^="stBaseButton"]:hover p,
+[class*="st-key-reject_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"],
+[class*="st-key-delete_"] [data-testid^="stBaseButton"]:hover p,
+[class*="st-key-delete_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] {
+  color: #B3402F;
+}
+
+/* the final "Reject" and "Delete permanently" buttons in the dialogs are red */
+[class*="st-key-confirm_reject_"] [data-testid^="stBaseButton"],
+[class*="st-key-confirm_delete_"] [data-testid^="stBaseButton"] {
+  background: #B3402F !important;
+  border-color: #B3402F !important;
+}
+
+[class*="st-key-confirm_reject_"] [data-testid^="stBaseButton"]:hover,
+[class*="st-key-confirm_delete_"] [data-testid^="stBaseButton"]:hover {
+  background: #963424 !important;
+  border-color: #963424 !important;
+}
+
+
+/* ----------------------------------------------------------
+   Dialogs
+   ---------------------------------------------------------- */
+
+.st-key-ma_dialog {
+  gap: 0.85rem;
+  color: var(--ap-ink);
+}
+
+.st-key-ma_dialog .ma-dialog-head {
+  margin-bottom: 0.3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.st-key-ma_dialog .ma-dialog-title {
+  margin: 0;
+  font-family: var(--ap-font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ap-ink);
+}
+
+.st-key-ma_dialog .ma-dialog-sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_dialog .ma-dialog-text {
+  margin: 0 0 0.5rem;
+  font-size: 0.97rem;
+  line-height: 1.5;
+  color: var(--ap-ink);
+}
+
+.st-key-ma_dialog .ma-subtitle {
+  margin: 0.4rem 0 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_dialog .ma-subtitle:first-child {
+  margin-top: 0.1rem;
+}
+
+/* label / value rows */
+.st-key-ma_dialog .ma-rows {
+  margin-bottom: 0.9rem;
+  border-top: 1px solid var(--ap-mist);
+}
+
+.st-key-ma_dialog .ma-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--ap-mist);
+  font-size: 0.88rem;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_dialog .ma-row:last-child {
+  border-bottom: none;
+}
+
+.st-key-ma_dialog .ma-row b {
+  max-width: 65%;
+  font-weight: 600;
+  text-align: right;
+  color: var(--ap-ink);
+  overflow-wrap: anywhere;
+}
+
+/* note boxes */
+.st-key-ma_dialog .ma-note {
+  margin-bottom: 0.9rem;        /* Streamlit trims 1rem under HTML blocks */
+  padding: 0.65rem 0.9rem;
+  background: var(--ap-film);
+  border: 1px solid var(--ap-mist);
+  border-left: 3px solid var(--ap-teal);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_dialog .ma-note-green { background: var(--ap-green-soft); border-color: #CBE8DC; border-left-color: var(--ap-green); }
+.st-key-ma_dialog .ma-note-red   { background: #FDF3F2; border-color: #F2D3CF; border-left-color: #B3402F; }
+.st-key-ma_dialog .ma-note-amber { background: #FFF9EB; border-color: #F5E4BB; border-left-color: #D9930D; }
+
+
+/* ----------------------------------------------------------
+   Invoice
+   ---------------------------------------------------------- */
+
+.st-key-ma_dialog .ma-inv {
+  margin-bottom: 0.9rem;
+  background: var(--ap-white);
+  border: 1px solid var(--ap-mist);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.st-key-ma_dialog .ma-inv-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1.25rem;
+  background: var(--ap-film);
+  border-bottom: 1px solid var(--ap-mist);
+}
+
+.st-key-ma_dialog .ma-inv-label {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_dialog .ma-inv-number {
+  margin: 0;
+  font-family: var(--ap-font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+}
+
+.st-key-ma_dialog .ma-inv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.5rem;
+  padding: 1rem 1.25rem 1.1rem;
+}
+
+.st-key-ma_dialog .ma-inv-block span {
+  display: block;
+  margin-top: 0.55rem;
+  font-size: 0.74rem;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_dialog .ma-inv-block span:first-child {
+  margin-top: 0;
+}
+
+.st-key-ma_dialog .ma-inv-block b {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+  overflow-wrap: anywhere;
+}
+
+.st-key-ma_dialog .ma-inv-block small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_dialog .ma-inv-lines {
+  padding: 0 1.25rem;
+  border-top: 1px solid var(--ap-mist);
+}
+
+.st-key-ma_dialog .ma-inv-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--ap-mist);
+  font-size: 0.9rem;
+  color: var(--ap-ink);
+}
+
+.st-key-ma_dialog .ma-inv-line:last-child {
+  border-bottom: none;
+}
+
+.st-key-ma_dialog .ma-inv-line-head {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ap-slate);
+}
+
+.st-key-ma_dialog .ma-inv-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.8rem 1.25rem;
+  background: var(--ap-film);
+  border-top: 1px solid var(--ap-mist);
+  color: var(--ap-slate);
+}
+
+.st-key-ma_dialog .ma-inv-total b {
+  font-size: 1.45rem;
+  color: var(--ap-ink);
+}
+
+
+/* ----------------------------------------------------------
+   Small screens
+   ---------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .st-key-ma_dialog .ma-inv-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-key-ma_page *,
+  .st-key-ma_dialog * {
+    transition: none !important;
+  }
+}

@@ -1,0 +1,18 @@
+# Streamlit configuration file to force light theme
+# Place this at .streamlit/config.toml in your project root
+
+[theme]
+base = "light"
+# Optional: set additional theme colors if you want custom look
+# primaryColor = "#1f77b4"
+# backgroundColor = "#FFFFFF"
+# secondaryBackgroundColor = "#F0F2F6"
+# font = "sans serif"
+
+[server]
+enableStaticServing = true
+
+[client]
+showSidebarNavigation = false
+toolbarMode = "minimal"
+

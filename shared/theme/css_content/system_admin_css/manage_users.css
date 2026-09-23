@@ -1,0 +1,21 @@
+/* ==========================================================
+   SYSTEM ADMIN - MANAGE USERS
+   shared/theme/css_content/system_admin_css/manage_users.css
+   Only what is unique to this page. The table, pills, avatars,
+   metric cards and dialogs come from base.css.
+   ========================================================== */
+
+/* the last three columns hold small icon buttons: keep them tight */
+[class*="st-key-sa_row_users_"] [data-testid="stHorizontalBlock"] {
+  gap: 0.35rem;
+}
+
+/* the view / edit / delete icons line up under the "Actions" header */
+[class*="st-key-sa_row_users_"] [data-testid^="stBaseButton"] {
+  width: 100%;
+}
+
+/* users that are inactive look a little quieter */
+[class*="st-key-sa_row_users_"] .sa-pill-grey {
+  opacity: 0.9;
+}

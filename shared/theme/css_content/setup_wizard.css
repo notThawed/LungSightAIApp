@@ -1,0 +1,537 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+
+/* ==========================================================
+   LungSight hospital setup wizard
+   Same tokens as application.css, so this screen and the
+   application dialog feel like one product.
+   ========================================================== */
+
+:root {
+  --ap-film:      #F2F6F7;
+  --ap-white:     #FFFFFF;
+  --ap-ink:       #12283A;
+  --ap-slate:     #5A6F7F;
+  --ap-mist:      #DDE8EB;
+  --ap-teal:      #0F7C88;
+  --ap-teal-dark: #0B626C;
+  --ap-teal-soft: #E8F4F6;
+  --ap-green:     #2E8B6A;
+  --ap-green-soft:#EAF6F1;
+
+  --ap-font-display: 'Fraunces', Georgia, serif;
+  --ap-font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.st-key-setup_wizard {
+  font-family: var(--ap-font-body);
+  color: var(--ap-ink);
+}
+
+.st-key-setup_wizard h1 {
+  font-family: var(--ap-font-display);
+  font-weight: 600;
+}
+
+
+/* ----------------------------------------------------------
+   Back to Login button — quiet, top-left, not competing
+   with the primary step navigation buttons
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard .st-key-setup_back_to_login button {
+  background: transparent !important;
+  border: none !important;
+  color: var(--ap-slate) !important;
+  font-weight: 500;
+  padding: 0.2rem 0;
+  box-shadow: none !important;
+}
+
+.st-key-setup_wizard .st-key-setup_back_to_login button:hover {
+  color: var(--ap-teal) !important;
+  text-decoration: underline;
+}
+
+.st-key-setup_wizard .st-key-setup_back_to_login button p {
+  color: inherit;
+  font-weight: 500;
+}
+
+
+/* ----------------------------------------------------------
+   Progress tracker — same shape as the application dialog's
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard .ls-progress {
+  background: var(--ap-film);
+  border: 1px solid var(--ap-mist);
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.st-key-setup_wizard .ls-progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.st-key-setup_wizard .ls-progress-title {
+  font-family: var(--ap-font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+  margin: 0;
+}
+
+.st-key-setup_wizard .ls-progress-meta {
+  font-size: 0.82rem;
+  color: var(--ap-slate);
+  margin: 0.2rem 0 0;
+}
+
+.st-key-setup_wizard .ls-progress-percent {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ap-teal);
+  text-align: right;
+}
+
+.st-key-setup_wizard .ls-progress-percent small {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--ap-slate);
+}
+
+.st-key-setup_wizard .ls-bar {
+  height: 6px;
+  margin: 0.75rem 0 0.9rem;
+  background: var(--ap-mist);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.st-key-setup_wizard .ls-bar-fill {
+  height: 100%;
+  background: var(--ap-teal);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.st-key-setup_wizard .ls-steps {
+  display: flex;
+}
+
+.st-key-setup_wizard .ls-step {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+}
+
+.st-key-setup_wizard .ls-step::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--ap-mist);
+}
+
+.st-key-setup_wizard .ls-step:first-child::before {
+  display: none;
+}
+
+.st-key-setup_wizard .ls-step-done::before,
+.st-key-setup_wizard .ls-step-current::before {
+  background: var(--ap-teal);
+}
+
+.st-key-setup_wizard .ls-dot {
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--ap-white);
+  border: 2px solid var(--ap-mist);
+  color: var(--ap-slate);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.st-key-setup_wizard .ls-step-done .ls-dot {
+  background: var(--ap-teal);
+  border-color: var(--ap-teal);
+  color: #FFFFFF;
+}
+
+.st-key-setup_wizard .ls-step-current .ls-dot {
+  border-color: var(--ap-teal);
+  color: var(--ap-teal);
+  box-shadow: 0 0 0 4px rgba(15, 124, 136, 0.16);
+}
+
+.st-key-setup_wizard .ls-step-name {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--ap-slate);
+}
+
+.st-key-setup_wizard .ls-step-done .ls-step-name {
+  color: var(--ap-teal-dark);
+}
+
+.st-key-setup_wizard .ls-step-current .ls-step-name {
+  color: var(--ap-ink);
+  font-weight: 700;
+}
+
+
+/* ----------------------------------------------------------
+   Step heading
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard .ls-step-header {
+  margin: 0.35rem 0 1rem;
+}
+
+.st-key-setup_wizard .ls-step-title {
+  font-family: var(--ap-font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+  margin: 0;
+}
+
+.st-key-setup_wizard .ls-step-caption {
+  font-size: 0.9rem;
+  color: var(--ap-slate);
+  margin: 0.15rem 0 0;
+}
+
+
+/* ----------------------------------------------------------
+   Upload card (logo / profile picture)
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard .ls-upload-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  background: var(--ap-film);
+  border: 1px dashed var(--ap-mist);
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+}
+
+.st-key-setup_wizard .ls-upload-card img,
+.st-key-setup_wizard .ls-upload-card [data-testid="stImage"] img {
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--ap-mist);
+}
+
+.st-key-setup_wizard .ls-upload-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+  margin: 0 0 0.15rem;
+}
+
+.st-key-setup_wizard .ls-upload-caption {
+  font-size: 0.78rem;
+  color: var(--ap-slate);
+  margin: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Label / value rows (review step, subscription)
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard .ls-rows {
+  border-top: 1px solid var(--ap-mist);
+}
+
+.st-key-setup_wizard .ls-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--ap-mist);
+  font-size: 0.88rem;
+  color: var(--ap-slate);
+}
+
+.st-key-setup_wizard .ls-row:last-child {
+  border-bottom: none;
+}
+
+.st-key-setup_wizard .ls-row b {
+  color: var(--ap-ink);
+  font-weight: 600;
+  text-align: right;
+}
+
+
+/* ----------------------------------------------------------
+   Review section boxes
+   ---------------------------------------------------------- */
+
+[class*="st-key-setup_section_"] {
+  padding: 0.9rem 1.1rem 1.3rem;
+  background: var(--ap-white);
+  border: 1px solid var(--ap-mist);
+  border-radius: 12px;
+  margin-bottom: 0.85rem;
+}
+
+[class*="st-key-setup_section_"] .ls-review-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.4rem;
+  font-family: var(--ap-font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+}
+
+[class*="st-key-setup_section_"] .ls-review-avatar img {
+  border-radius: 10px;
+  border: 1px solid var(--ap-mist);
+}
+
+
+/* ----------------------------------------------------------
+   Subscription plan box (step 3) — dark card like
+   the plan_summary box in application.css
+   ---------------------------------------------------------- */
+
+.st-key-setup_plan {
+  padding: 1.25rem 1.5rem 1.4rem;
+  background: var(--ap-ink);
+  border: 1px solid var(--ap-ink);
+  border-radius: 14px;
+  box-shadow: 0 14px 32px -16px rgba(18, 40, 58, 0.55);
+  margin-bottom: 0.75rem;
+}
+
+.st-key-setup_plan .ls-plan-label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #A9BAC7;
+}
+
+.st-key-setup_plan .ls-plan-name {
+  margin: 0 0 0.5rem;
+  font-family: var(--ap-font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.st-key-setup_plan .ls-plan-desc {
+  font-size: 0.85rem;
+  color: #A9BAC7;
+  margin: 0 0 0.75rem;
+}
+
+.st-key-setup_plan .ls-plan-price {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0;
+}
+
+.st-key-setup_plan .ls-plan-price small {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #A9BAC7;
+}
+
+.st-key-setup_plan .ls-limits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.st-key-setup_plan .ls-limit b {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.st-key-setup_plan .ls-limit span {
+  font-size: 0.78rem;
+  color: #A9BAC7;
+}
+
+.st-key-setup_plan .ls-plan-dates {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 0.82rem;
+  color: #A9BAC7;
+}
+
+.st-key-setup_plan .ls-plan-dates b {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+
+/* ----------------------------------------------------------
+   Note boxes
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard .ls-note {
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--ap-film);
+  border: 1px solid var(--ap-mist);
+  border-left: 3px solid var(--ap-teal);
+  border-radius: 8px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--ap-slate);
+}
+
+.st-key-setup_wizard [data-testid="stAlert"] {
+  border-radius: 8px;
+}
+
+
+/* ----------------------------------------------------------
+   Form fields — same treatment as application.css
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard label p {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+}
+
+.st-key-setup_wizard [data-testid="stTextInputRootElement"],
+.st-key-setup_wizard [data-testid="stTextAreaRootElement"],
+.st-key-setup_wizard [data-testid="stSelectbox"] [role="group"],
+.st-key-setup_wizard div[data-baseweb="input"],
+.st-key-setup_wizard div[data-baseweb="textarea"],
+.st-key-setup_wizard div[data-baseweb="select"] > div {
+  background: var(--ap-film);
+  border: 1px solid var(--ap-mist);
+  border-radius: 8px;
+}
+
+.st-key-setup_wizard input,
+.st-key-setup_wizard textarea,
+.st-key-setup_wizard div[data-baseweb="base-input"] {
+  background: transparent;
+  color: var(--ap-ink);
+  font-family: var(--ap-font-body);
+}
+
+.st-key-setup_wizard [data-testid="stTextInputRootElement"]:focus-within,
+.st-key-setup_wizard [data-testid="stTextAreaRootElement"]:focus-within,
+.st-key-setup_wizard [data-testid="stSelectbox"] [role="group"]:focus-within,
+.st-key-setup_wizard div[data-baseweb="select"] > div:focus-within {
+  border-color: var(--ap-teal);
+  box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.18);
+}
+
+.st-key-setup_wizard [data-testid="stFileUploaderDropzone"] {
+  background: var(--ap-white);
+  border: 1px dashed var(--ap-mist);
+  border-radius: 8px;
+}
+
+
+/* ----------------------------------------------------------
+   Buttons
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard [data-testid^="stBaseButton"] {
+  border-radius: 8px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.st-key-setup_wizard [data-testid^="stBaseButton-primary"] {
+  background: var(--ap-teal) !important;
+  border: 1px solid var(--ap-teal) !important;
+}
+
+.st-key-setup_wizard [data-testid^="stBaseButton-primary"] p {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.st-key-setup_wizard [data-testid^="stBaseButton-primary"]:hover {
+  background: var(--ap-teal-dark) !important;
+  border-color: var(--ap-teal-dark) !important;
+}
+
+.st-key-setup_wizard [data-testid^="stBaseButton-secondary"] {
+  background: var(--ap-white) !important;
+  border: 1px solid var(--ap-mist) !important;
+}
+
+.st-key-setup_wizard [data-testid^="stBaseButton-secondary"] p {
+  color: var(--ap-slate);
+  font-weight: 600;
+}
+
+.st-key-setup_wizard [data-testid^="stBaseButton-secondary"]:hover {
+  border-color: var(--ap-teal) !important;
+}
+
+.st-key-setup_wizard [data-testid^="stBaseButton-secondary"]:hover p {
+  color: var(--ap-teal);
+}
+
+.st-key-setup_wizard [data-testid^="stBaseButton"]:focus-visible {
+  outline: 3px solid rgba(15, 124, 136, 0.4);
+  outline-offset: 2px;
+}
+
+
+/* ----------------------------------------------------------
+   Small screens
+   ---------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .st-key-setup_wizard .ls-step-name,
+  .st-key-setup_wizard .ls-progress-percent small {
+    display: none;
+  }
+
+  .st-key-setup_wizard .ls-upload-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-key-setup_wizard * {
+    transition: none !important;
+  }
+}

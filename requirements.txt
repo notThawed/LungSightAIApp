@@ -1,0 +1,9 @@
+streamlit
+fastapi
+uvicorn
+sqlalchemy
+pillow
+supabase
+psycopg2-binary
+python-dotenv
+streamlit-drawable-canvas

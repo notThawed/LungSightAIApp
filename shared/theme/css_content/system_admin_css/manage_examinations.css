@@ -1,0 +1,21 @@
+/* ==========================================================
+   SYSTEM ADMIN - MANAGE EXAMINATIONS
+   shared/theme/css_content/system_admin_css/manage_examinations.css
+   Only what is unique to this page. The tables, pills, buttons
+   and dialogs come from base.css.
+   ========================================================== */
+
+/* the examination history list inside the dialog is a small table */
+.st-key-sa_table_history {
+  margin-bottom: 0.4rem;
+}
+
+/* the "Examine" button in each row is a quiet outlined button */
+[class*="st-key-sa_row_exam_patients_"] [data-testid^="stBaseButton"] {
+  padding: 0.25rem 0.7rem;
+}
+
+/* pill under the details rows: give it some room */
+.st-key-sa_dialog .sa-pill {
+  margin-bottom: 0.2rem;
+}

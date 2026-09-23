@@ -1,0 +1,27 @@
+/* ==========================================================
+   SYSTEM ADMIN - MEDICAL RECORDS
+   shared/theme/css_content/system_admin_css/manage_medical_records.css
+   Only what is unique to this page. Tables, rows, fields, tabs
+   and buttons come from base.css.
+   ========================================================== */
+
+/* attached images (X-rays, scans) get a soft frame */
+.st-key-sa_dialog [data-testid="stImage"] img {
+  border: 1px solid var(--sa-mist);
+  border-radius: 10px;
+}
+
+/* long clinical text stays readable */
+.st-key-sa_dialog .sa-field p {
+  max-width: 62ch;
+}
+
+/* the add-record form is long: keep text areas compact */
+.st-key-sa_dialog [data-testid="stForm"] textarea {
+  min-height: 4.5rem;
+}
+
+/* the records list inside the dialog */
+.st-key-sa_table_records {
+  margin-bottom: 0.4rem;
+}
