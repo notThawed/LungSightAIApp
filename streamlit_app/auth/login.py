@@ -77,9 +77,9 @@ def check_login(email, password):
 def show_login_form():
     with st.container(key="login_card"):
         st.markdown(
-            "<p class='ls-login-title'>Sign in</p>"
+            "<p class='ls-login-title'>Sign-In</p>"
             "<p class='ls-login-subtitle'>"
-            "Access your hospital's LungSight workspace."
+            "Test Edit for a new Commit"
             "</p>",
             unsafe_allow_html=True,
         )
