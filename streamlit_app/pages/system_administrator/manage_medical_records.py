@@ -2,6 +2,8 @@ import streamlit as st
 
 from backend.fetches import (
     get_all_patients,
+    get_all_hospitals,
+    get_examinations_by_patient,
     get_medical_records_by_patient,
     get_medical_record_images,
     get_medical_record_file_url,
@@ -18,357 +20,1448 @@ from streamlit_app.components.ui import (
     empty_state,
     section_title,
     show_rows,
-    field,
     full_name,
     format_date,
     table_header,
     table_row,
     name_cell,
     text_cell,
+    pill_cell,
     remember,
     show_flash_message,
 )
 
+from datetime import date
 
-# Column widths: name, date of birth, sex, view button
-WIDTHS = [3.5, 1.8, 1, 1.2]
-HEADERS = ["Patient", "Date of birth", "Sex", ""]
 
-# Column widths in the history dialog: date, type, diagnosis, facility, view
-RECORD_WIDTHS = [1.4, 1.4, 2.4, 2, 0.9]
+# ============================================================
+# CONFIG
+# ============================================================
 
-RECORD_TYPES = ["X-Ray", "CT Scan", "MRI", "Laboratory Result", "Diagnosis", "Medical Report", "Other"]
+WIDTHS = [
+    1.3,
+    3,
+    1.5,
+    0.9,
+    1.8,
+    2,
+    1,
+]
 
+WIDTHS_SUPERADMIN = [
+    1.6,
+    1.3,
+    2.7,
+    1.4,
+    0.9,
+    1.5,
+    1,
+]
+
+HEADERS = [
+    "Patient ID",
+    "Name",
+    "Date of birth",
+    "Sex",
+    "Contact",
+    "Hospital",
+    "Records",
+]
+
+HEADERS_SUPERADMIN = [
+    "Hospital",
+    "Patient ID",
+    "Name",
+    "Date of birth",
+    "Sex",
+    "Contact",
+    "Records",
+]
+
+
+EXAM_WIDTHS = [
+    1.5,
+    2,
+    1.5,
+    1,
+]
+
+EXAM_HEADERS = [
+    "Date",
+    "Examination",
+    "Status",
+    "View",
+]
+
+
+MEDICAL_WIDTHS = [
+    1.4,
+    1.8,
+    2.5,
+    1,
+]
+
+MEDICAL_HEADERS = [
+    "Date",
+    "Record type",
+    "Facility",
+    "View",
+]
+
+
+STATUS_TONES = {
+    "Completed": "green",
+    "Pending": "amber",
+    "In Progress": "blue",
+    "Awaiting X-Ray": "amber",
+    "X-Ray Ready": "blue",
+    "Cancelled": "red",
+}
+
+
+ROLE_SUPERADMIN = 1
+
+
+# ============================================================
+# HELPERS
+# ============================================================
 
 def load_patients():
-    """Load all patients. Shows an error and returns [] if it fails."""
 
     try:
+
         return get_all_patients() or []
 
     except Exception as error:
-        st.error(f"Failed to load patients: {error}")
+
+        st.error(
+            f"Unable to load patients: {error}"
+        )
+
         return []
 
 
-def patient_name(patient):
-    return full_name(patient.get("first_name"), patient.get("middle_name"), patient.get("last_name"))
+def patient_name(
+    patient
+):
 
-
-def clear_medical_state(*keys):
-    for key in keys:
-        st.session_state.pop(key, None)
-
-
-# ============================================================
-# VIEW ONE MEDICAL RECORD
-# ============================================================
-
-def show_medical_record_details(record):
-
-    record_id = record.get("medical_record_id")
-
-    record_tab, clinical_tab, documents_tab = st.tabs(["Record", "Clinical", "Documents"])
-
-    with record_tab:
-        show_rows([
-            ("Record date", format_date(record.get("record_date"))),
-            ("Record type", record.get("record_type")),
-            ("Healthcare facility", record.get("facility_name")),
-            ("Department", record.get("department")),
-            ("Attending physician", record.get("attending_physician")),
-            ("Record source", record.get("record_source") or "External"),
-        ])
-
-    with clinical_tab:
-        for label, key in [
-            ("Chief complaint", "chief_complaint"),
-            ("Clinical history", "clinical_history"),
-            ("Diagnosis", "diagnosis"),
-            ("Procedure", "procedure_name"),
-            ("Findings", "findings"),
-            ("Impression", "impression"),
-            ("Treatment", "treatment"),
-            ("Follow-up / recommendations", "follow_up"),
-        ]:
-            field(label, record.get(key))
-
-    with documents_tab:
-        images = get_medical_record_images(record_id)
-
-        if not images:
-            empty_state("No medical documents attached to this record.")
-
-        for image in images or []:
-
-            image_url = image.get("image_url")
-            image_type = image.get("image_type", "Medical document")
-
-            if not image_url:
-                continue
-
-            signed_url = get_medical_record_file_url(image_url)
-
-            if not signed_url:
-                st.error(f"Unable to load {image_type}.")
-                continue
-
-            st.markdown(f"<p class='sa-subtitle'>{image_type}</p>", unsafe_allow_html=True)
-
-            if image_url.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
-                st.image(signed_url, width="stretch")
-            elif image_url.lower().endswith(".pdf"):
-                st.markdown(f"[Open medical document]({signed_url})")
-
-    if st.button("Back to medical history", key="back_to_history", width="stretch"):
-        clear_medical_state("selected_medical_record")
-        st.rerun()
-
-
-# ============================================================
-# ADD AN EXTERNAL MEDICAL RECORD
-# ============================================================
-
-def show_create_external_record_form(patient):
-
-    section_title(
-        "Add external medical record",
-        "Enter a record from a previous healthcare facility.",
+    return full_name(
+        patient.get(
+            "first_name"
+        ),
+        patient.get(
+            "middle_name"
+        ),
+        patient.get(
+            "last_name"
+        ),
+        patient.get(
+            "suffix"
+        ),
     )
 
-    errors = st.container()
 
-    with st.form("external_record_form", clear_on_submit=False):
+def patient_code(
+    patient
+):
 
-        date_col, type_col = st.columns(2)
+    return (
+        patient.get(
+            "patient_code"
+        )
+        or patient.get(
+            "patient_id"
+        )
+    )
 
-        record_date = date_col.date_input("Record date")
-        record_type = type_col.selectbox("Record type", RECORD_TYPES)
 
-        facility_col, department_col, physician_col = st.columns(3)
+def patient_hospital_name(
+    patient
+):
 
-        facility_name = facility_col.text_input("Healthcare facility *", placeholder="e.g. Chong Hua Hospital")
-        department = department_col.text_input("Department", placeholder="e.g. Radiology")
-        attending_physician = physician_col.text_input("Attending physician", placeholder="e.g. Dr. Juan Dela Cruz")
+    hospitals = patient.get(
+        "hospitals"
+    )
 
-        complaint_col, history_col = st.columns(2)
+    if isinstance(
+        hospitals,
+        dict,
+    ):
 
-        chief_complaint = complaint_col.text_area("Chief complaint", height=90)
-        clinical_history = history_col.text_area("Clinical history", height=90)
-
-        diagnosis_col, procedure_col = st.columns(2)
-
-        diagnosis = diagnosis_col.text_area("Diagnosis", height=90)
-        procedure_name = procedure_col.text_area("Procedure", height=90, placeholder="e.g. Chest PA and Lateral")
-
-        findings_col, impression_col = st.columns(2)
-
-        findings = findings_col.text_area("Findings", height=90)
-        impression = impression_col.text_area("Impression", height=90)
-
-        treatment_col, follow_up_col = st.columns(2)
-
-        treatment = treatment_col.text_area("Treatment", height=90)
-        follow_up = follow_up_col.text_area("Follow-up / recommendations", height=90)
-
-        uploaded_files = st.file_uploader(
-            "Medical images or documents",
-            type=["jpg", "jpeg", "png", "webp", "pdf"],
-            accept_multiple_files=True,
+        return (
+            hospitals.get(
+                "hospital_name"
+            )
+            or "—"
         )
 
-        cancel_col, save_col = st.columns(2)
+    if isinstance(
+        hospitals,
+        list,
+    ) and hospitals:
 
-        cancel = cancel_col.form_submit_button("Cancel", width="stretch")
-        save = save_col.form_submit_button("Save medical record", type="primary", width="stretch")
-
-    if cancel:
-        clear_medical_state("adding_medical_record")
-        st.rerun()
-
-    if not save:
-        return
-
-    created_by = (st.session_state.get("user") or {}).get("user_id")
-
-    if not facility_name.strip():
-        errors.error("Healthcare facility is required.")
-        return
-
-    if not created_by:
-        errors.error("Unable to identify the current user. Please log in again.")
-        return
-
-    with st.spinner("Saving medical record..."):
-        result = create_medical_record(
-            patient_id=patient.get("patient_id"),
-            record_date=record_date,
-            record_type=record_type,
-            facility_name=facility_name,
-            department=department,
-            attending_physician=attending_physician,
-            chief_complaint=chief_complaint,
-            clinical_history=clinical_history,
-            diagnosis=diagnosis,
-            procedure_name=procedure_name,
-            findings=findings,
-            impression=impression,
-            treatment=treatment,
-            follow_up=follow_up,
-            created_by=created_by,
+        return (
+            hospitals[0].get(
+                "hospital_name"
+            )
+            or "—"
         )
 
-    if not result.get("success"):
-        errors.error(result.get("message", "Failed to create medical record."))
-        return
+    return "—"
 
-    medical_record_id = (result.get("data") or {}).get("medical_record_id")
 
-    if not medical_record_id:
-        errors.error("The record was created, but its ID could not be retrieved.")
-        return
+def current_user():
 
-    # ---- upload the files, one by one ----
+    return (
+        st.session_state.get(
+            "user"
+        )
+        or {}
+    )
 
-    for index, uploaded_file in enumerate(uploaded_files or [], start=1):
 
-        with st.spinner(f"Uploading file {index} of {len(uploaded_files)}: {uploaded_file.name}"):
-            upload_result = upload_medical_record_file(
-                medical_record_id=medical_record_id,
-                uploaded_file=uploaded_file,
-                image_type=record_type,
-            )
+def current_role_id():
 
-        if not upload_result.get("success"):
-            errors.warning(
-                "The record was created, but a file could not be uploaded: "
-                f"{uploaded_file.name} ({upload_result.get('message', 'Unknown error.')})"
-            )
-            return
+    return current_user().get(
+        "role_id"
+    )
 
-    clear_medical_state("adding_medical_record")
-    remember("Medical record saved.")
+
+def current_hospital_id():
+
+    return current_user().get(
+        "hospital_id"
+    )
+
+
+def is_superadmin():
+
+    return (
+        current_role_id()
+        == ROLE_SUPERADMIN
+    )
+
+
+def open_dialog(
+    name,
+    **state,
+):
+
+    st.session_state[
+        "patient_records_dialog"
+    ] = name
+
+    for key, value in state.items():
+
+        st.session_state[
+            key
+        ] = value
+
     st.rerun()
 
 
 # ============================================================
-# MEDICAL HISTORY DIALOG (history list, one record, or the add form)
+# PATIENT RECORDS DIALOG
 # ============================================================
 
-@st.dialog("Medical history", width="medium")
-def show_medical_history_dialog(patient):
+@st.dialog(
+    "Patient Records",
+    width="large",
+)
+def show_patient_records(
+    patient
+):
 
-    with st.container(key="sa_dialog"):
-
-        selected_record = st.session_state.get("selected_medical_record")
-
-        if selected_record:
-            show_medical_record_details(selected_record)
-            return
-
-        if st.session_state.get("adding_medical_record", False):
-            show_create_external_record_form(patient)
-            return
-
-        patient_id = patient.get("patient_id")
-
-        show_rows([
-            ("Patient", patient_name(patient)),
-            ("Date of birth", format_date(patient.get("date_of_birth"))),
-            ("Sex", patient.get("sex")),
-        ])
-
-        if st.button(
-            "Add external record", key=f"add_external_{patient_id}",
-            icon=":material/add:", type="primary", width="stretch",
-        ):
-            st.session_state["adding_medical_record"] = True
-            st.rerun()
-
-        records = get_medical_records_by_patient(patient_id)
-
-        if not records:
-            empty_state("No external medical records found.")
-
-        else:
-            section_title(f"{len(records)} medical record(s)")
-
-            with st.container(key="sa_table_records"):
-
-                table_header(["Date", "Type", "Diagnosis / procedure", "Facility", ""], RECORD_WIDTHS, "records")
-
-                for record in records:
-
-                    record_id = record.get("medical_record_id")
-
-                    with table_row(f"records_{record_id}", RECORD_WIDTHS) as cols:
-
-                        text_cell(cols[0], format_date(record.get("record_date")))
-                        text_cell(cols[1], record.get("record_type"))
-                        text_cell(cols[2], record.get("diagnosis") or record.get("procedure_name"))
-                        text_cell(cols[3], record.get("facility_name"))
-
-                        if cols[4].button("View", key=f"view_record_{record_id}", width="stretch"):
-                            st.session_state["selected_medical_record"] = record
-                            st.rerun()
-
-        if st.button("Close", key=f"close_history_{patient_id}", width="stretch"):
-            clear_medical_state("selected_medical_patient", "selected_medical_record", "adding_medical_record")
-            st.rerun()
-
-
-# ============================================================
-# PATIENT LIST
-# ============================================================
-
-def show_filters(patients):
-    """Search and sex filter. Returns the matching patients."""
-
-    search_col, sex_col = st.columns([3, 1])
-
-    search = search_col.text_input(
-        "Search", placeholder="Search by patient name",
-        label_visibility="collapsed", key="medical_records_patient_search",
-    ).strip().lower()
-
-    sex = sex_col.selectbox(
-        "Sex", ["All sexes", "Male", "Female"],
-        label_visibility="collapsed", key="medical_records_sex_filter",
-    )
-
-    return [
-        patient for patient in patients
-        if (not search or search in patient_name(patient).lower())
-        and (sex == "All sexes" or (patient.get("sex") or "").lower() == sex.lower())
+    patient_id = patient[
+        "patient_id"
     ]
 
+    examinations = (
+        get_examinations_by_patient(
+            patient_id
+        )
+    )
 
-def render_patient_table(patients):
+    medical_records = (
+        get_medical_records_by_patient(
+            patient_id
+        )
+    )
 
-    if not patients:
-        empty_state("No patients found.")
-        return
+    with st.container(
+        key="sa_dialog"
+    ):
 
-    with st.container(key="sa_table_medical"):
+        # ====================================================
+        # PATIENT INFORMATION
+        # ====================================================
 
-        table_header(HEADERS, WIDTHS, "medical")
+        section_title(
+            "Patient Information"
+        )
+
+        show_rows(
+            [
+                (
+                    "Patient ID",
+                    patient_code(
+                        patient
+                    ),
+                ),
+                (
+                    "Full name",
+                    patient_name(
+                        patient
+                    ),
+                ),
+                (
+                    "Date of birth",
+                    format_date(
+                        patient.get(
+                            "date_of_birth"
+                        )
+                    ),
+                ),
+                (
+                    "Sex",
+                    patient.get(
+                        "sex"
+                    ),
+                ),
+                (
+                    "Civil status",
+                    patient.get(
+                        "civil_status"
+                    ),
+                ),
+                (
+                    "Contact",
+                    patient.get(
+                        "contact_number"
+                    ),
+                ),
+                (
+                    "Address",
+                    patient.get(
+                        "address"
+                    ),
+                ),
+                (
+                    "Hospital",
+                    patient_hospital_name(
+                        patient
+                    ),
+                ),
+            ]
+        )
+
+        # ====================================================
+        # INTERNAL EXAMINATION RECORDS
+        # ====================================================
+
+        section_title(
+            "Examination Records"
+        )
+
+        if not examinations:
+
+            empty_state(
+                "No examination records found for this patient."
+            )
+
+            if st.button(
+                "Examine Patient",
+                key=(
+                    "records_examine_"
+                    f"{patient_id}"
+                ),
+                icon=":material/clinical_notes:",
+                type="primary",
+                width="stretch",
+            ):
+
+                # ------------------------------------------------
+                # MOVE TO EXAMINATIONS PAGE
+                # ------------------------------------------------
+
+                st.session_state[
+                    "current_page"
+                ] = "Examinations"
+
+                st.session_state[
+                    "examination_dialog"
+                ] = "history"
+
+                st.session_state[
+                    "selected_patient"
+                ] = patient
+
+                st.session_state[
+                    "patient_records_dialog"
+                ] = None
+
+                st.rerun()
+
+        else:
+
+            with st.container(
+                key="patient_exam_records"
+            ):
+
+                table_header(
+                    EXAM_HEADERS,
+                    EXAM_WIDTHS,
+                    "patient_exams",
+                )
+
+                for examination in examinations:
+
+                    examination_id = (
+                        examination[
+                            "examination_id"
+                        ]
+                    )
+
+                    status = (
+                        examination.get(
+                            "status"
+                        )
+                        or "—"
+                    )
+
+                    with table_row(
+                        f"patient_exam_{examination_id}",
+                        EXAM_WIDTHS,
+                    ) as cols:
+
+                        text_cell(
+                            cols[0],
+                            format_date(
+                                examination.get(
+                                    "examination_date"
+                                )
+                            ),
+                        )
+
+                        text_cell(
+                            cols[1],
+                            examination.get(
+                                "examination_type"
+                            ),
+                        )
+
+                        pill_cell(
+                            cols[2],
+                            status,
+                            STATUS_TONES.get(
+                                status,
+                                "grey",
+                            ),
+                        )
+
+                        if cols[3].button(
+                            "View",
+                            key=(
+                                f"record_exam_view_"
+                                f"{examination_id}"
+                            ),
+                            width="stretch",
+                        ):
+
+                            # ------------------------------------
+                            # IMPORTANT:
+                            # Go to Examinations page
+                            # ------------------------------------
+
+                            st.session_state[
+                                "current_page"
+                            ] = "Examinations"
+
+                            st.session_state[
+                                "examination_dialog"
+                            ] = "view_exam"
+
+                            st.session_state[
+                                "selected_patient"
+                            ] = patient
+
+                            st.session_state[
+                                "selected_examination"
+                            ] = examination
+
+                            st.session_state[
+                                "patient_records_dialog"
+                            ] = None
+
+                            st.rerun()
+
+        # ====================================================
+        # PREVIOUS EXTERNAL MEDICAL HISTORIES
+        # ====================================================
+
+        section_title(
+            "Previous Medical Histories"
+        )
+
+        if not medical_records:
+
+            empty_state(
+                "No previous external medical records found."
+            )
+
+            if st.button(
+                "Add External Medical Record",
+                key=(
+                    "add_external_record_"
+                    f"{patient_id}"
+                ),
+                icon=":material/add:",
+                width="stretch",
+            ):
+
+                open_dialog(
+                    "add_medical_record",
+                    selected_patient=patient,
+                )
+
+        else:
+
+            with st.container(
+                key="patient_medical_records"
+            ):
+
+                table_header(
+                    MEDICAL_HEADERS,
+                    MEDICAL_WIDTHS,
+                    "patient_medical",
+                )
+
+                for record in medical_records:
+
+                    record_id = record[
+                        "medical_record_id"
+                    ]
+
+                    with table_row(
+                        f"patient_medical_{record_id}",
+                        MEDICAL_WIDTHS,
+                    ) as cols:
+
+                        text_cell(
+                            cols[0],
+                            format_date(
+                                record.get(
+                                    "record_date"
+                                )
+                            ),
+                        )
+
+                        text_cell(
+                            cols[1],
+                            record.get(
+                                "record_type"
+                            )
+                            or "—",
+                        )
+
+                        text_cell(
+                            cols[2],
+                            record.get(
+                                "facility_name"
+                            )
+                            or "—",
+                        )
+
+                        if cols[3].button(
+                            "View",
+                            key=(
+                                f"medical_view_"
+                                f"{record_id}"
+                            ),
+                            width="stretch",
+                        ):
+
+                            open_dialog(
+                                "view_medical_record",
+                                selected_medical_record=(
+                                    record
+                                ),
+                                selected_patient=(
+                                    patient
+                                ),
+                            )
+
+            st.divider()
+
+            if st.button(
+                "Add External Medical Record",
+                key=(
+                    "add_external_record_existing_"
+                    f"{patient_id}"
+                ),
+                icon=":material/add:",
+                width="stretch",
+            ):
+
+                open_dialog(
+                    "add_medical_record",
+                    selected_patient=patient,
+                )
+
+
+# ============================================================
+# EXTERNAL MEDICAL RECORD DETAILS
+# ============================================================
+
+@st.dialog(
+    "Previous Medical Record",
+    width="large",
+)
+def show_medical_record_details(
+    patient,
+    record,
+):
+
+    with st.container(
+        key="sa_dialog"
+    ):
+
+        section_title(
+            "Patient Information"
+        )
+
+        show_rows(
+            [
+                (
+                    "Patient ID",
+                    patient_code(
+                        patient
+                    ),
+                ),
+                (
+                    "Patient",
+                    patient_name(
+                        patient
+                    ),
+                ),
+                (
+                    "Date of birth",
+                    format_date(
+                        patient.get(
+                            "date_of_birth"
+                        )
+                    ),
+                ),
+                (
+                    "Sex",
+                    patient.get(
+                        "sex"
+                    ),
+                ),
+            ]
+        )
+
+        section_title(
+            "External Medical Record"
+        )
+
+        show_rows(
+            [
+                (
+                    "Record date",
+                    format_date(
+                        record.get(
+                            "record_date"
+                        )
+                    ),
+                ),
+                (
+                    "Record type",
+                    record.get(
+                        "record_type"
+                    ),
+                ),
+                (
+                    "Facility",
+                    record.get(
+                        "facility_name"
+                    ),
+                ),
+                (
+                    "Department",
+                    record.get(
+                        "department"
+                    ),
+                ),
+                (
+                    "Attending physician",
+                    record.get(
+                        "attending_physician"
+                    ),
+                ),
+                (
+                    "Chief complaint",
+                    record.get(
+                        "chief_complaint"
+                    ),
+                ),
+                (
+                    "Clinical history",
+                    record.get(
+                        "clinical_history"
+                    ),
+                ),
+                (
+                    "Diagnosis",
+                    record.get(
+                        "diagnosis"
+                    ),
+                ),
+                (
+                    "Procedure",
+                    record.get(
+                        "procedure_name"
+                    ),
+                ),
+                (
+                    "Findings",
+                    record.get(
+                        "findings"
+                    ),
+                ),
+                (
+                    "Impression",
+                    record.get(
+                        "impression"
+                    ),
+                ),
+                (
+                    "Treatment",
+                    record.get(
+                        "treatment"
+                    ),
+                ),
+                (
+                    "Follow-up",
+                    record.get(
+                        "follow_up"
+                    ),
+                ),
+            ]
+        )
+
+        section_title(
+            "Attached Files"
+        )
+
+        images = (
+            get_medical_record_images(
+                record[
+                    "medical_record_id"
+                ]
+            )
+        )
+
+        if not images:
+
+            st.caption(
+                "No files attached."
+            )
+
+        else:
+
+            for image in images:
+
+                st.markdown(
+                    f"**{image.get('image_type') or 'File'}**"
+                )
+
+                if image.get(
+                    "description"
+                ):
+
+                    st.caption(
+                        image.get(
+                            "description"
+                        )
+                    )
+
+                file_path = image.get(
+                    "image_url"
+                )
+
+                if file_path:
+
+                    file_url = (
+                        get_medical_record_file_url(
+                            file_path
+                        )
+                    )
+
+                    if file_url:
+
+                        st.link_button(
+                            "Open file",
+                            file_url,
+                            width="stretch",
+                        )
+
+        if st.button(
+            "Back to Patient Records",
+            key=(
+                "back_patient_records_"
+                f"{record['medical_record_id']}"
+            ),
+            width="stretch",
+        ):
+
+            open_dialog(
+                "records",
+                selected_patient=(
+                    patient
+                ),
+            )
+
+
+# ============================================================
+# ADD EXTERNAL MEDICAL RECORD
+# ============================================================
+
+@st.dialog(
+    "Add External Medical Record",
+    width="large",
+)
+def show_add_medical_record(
+    patient
+):
+
+    with st.container(
+        key="sa_dialog"
+    ):
+
+        section_title(
+            "Patient"
+        )
+
+        show_rows(
+            [
+                (
+                    "Patient ID",
+                    patient_code(
+                        patient
+                    ),
+                ),
+                (
+                    "Patient",
+                    patient_name(
+                        patient
+                    ),
+                ),
+            ]
+        )
+
+        with st.form(
+            "external_medical_record_form"
+        ):
+
+            record_date = st.date_input(
+                "Record date",
+                value=date.today(),
+                format="YYYY-MM-DD",
+            )
+
+            record_type = st.selectbox(
+                "Record type",
+                [
+                    "Consultation",
+                    "Hospitalization",
+                    "Laboratory",
+                    "Imaging",
+                    "Treatment",
+                    "Discharge Summary",
+                    "Other",
+                ],
+            )
+
+            facility_name = st.text_input(
+                "Facility / Hospital"
+            )
+
+            department = st.text_input(
+                "Department"
+            )
+
+            attending_physician = st.text_input(
+                "Attending physician"
+            )
+
+            chief_complaint = st.text_area(
+                "Chief complaint"
+            )
+
+            clinical_history = st.text_area(
+                "Clinical history"
+            )
+
+            diagnosis = st.text_area(
+                "Diagnosis"
+            )
+
+            procedure_name = st.text_input(
+                "Procedure"
+            )
+
+            findings = st.text_area(
+                "Findings"
+            )
+
+            impression = st.text_area(
+                "Impression"
+            )
+
+            treatment = st.text_area(
+                "Treatment"
+            )
+
+            follow_up = st.text_area(
+                "Follow-up"
+            )
+
+            uploaded_files = st.file_uploader(
+                "Attach supporting files",
+                type=[
+                    "png",
+                    "jpg",
+                    "jpeg",
+                    "pdf",
+                ],
+                accept_multiple_files=True,
+            )
+
+            cancel_col, save_col = st.columns(
+                2
+            )
+
+            cancel = cancel_col.form_submit_button(
+                "Cancel",
+                width="stretch",
+            )
+
+            submitted = save_col.form_submit_button(
+                "Save Medical Record",
+                type="primary",
+                width="stretch",
+            )
+
+        if cancel:
+
+            st.session_state[
+                "patient_records_dialog"
+            ] = "records"
+
+            st.rerun()
+
+        if not submitted:
+            return
+
+        if not facility_name.strip():
+
+            st.error(
+                "Facility / Hospital is required."
+            )
+
+            return
+
+        try:
+
+            result = create_medical_record(
+                patient_id=(
+                    patient[
+                        "patient_id"
+                    ]
+                ),
+                record_date=(
+                    record_date
+                ),
+                record_type=(
+                    record_type
+                ),
+                facility_name=(
+                    facility_name.strip()
+                ),
+                department=(
+                    department.strip()
+                    or None
+                ),
+                attending_physician=(
+                    attending_physician.strip()
+                    or None
+                ),
+                chief_complaint=(
+                    chief_complaint.strip()
+                    or None
+                ),
+                clinical_history=(
+                    clinical_history.strip()
+                    or None
+                ),
+                diagnosis=(
+                    diagnosis.strip()
+                    or None
+                ),
+                procedure_name=(
+                    procedure_name.strip()
+                    or None
+                ),
+                findings=(
+                    findings.strip()
+                    or None
+                ),
+                impression=(
+                    impression.strip()
+                    or None
+                ),
+                treatment=(
+                    treatment.strip()
+                    or None
+                ),
+                follow_up=(
+                    follow_up.strip()
+                    or None
+                ),
+                created_by=(
+                    current_user().get(
+                        "user_id"
+                    )
+                ),
+            )
+
+            if not result.get(
+                "success"
+            ):
+
+                st.error(
+                    result.get(
+                        "message"
+                    )
+                    or
+                    "Unable to create medical record."
+                )
+
+                return
+
+            medical_record_id = (
+                result[
+                    "data"
+                ][
+                    "medical_record_id"
+                ]
+            )
+
+            for uploaded_file in (
+                uploaded_files
+                or []
+            ):
+
+                upload_medical_record_file(
+                    medical_record_id=(
+                        medical_record_id
+                    ),
+                    uploaded_file=(
+                        uploaded_file
+                    ),
+                    image_type=(
+                        uploaded_file.type
+                        or "File"
+                    ),
+                    description=(
+                        uploaded_file.name
+                    ),
+                )
+
+            remember(
+                "External medical record added."
+            )
+
+            open_dialog(
+                "records",
+                selected_patient=(
+                    patient
+                ),
+            )
+
+        except Exception as error:
+
+            st.error(
+                f"Failed to save medical record: {error}"
+            )
+
+
+# ============================================================
+# FILTERS
+# ============================================================
+
+def show_filters(
+    patients,
+    hospitals=None,
+):
+
+    if (
+        is_superadmin()
+        and hospitals is not None
+    ):
+
+        hospital_col, search_col, sex_col, reset_col = st.columns(
+            [
+                1.5,
+                3,
+                1.2,
+                0.8,
+            ]
+        )
+
+        hospital_names = [
+            "All hospitals"
+        ] + sorted(
+            {
+                hospital.get(
+                    "hospital_name"
+                )
+                for hospital in hospitals
+                if hospital.get(
+                    "hospital_name"
+                )
+            }
+        )
+
+        hospital_filter = (
+            hospital_col.selectbox(
+                "Hospital",
+                hospital_names,
+                label_visibility="collapsed",
+                key="records_hospital_filter",
+            )
+        )
+
+        search = search_col.text_input(
+            "Search",
+            placeholder="Search by patient name or contact number",
+            label_visibility="collapsed",
+            key="records_search",
+        ).strip().lower()
+
+        sex = sex_col.selectbox(
+            "Sex",
+            [
+                "All sexes",
+                "Male",
+                "Female",
+            ],
+            label_visibility="collapsed",
+            key="records_sex",
+        )
+
+        if reset_col.button(
+            "Refresh",
+            icon=":material/refresh:",
+            width="stretch",
+            key="records_refresh",
+        ):
+
+            st.rerun()
+
+        matches = []
 
         for patient in patients:
 
-            patient_id = patient.get("patient_id")
+            text = (
+                f"{patient_name(patient)} "
+                f"{patient.get('contact_number') or ''}"
+            ).lower()
 
-            with table_row(f"medical_{patient_id}", WIDTHS) as cols:
+            if (
+                hospital_filter
+                != "All hospitals"
+                and patient_hospital_name(
+                    patient
+                )
+                != hospital_filter
+            ):
+                continue
 
-                name_cell(cols[0], patient_name(patient))
-                text_cell(cols[1], format_date(patient.get("date_of_birth")))
-                text_cell(cols[2], patient.get("sex"))
+            if (
+                search
+                and search not in text
+            ):
+                continue
 
-                if cols[3].button(
-                    "Records", key=f"view_medical_records_{patient_id}",
-                    icon=":material/folder_open:", width="stretch",
-                ):
-                    st.session_state["selected_medical_patient"] = patient
-                    st.rerun()
+            if (
+                sex != "All sexes"
+                and patient.get(
+                    "sex"
+                )
+                != sex
+            ):
+                continue
+
+            matches.append(
+                patient
+            )
+
+        return matches
+
+    search_col, sex_col, reset_col = st.columns(
+        [
+            3,
+            1.2,
+            1,
+        ]
+    )
+
+    search = search_col.text_input(
+        "Search",
+        placeholder="Search by patient name or contact number",
+        label_visibility="collapsed",
+        key="records_search",
+    ).strip().lower()
+
+    sex = sex_col.selectbox(
+        "Sex",
+        [
+            "All sexes",
+            "Male",
+            "Female",
+        ],
+        label_visibility="collapsed",
+        key="records_sex",
+    )
+
+    if reset_col.button(
+        "Refresh",
+        icon=":material/refresh:",
+        width="stretch",
+        key="records_refresh",
+    ):
+
+        st.rerun()
+
+    matches = []
+
+    for patient in patients:
+
+        text = (
+            f"{patient_name(patient)} "
+            f"{patient.get('contact_number') or ''}"
+        ).lower()
+
+        if (
+            search
+            and search not in text
+        ):
+            continue
+
+        if (
+            sex != "All sexes"
+            and patient.get(
+                "sex"
+            )
+            != sex
+        ):
+            continue
+
+        matches.append(
+            patient
+        )
+
+    return matches
+
+
+# ============================================================
+# PATIENT TABLE
+# ============================================================
+
+def render_patient_table(
+    patients
+):
+
+    if not patients:
+
+        empty_state(
+            "No patients found."
+        )
+
+        return
+
+    if is_superadmin():
+
+        with st.container(
+            key="sa_table_patient_records"
+        ):
+
+            table_header(
+                HEADERS_SUPERADMIN,
+                WIDTHS_SUPERADMIN,
+                "patient_records",
+            )
+
+            for patient in patients:
+
+                patient_id = patient[
+                    "patient_id"
+                ]
+
+                with table_row(
+                    f"records_{patient_id}",
+                    WIDTHS_SUPERADMIN,
+                ) as cols:
+
+                    text_cell(
+                        cols[0],
+                        patient_hospital_name(
+                            patient
+                        ),
+                        muted=True,
+                    )
+
+                    text_cell(
+                        cols[1],
+                        patient_code(
+                            patient
+                        ),
+                        muted=True,
+                    )
+
+                    name_cell(
+                        cols[2],
+                        patient_name(
+                            patient
+                        ),
+                    )
+
+                    text_cell(
+                        cols[3],
+                        format_date(
+                            patient.get(
+                                "date_of_birth"
+                            )
+                        ),
+                    )
+
+                    text_cell(
+                        cols[4],
+                        patient.get(
+                            "sex"
+                        ),
+                    )
+
+                    text_cell(
+                        cols[5],
+                        patient.get(
+                            "contact_number"
+                        ),
+                    )
+
+                    if cols[6].button(
+                        "Records",
+                        key=(
+                            f"records_"
+                            f"{patient_id}"
+                        ),
+                        icon=":material/folder_shared:",
+                        width="stretch",
+                    ):
+
+                        open_dialog(
+                            "records",
+                            selected_patient=(
+                                patient
+                            ),
+                        )
+
+    else:
+
+        with st.container(
+            key="sa_table_patient_records"
+        ):
+
+            table_header(
+                HEADERS,
+                WIDTHS,
+                "patient_records",
+            )
+
+            for patient in patients:
+
+                patient_id = patient[
+                    "patient_id"
+                ]
+
+                with table_row(
+                    f"records_{patient_id}",
+                    WIDTHS,
+                ) as cols:
+
+                    text_cell(
+                        cols[0],
+                        patient_code(
+                            patient
+                        ),
+                        muted=True,
+                    )
+
+                    name_cell(
+                        cols[1],
+                        patient_name(
+                            patient
+                        ),
+                    )
+
+                    text_cell(
+                        cols[2],
+                        format_date(
+                            patient.get(
+                                "date_of_birth"
+                            )
+                        ),
+                    )
+
+                    text_cell(
+                        cols[3],
+                        patient.get(
+                            "sex"
+                        ),
+                    )
+
+                    text_cell(
+                        cols[4],
+                        patient.get(
+                            "contact_number"
+                        ),
+                    )
+
+                    text_cell(
+                        cols[5],
+                        patient_hospital_name(
+                            patient
+                        ),
+                    )
+
+                    if cols[6].button(
+                        "Records",
+                        key=(
+                            f"records_"
+                            f"{patient_id}"
+                        ),
+                        icon=":material/folder_shared:",
+                        width="stretch",
+                    ):
+
+                        open_dialog(
+                            "records",
+                            selected_patient=(
+                                patient
+                            ),
+                        )
 
 
 # ============================================================
@@ -377,16 +1470,114 @@ def render_patient_table(patients):
 
 def show():
 
-    load_css("manage_medical_records.css")
+    load_css(
+        "manage_medical_records.css"
+    )
+
     show_flash_message()
 
-    with st.container(key="sa_page"):
+    hospital_id = (
+        current_hospital_id()
+    )
 
-        page_header("Medical records", "View and manage patient medical history.")
+    with st.container(
+        key="sa_page"
+    ):
 
-        render_patient_table(show_filters(load_patients()))
+        page_header(
+            "Patient Records",
+            "View the complete patient record, including examinations and previous medical histories.",
+        )
 
-    selected_patient = st.session_state.get("selected_medical_patient")
+        patients = load_patients()
 
-    if selected_patient:
-        show_medical_history_dialog(selected_patient)
+        if is_superadmin():
+
+            hospitals = (
+                get_all_hospitals()
+                or []
+            )
+
+            matches = show_filters(
+                patients,
+                hospitals=hospitals,
+            )
+
+        else:
+
+            if hospital_id is None:
+
+                st.error(
+                    "Your account is not assigned "
+                    "to a hospital. Please contact "
+                    "your Superadmin."
+                )
+
+                st.stop()
+
+            patients = [
+                patient
+                for patient in patients
+                if patient.get(
+                    "hospital_id"
+                )
+                == hospital_id
+            ]
+
+            matches = show_filters(
+                patients
+            )
+
+        render_patient_table(
+            matches
+        )
+
+    # ========================================================
+    # DIALOG ROUTER
+    # ========================================================
+
+    dialog = st.session_state.get(
+        "patient_records_dialog"
+    )
+
+    if (
+        dialog == "records"
+        and st.session_state.get(
+            "selected_patient"
+        )
+    ):
+
+        show_patient_records(
+            st.session_state[
+                "selected_patient"
+            ]
+        )
+
+    elif (
+        dialog == "view_medical_record"
+        and st.session_state.get(
+            "selected_medical_record"
+        )
+    ):
+
+        show_medical_record_details(
+            st.session_state[
+                "selected_patient"
+            ],
+            st.session_state[
+                "selected_medical_record"
+            ],
+        )
+
+    elif (
+        dialog == "add_medical_record"
+        and st.session_state.get(
+            "selected_patient"
+        )
+    ):
+
+        show_add_medical_record(
+            st.session_state[
+                "selected_patient"
+            ]
+        )

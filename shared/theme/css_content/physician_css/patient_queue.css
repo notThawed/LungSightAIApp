@@ -1,0 +1,185 @@
+/* ==========================================================
+   PHYSICIAN - PATIENT QUEUE
+   shared/theme/css_content/physician_css/patient_queue.css
+
+   Styles unique to the Patient Queue page.
+
+   Reusable components such as:
+   - metric cards
+   - tables
+   - pills
+   - buttons
+   - forms
+   - dialogs
+   - section titles
+
+   remain in the shared/base CSS.
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   Patient Queue page
+   ---------------------------------------------------------- */
+
+.st-key-physician_patient_queue_page {
+  width: 100%;
+}
+
+
+/* ----------------------------------------------------------
+   Refresh button
+   ---------------------------------------------------------- */
+
+.st-key-physician_queue_refresh {
+  margin-bottom: 0.75rem;
+}
+
+
+/* ----------------------------------------------------------
+   Queue metrics
+   ---------------------------------------------------------- */
+
+/*
+   metric_card() is already styled by the shared UI CSS.
+
+   These rules only make sure the four metric columns have
+   consistent height and spacing on this page.
+*/
+
+.st-key-physician_patient_queue_page
+[data-testid="stHorizontalBlock"] {
+  align-items: stretch;
+}
+
+
+/* ----------------------------------------------------------
+   Queue table
+   ---------------------------------------------------------- */
+
+.st-key-physician_queue_table_pending {
+  margin-top: 0.25rem;
+}
+
+
+/* ----------------------------------------------------------
+   Queue table action buttons
+   ---------------------------------------------------------- */
+
+.st-key-physician_queue_table_pending
+[data-testid^="stBaseButton"] {
+  min-height: 2rem;
+  padding: 0.25rem 0.65rem;
+}
+
+
+/* ----------------------------------------------------------
+   Examine Patient dialog
+   ---------------------------------------------------------- */
+
+.st-key-physician_examine_dialog {
+  gap: 0.75rem;
+}
+
+
+/* ----------------------------------------------------------
+   Pending examinations dialog
+   ---------------------------------------------------------- */
+
+.st-key-physician_pending_exams_dialog {
+  gap: 0.75rem;
+}
+
+
+/* ----------------------------------------------------------
+   Patient history dialog
+   ---------------------------------------------------------- */
+
+.st-key-physician_history_dialog {
+  gap: 0.75rem;
+}
+
+
+/* ----------------------------------------------------------
+   Dialog section spacing
+   ---------------------------------------------------------- */
+
+.st-key-physician_examine_dialog
+.sa-section-title,
+
+.st-key-physician_pending_exams_dialog
+.sa-section-title,
+
+.st-key-physician_history_dialog
+.sa-section-title {
+  margin-top: 0.35rem;
+}
+
+
+/* ----------------------------------------------------------
+   Patient information / clinical data
+   ---------------------------------------------------------- */
+
+.st-key-physician_examine_dialog
+[data-testid="stHorizontalBlock"] {
+  align-items: stretch;
+}
+
+
+/* ----------------------------------------------------------
+   History buttons
+   ---------------------------------------------------------- */
+
+.st-key-physician_examine_dialog
+[data-testid^="stBaseButton"] {
+  min-height: 2.1rem;
+}
+
+
+/* ----------------------------------------------------------
+   Examination dialog alerts
+   ---------------------------------------------------------- */
+
+.st-key-physician_examine_dialog
+[data-testid="stAlert"],
+
+.st-key-physician_pending_exams_dialog
+[data-testid="stAlert"],
+
+.st-key-physician_history_dialog
+[data-testid="stAlert"] {
+  border-radius: 8px;
+}
+
+
+/* ----------------------------------------------------------
+   Examination history
+   ---------------------------------------------------------- */
+
+.st-key-physician_history_dialog
+.sa-pill {
+  margin-bottom: 0.2rem;
+}
+
+
+/* ----------------------------------------------------------
+   Responsive layout
+   ---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+
+  .st-key-physician_patient_queue_page
+  [data-testid="stHorizontalBlock"] {
+    gap: 0.6rem;
+  }
+
+}
+
+
+@media (max-width: 640px) {
+
+  .st-key-physician_patient_queue_page
+  [data-testid="stHorizontalBlock"] {
+    gap: 0.5rem;
+  }
+
+}

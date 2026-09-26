@@ -229,16 +229,10 @@ STAFF_NAV = [
                 "Examinations",
                 "assignment",
             ),
-        ],
-    },
-
-    {
-        "section": "Appointments",
-        "items": [
             (
                 "Follow-Ups",
                 "Follow-up appointments",
-                "event_available",
+                "event_available",                
             ),
         ],
     },

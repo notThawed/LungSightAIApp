@@ -1,9 +1,18 @@
-from backend.supabase_client import supabase, admin_supabase
-
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from backend.supabase_client import (
+    supabase,
+    admin_supabase,
+)
+
+
+# ==========================================
+# TIMEZONE
+# ==========================================
+
 MANILA_TZ = ZoneInfo("Asia/Manila")
+UTC_TZ = ZoneInfo("UTC")
 
 
 # ==========================================
@@ -12,29 +21,28 @@ MANILA_TZ = ZoneInfo("Asia/Manila")
 
 def convert_to_manila_time(timestamp):
     """
-    Convert Supabase Auth timestamp to Philippine Standard Time.
+    Convert a Supabase timestamp to Philippine Standard Time.
+
+    Supports:
+    - datetime objects
+    - ISO timestamp strings
     """
 
     if not timestamp:
         return None
 
     try:
-
-        # Supabase may already return a datetime object
         if isinstance(timestamp, datetime):
 
-            # If the datetime has no timezone,
-            # assume it is UTC
             if timestamp.tzinfo is None:
                 timestamp = timestamp.replace(
-                    tzinfo=ZoneInfo("UTC")
+                    tzinfo=UTC_TZ
                 )
 
             return timestamp.astimezone(
                 MANILA_TZ
             )
 
-        # If Supabase returns a string instead
         if isinstance(timestamp, str):
 
             timestamp = timestamp.replace(
@@ -46,47 +54,82 @@ def convert_to_manila_time(timestamp):
                 timestamp
             )
 
+            if dt.tzinfo is None:
+                dt = dt.replace(
+                    tzinfo=UTC_TZ
+                )
+
             return dt.astimezone(
                 MANILA_TZ
             )
 
-    except Exception as e:
-
+    except Exception as exc:
         print(
-            f"Failed to convert timestamp: {e}"
+            f"Failed to convert timestamp: {exc}"
         )
 
     return timestamp
 
 
 # ==========================================
-# GET ALL AUTH USERS IN ONE REQUEST   (NEW)
-# The old code asked Supabase Auth once PER USER.
+# GET ALL AUTH USERS
 # ==========================================
 
 def get_auth_users_by_id():
-    """Returns {user_id: auth_user} using as few requests as possible."""
+    """
+    Get all Supabase Auth users and return them
+    as:
+
+        {
+            "user_uuid": auth_user
+        }
+
+    Uses pagination instead of making one Auth
+    request for every user.
+    """
 
     users_by_id = {}
+
     per_page = 1000
     page = 1
 
     while True:
 
-        response = admin_supabase.auth.admin.list_users(
-            page=page,
-            per_page=per_page
+        response = (
+            admin_supabase
+            .auth
+            .admin
+            .list_users(
+                page=page,
+                per_page=per_page,
+            )
         )
 
-        # Depending on the supabase version this is a list, or an object with .users
-        batch = (
-            response
-            if isinstance(response, list)
-            else getattr(response, "users", None) or []
-        )
+        if isinstance(response, list):
+            batch = response
+
+        else:
+            batch = (
+                getattr(
+                    response,
+                    "users",
+                    None,
+                )
+                or []
+            )
 
         for auth_user in batch:
-            users_by_id[str(auth_user.id)] = auth_user
+
+            user_id = getattr(
+                auth_user,
+                "id",
+                None,
+            )
+
+            if user_id:
+                users_by_id[str(user_id)] = (
+                    auth_user
+                )
 
         if len(batch) < per_page:
             break
@@ -97,10 +140,16 @@ def get_auth_users_by_id():
 
 
 # ==========================================
-# USER PROFILES - database only, no Auth calls
+# USER PROFILES
 # ==========================================
 
 def _fetch_profiles():
+    """
+    Fetch user profiles from the database.
+
+    Email and last-login information are intentionally
+    not fetched here because those belong to Supabase Auth.
+    """
 
     response = (
         admin_supabase
@@ -115,13 +164,16 @@ def _fetch_profiles():
             user_sex,
             user_contact_number,
             user_address,
+            user_department,
             role_id,
             is_active,
             created_at,
             updated_at,
             hospital_id,
+            profile_picture_url,
 
             roles (
+                role_id,
                 role_name
             ),
 
@@ -129,9 +181,12 @@ def _fetch_profiles():
                 hospital_id,
                 hospital_name,
                 hospital_code
-                )
+            )
         """)
-        .order("user_lname")
+        .order(
+            "user_lname",
+            desc=False,
+        )
         .execute()
     )
 
@@ -139,40 +194,63 @@ def _fetch_profiles():
 
 
 # ==========================================
-# GET ALL USERS - one Auth request instead of one per user)
+# GET ALL USERS
 # ==========================================
 
 def get_all_users():
+    """
+    Get all users.
+
+    Database information comes from user_profiles.
+    Email and last login come from Supabase Auth.
+    """
 
     users = _fetch_profiles()
 
-    # ------------------------------------------
-    # GET AUTH INFORMATION (ONE request for everyone)
-    # ------------------------------------------
-
     try:
         auth_by_id = get_auth_users_by_id()
-    except Exception as e:
-        print(f"Failed to fetch auth information: {e}")
+
+    except Exception as exc:
+
+        print(
+            f"Failed to fetch Auth users: {exc}"
+        )
+
         auth_by_id = {}
 
     for user in users:
 
-        auth_user = auth_by_id.get(str(user["user_id"]))
-
-        # EMAIL
-        user["email"] = (
-            (auth_user.email or "")
-            if auth_user
-            else ""
+        user_id = str(
+            user.get("user_id") or ""
         )
 
-        # LAST LOGIN
-        user["last_login"] = (
-            convert_to_manila_time(auth_user.last_sign_in_at)
-            if auth_user
-            else None
+        auth_user = auth_by_id.get(
+            user_id
         )
+
+        user["email"] = ""
+        user["last_login"] = None
+
+        if auth_user:
+
+            user["email"] = (
+                getattr(
+                    auth_user,
+                    "email",
+                    None,
+                )
+                or ""
+            )
+
+            user["last_login"] = (
+                convert_to_manila_time(
+                    getattr(
+                        auth_user,
+                        "last_sign_in_at",
+                        None,
+                    )
+                )
+            )
 
     return users
 
@@ -184,12 +262,15 @@ def get_all_users():
 def get_all_roles():
 
     response = (
-        supabase
+        admin_supabase
         .table("roles")
         .select(
             "role_id, role_name"
         )
-        .order("role_id")
+        .order(
+            "role_id",
+            desc=False,
+        )
         .execute()
     )
 
@@ -210,7 +291,10 @@ def generate_employee_id():
         admin_supabase
         .table("user_profiles")
         .select("employee_id")
-        .like("employee_id", f"{prefix}%")
+        .like(
+            "employee_id",
+            f"{prefix}%",
+        )
         .execute()
     )
 
@@ -220,20 +304,38 @@ def generate_employee_id():
 
     for row in rows:
 
-        emp_id = row.get("employee_id") or ""
+        employee_id = (
+            row.get("employee_id")
+            or ""
+        )
 
-        if not emp_id.startswith(prefix):
+        if not employee_id.startswith(
+            prefix
+        ):
             continue
 
         try:
-            number = int(emp_id[len(prefix):])
-        except ValueError:
+            number = int(
+                employee_id[
+                    len(prefix):
+                ]
+            )
+
+        except (
+            ValueError,
+            TypeError,
+        ):
             continue
 
-        if number > highest:
-            highest = number
+        highest = max(
+            highest,
+            number,
+        )
 
-    return f"{prefix}{highest + 1:03d}"
+    return (
+        f"{prefix}"
+        f"{highest + 1:03d}"
+    )
 
 
 # ==========================================
@@ -242,11 +344,10 @@ def generate_employee_id():
 
 def get_user(user_id):
 
-    # ------------------------------------------
-    # GET PROFILE
-    # ------------------------------------------
+    if not user_id:
+        return None
 
-    profile_response = (
+    response = (
         admin_supabase
         .table("user_profiles")
         .select("""
@@ -261,28 +362,23 @@ def get_user(user_id):
                 hospital_code
             )
         """)
-        .eq("user_id", user_id)
-        .limit(1)          # ← was .single()
+        .eq(
+            "user_id",
+            user_id,
+        )
+        .limit(1)
         .execute()
     )
 
-    rows = profile_response.data or []
+    rows = response.data or []
 
     if not rows:
         return None
 
-    profile = rows[0]      # ← now we pull the first row ourselves
-
-    # ------------------------------------------
-    # DEFAULT AUTH VALUES
-    # ------------------------------------------
+    profile = rows[0]
 
     profile["email"] = ""
     profile["last_login"] = None
-
-    # ------------------------------------------
-    # GET AUTH USER
-    # ------------------------------------------
 
     try:
 
@@ -290,33 +386,49 @@ def get_user(user_id):
             admin_supabase
             .auth
             .admin
-            .get_user_by_id(user_id)
+            .get_user_by_id(
+                user_id
+            )
         )
 
-        if auth_response.user:
+        auth_user = getattr(
+            auth_response,
+            "user",
+            None,
+        )
 
-            # EMAIL
+        if auth_user:
+
             profile["email"] = (
-                auth_response.user.email
+                getattr(
+                    auth_user,
+                    "email",
+                    None,
+                )
                 or ""
             )
 
-            # LAST LOGIN
             profile["last_login"] = (
                 convert_to_manila_time(
-                    auth_response.user.last_sign_in_at
+                    getattr(
+                        auth_user,
+                        "last_sign_in_at",
+                        None,
+                    )
                 )
             )
 
-    except Exception as e:
+    except Exception as exc:
 
-        print(f"Failed to fetch auth user: {e}")
+        print(
+            f"Failed to fetch Auth user: {exc}"
+        )
 
     return profile
 
 
 # ==========================================
-# GET USER COUNTS   (CHANGED: no Auth requests at all)
+# GET USER COUNTS
 # ==========================================
 
 def get_user_counts():
@@ -331,6 +443,16 @@ def get_user_counts():
 
         role_data = user.get("roles")
 
+        if isinstance(
+            role_data,
+            list,
+        ):
+            role_data = (
+                role_data[0]
+                if role_data
+                else None
+            )
+
         if not role_data:
             continue
 
@@ -343,7 +465,9 @@ def get_user_counts():
             radiologist_count += 1
             total_staff += 1
 
-        elif role_name == "Radiologic Technologist":
+        elif role_name == (
+            "Radiologic Technologist"
+        ):
 
             radiologic_technologist_count += 1
             total_staff += 1
@@ -353,27 +477,25 @@ def get_user_counts():
             total_staff += 1
 
     return {
-
         "total_staff": total_staff,
-
-        "radiologist":
-            radiologist_count,
-
-        "radiologic_technologist":
-            radiologic_technologist_count,
-
-        "total_patients":
-            0
+        "radiologist": radiologist_count,
+        "radiologic_technologist": (
+            radiologic_technologist_count
+        ),
+        "total_patients": 0,
     }
 
-# GET ALL PATIENTS
+
+# ==========================================
+# PATIENTS
+# ==========================================
 
 def get_all_patients():
+
     response = (
         admin_supabase
         .table("patients")
-        .select(
-            """
+        .select("""
             patient_id,
             patient_code,
             first_name,
@@ -392,71 +514,97 @@ def get_all_patients():
             emergency_contact_no,
             status,
             created_at,
+            created_by,
+            updated_at,
             hospital_id,
+
             hospitals (
                 hospital_id,
-                hospital_name
+                hospital_name,
+                hospital_code
             )
-            """
+        """)
+        .order(
+            "last_name",
+            desc=False,
         )
-        .order("last_name", desc=False)
-        .order("first_name", desc=False)
+        .order(
+            "first_name",
+            desc=False,
+        )
         .execute()
     )
 
-    return response.data
+    return response.data or []
+
 
 def generate_patient_id():
 
     current_year = datetime.now().year
+
+    prefix = f"LSP-{current_year}-"
+
     response = (
-        supabase
+        admin_supabase
         .table("patients")
         .select("patient_code")
         .like(
             "patient_code",
-            f"LSP-{current_year}-%"
+            f"{prefix}%",
         )
         .order(
             "patient_code",
-            desc=True
+            desc=True,
         )
         .limit(1)
         .execute()
     )
 
-    if not response.data:
-        return (
-            f"LSP-{current_year}-001"
-        )
-    last_id = response.data[0].get(
-        "patient_code"
+    rows = response.data or []
+
+    if not rows:
+        return f"{prefix}001"
+
+    last_id = (
+        rows[0].get("patient_code")
+        or ""
     )
 
-    if not last_id:
+    if not last_id.startswith(prefix):
+        return f"{prefix}001"
 
-        return (
-            f"LSP-{current_year}-001"
-        )
     try:
+
         number = int(
             last_id.split("-")[-1]
         )
 
     except (
         ValueError,
-        TypeError
-    ): number = 0
+        TypeError,
+    ):
 
-    return(
-        f"LSP-{current_year}-{number + 1:03d}"
+        number = 0
+
+    return (
+        f"{prefix}"
+        f"{number + 1:03d}"
     )
 
 
-def get_examinations_by_patient(patient_id):
+# ==========================================
+# EXAMINATIONS
+# ==========================================
+
+def get_examinations_by_patient(
+    patient_id,
+):
+
+    if not patient_id:
+        return []
 
     response = (
-        supabase
+        admin_supabase
         .table("examinations")
         .select("""
             examination_id,
@@ -472,6 +620,8 @@ def get_examinations_by_patient(patient_id):
             disposition,
             disposition_notes,
             time_of_discharge,
+            follow_up_date,
+            follow_up_notes,
             status,
             created_by,
             reviewed_by,
@@ -479,125 +629,229 @@ def get_examinations_by_patient(patient_id):
             created_at,
             updated_at
         """)
-        .eq("patient_id", patient_id)
-        .order("examination_date", desc=True)
+        .eq(
+            "patient_id",
+            patient_id,
+        )
+        .order(
+            "examination_date",
+            desc=True,
+        )
         .execute()
     )
 
     return response.data or []
 
-def get_examination_consents(examination_id):
-    """Get all consent rows for an examination."""
+
+# ==========================================
+# CONSENTS
+# ==========================================
+
+def get_examination_consents(
+    examination_id,
+):
+
+    if not examination_id:
+        return []
+
     try:
+
         response = (
             admin_supabase
             .table("examination_consents")
             .select("*")
-            .eq("examination_id", examination_id)
-            .order("created_at", desc=True)
+            .eq(
+                "examination_id",
+                examination_id,
+            )
+            .order(
+                "created_at",
+                desc=True,
+            )
             .execute()
         )
+
         return response.data or []
-    except Exception as e:
-        print(f"Error fetching consents: {e}")
+
+    except Exception as exc:
+
+        print(
+            f"Error fetching consents: {exc}"
+        )
+
         return []
 
 
-def get_examination_vitals(examination_id):
-    """Get all vitals rows for an examination, newest first."""
+# ==========================================
+# VITALS
+# ==========================================
+
+def get_examination_vitals(
+    examination_id,
+):
+
+    if not examination_id:
+        return []
+
     try:
+
         response = (
             admin_supabase
             .table("examination_vitals")
             .select("*")
-            .eq("examination_id", examination_id)
-            .order("recorded_at", desc=True)
+            .eq(
+                "examination_id",
+                examination_id,
+            )
+            .order(
+                "recorded_at",
+                desc=True,
+            )
             .execute()
         )
+
         return response.data or []
-    except Exception as e:
-        print(f"Error fetching vitals: {e}")
+
+    except Exception as exc:
+
+        print(
+            f"Error fetching vitals: {exc}"
+        )
+
         return []
 
 
-def get_medical_records_by_patient(patient_id):
+# ==========================================
+# EXTERNAL MEDICAL RECORDS
+# ==========================================
+
+def get_medical_records_by_patient(
+    patient_id,
+):
+
+    if not patient_id:
+        return []
+
     try:
+
         response = (
             admin_supabase
             .table("medical_records")
             .select("*")
-            .eq("patient_id", patient_id)
-            .order("record_date", desc=True)
+            .eq(
+                "patient_id",
+                patient_id,
+            )
+            .order(
+                "record_date",
+                desc=True,
+            )
             .execute()
         )
 
-        print("MEDICAL RECORD FETCH RESPONSE:", response.data)
-
         return response.data or []
 
-    except Exception as e:
-        print(f"Error fetching medical records: {e}")
+    except Exception as exc:
+
+        print(
+            "Error fetching medical records "
+            f"for patient {patient_id}: {exc}"
+        )
+
         return []
 
-def get_medical_record_images(medical_record_id):
+
+def get_medical_record_images(
+    medical_record_id,
+):
+
+    if not medical_record_id:
+        return []
+
     try:
+
         response = (
             admin_supabase
             .table("medical_record_images")
             .select("*")
             .eq(
                 "medical_record_id",
-                medical_record_id
+                medical_record_id,
             )
-            .order("uploaded_at", desc=False)
+            .order(
+                "uploaded_at",
+                desc=False,
+            )
             .execute()
         )
 
         return response.data or []
 
-    except Exception as e:
+    except Exception as exc:
+
         print(
-            f"Error fetching medical record images: {e}"
+            "Error fetching medical record images: "
+            f"{exc}"
         )
+
         return []
 
-def get_medical_record_file_url(file_path):
+
+def get_medical_record_file_url(
+    file_path,
+):
+
+    if not file_path:
+        return None
+
     try:
+
         response = (
             admin_supabase
             .storage
             .from_("external-medical-records")
             .create_signed_url(
                 file_path,
-                3600
+                3600,
             )
         )
 
-        return response.get("signedURL")
-
-    except Exception as e:
-        print(
-            f"Error creating signed URL: {e}"
+        return response.get(
+            "signedURL"
         )
+
+    except Exception as exc:
+
+        print(
+            "Error creating medical record "
+            f"signed URL: {exc}"
+        )
+
         return None
 
+
+# ==========================================
+# HOSPITALS
+# ==========================================
+
 def get_all_hospitals():
+
     response = (
         admin_supabase
         .table("hospitals")
         .select("*")
-        .order("hospital_name")
+        .order(
+            "hospital_name",
+            desc=False,
+        )
         .execute()
     )
-    return response.data or []
 
-# Below are some functions for the Hospital Management
-# 1.) Get a hospital Staff. - Who Belongs to this Hospital [ get_hospital_staff Function ]
-# 2.) Get one hospital Staff Member - Self explanatory [ get_hospital_staff_member Function ]
+    return response.data or []
 
 
 # ==========================================
-# GET HOSPITAL STAFF
+# HOSPITAL STAFF
 # ==========================================
 
 def get_hospital_staff(
@@ -605,7 +859,7 @@ def get_hospital_staff(
     active_only=False,
 ):
     """
-    Get all staff assigned to a hospital.
+    Get all staff belonging to a hospital.
 
     Profile information comes from user_profiles.
     Email and last login come from Supabase Auth.
@@ -651,7 +905,8 @@ def get_hospital_staff(
             hospital_id,
         )
         .order(
-            "user_lname"
+            "user_lname",
+            desc=False,
         )
     )
 
@@ -669,30 +924,17 @@ def get_hospital_staff(
     if not staff:
         return []
 
-    # ------------------------------------------------------
-    # GET SUPABASE AUTH USERS
-    # ------------------------------------------------------
-    #
-    # Email and last login belong to Supabase Auth.
-    # We fetch Auth users once instead of making one request
-    # for every staff member.
-    # ------------------------------------------------------
-
     try:
-
         auth_by_id = get_auth_users_by_id()
 
     except Exception as exc:
 
         print(
-            f"Failed to fetch Auth users for hospital staff: {exc}"
+            "Failed to fetch Auth users "
+            f"for hospital staff: {exc}"
         )
 
         auth_by_id = {}
-
-    # ------------------------------------------------------
-    # MERGE AUTH DATA INTO USER PROFILE DATA
-    # ------------------------------------------------------
 
     for member in staff:
 
@@ -705,7 +947,6 @@ def get_hospital_staff(
             user_id
         )
 
-        # Default values
         member["email"] = ""
         member["last_login"] = None
 
@@ -737,13 +978,9 @@ def get_hospital_staff(
 # GET SINGLE HOSPITAL STAFF MEMBER
 # ==========================================
 
-def get_hospital_staff_member(user_id):
-    """
-    Get one hospital staff member.
-
-    Profile information comes from user_profiles.
-    Email and last login come from Supabase Auth.
-    """
+def get_hospital_staff_member(
+    user_id,
+):
 
     if not user_id:
         return None
@@ -795,16 +1032,8 @@ def get_hospital_staff_member(user_id):
 
     member = rows[0]
 
-    # ------------------------------------------------------
-    # DEFAULT AUTH VALUES
-    # ------------------------------------------------------
-
     member["email"] = ""
     member["last_login"] = None
-
-    # ------------------------------------------------------
-    # GET AUTH USER
-    # ------------------------------------------------------
 
     try:
 
@@ -847,13 +1076,20 @@ def get_hospital_staff_member(user_id):
     except Exception as exc:
 
         print(
-            f"Failed to fetch Auth information "
+            "Failed to fetch Auth information "
             f"for staff member {user_id}: {exc}"
         )
 
     return member
 
-def get_user_hospital_status(user_id):
+
+# ==========================================
+# GET USER HOSPITAL STATUS
+# ==========================================
+
+def get_user_hospital_status(
+    user_id,
+):
 
     if not user_id:
         return None
@@ -866,6 +1102,7 @@ def get_user_hospital_status(user_id):
             .select("""
                 user_id,
                 hospital_id,
+
                 hospitals (
                     hospital_id,
                     hospital_name,
@@ -874,7 +1111,7 @@ def get_user_hospital_status(user_id):
             """)
             .eq(
                 "user_id",
-                user_id
+                user_id,
             )
             .limit(1)
             .execute()
@@ -891,8 +1128,10 @@ def get_user_hospital_status(user_id):
             "hospitals"
         )
 
-        if isinstance(hospital, list):
-
+        if isinstance(
+            hospital,
+            list,
+        ):
             hospital = (
                 hospital[0]
                 if hospital
@@ -900,7 +1139,6 @@ def get_user_hospital_status(user_id):
             )
 
         if not hospital:
-
             return None
 
         return {
@@ -924,28 +1162,57 @@ def get_user_hospital_status(user_id):
 
         return None
 
-def get_consent_signature_url(signature_path):
-    """Return a signed URL for a consent signature (1 hour valid)."""
+
+# ==========================================
+# CONSENT SIGNATURE
+# ==========================================
+
+def get_consent_signature_url(
+    signature_path,
+):
+    """
+    Return a signed URL for a consent signature.
+    URL is valid for one hour.
+    """
+
     if not signature_path:
         return None
 
     try:
+
         response = (
             admin_supabase
             .storage
             .from_("consent-signatures")
-            .create_signed_url(signature_path, 3600)
+            .create_signed_url(
+                signature_path,
+                3600,
+            )
         )
-        return response.get("signedURL")
 
-    except Exception as e:
-        print(f"Failed to create signed URL for signature: {e}")
+        return response.get(
+            "signedURL"
+        )
+
+    except Exception as exc:
+
+        print(
+            "Failed to create signed URL "
+            f"for signature: {exc}"
+        )
+
         return None
 
-def get_pending_examinations(hospital_id=None):
+
+# ==========================================
+# PENDING EXAMINATIONS
+# ==========================================
+
+def get_pending_examinations(
+    hospital_id=None,
+):
     """
-    Get all pending examinations with patient info.
-    If hospital_id is None, returns pending exams from ALL hospitals.
+    Get examinations with status = Pending.
     """
 
     query = (
@@ -959,6 +1226,7 @@ def get_pending_examinations(hospital_id=None):
             status,
             created_by,
             created_at,
+
             patients!inner (
                 patient_id,
                 patient_code,
@@ -970,26 +1238,47 @@ def get_pending_examinations(hospital_id=None):
                 sex,
                 contact_number,
                 hospital_id,
+
                 hospitals (
                     hospital_id,
                     hospital_name
                 )
             )
         """)
-        .eq("status", "Pending")
-        .order("created_at", desc=False)
+        .eq(
+            "status",
+            "Pending",
+        )
+        .order(
+            "created_at",
+            desc=False,
+        )
     )
 
     if hospital_id:
-        query = query.eq("patients.hospital_id", hospital_id)
+
+        query = query.eq(
+            "patients.hospital_id",
+            hospital_id,
+        )
 
     response = query.execute()
+
     return response.data or []
 
-def get_pending_xray_examinations(hospital_id=None):
+
+# ==========================================
+# AWAITING X-RAY
+# ==========================================
+
+def get_pending_xray_examinations(
+    hospital_id=None,
+):
     """
-    Get all examinations with status = 'Awaiting X-Ray'.
+    Get examinations with status =
+    Awaiting X-Ray.
     """
+
     query = (
         admin_supabase
         .table("examinations")
@@ -1003,6 +1292,7 @@ def get_pending_xray_examinations(hospital_id=None):
             created_at,
             chief_complaint,
             physical_examination,
+
             patients!inner (
                 patient_id,
                 patient_code,
@@ -1014,113 +1304,253 @@ def get_pending_xray_examinations(hospital_id=None):
                 sex,
                 contact_number,
                 hospital_id,
+
                 hospitals (
                     hospital_id,
                     hospital_name
                 )
             )
         """)
-        .eq("status", "Awaiting X-Ray")
-        .order("created_at", desc=False)
+        .eq(
+            "status",
+            "Awaiting X-Ray",
+        )
+        .order(
+            "created_at",
+            desc=False,
+        )
     )
 
     if hospital_id:
-        query = query.eq("patients.hospital_id", hospital_id)
+
+        query = query.eq(
+            "patients.hospital_id",
+            hospital_id,
+        )
 
     response = query.execute()
+
     return response.data or []
 
-def get_xray_request_by_examination(examination_id):
-    """Get the X-ray request for an examination."""
+
+# ==========================================
+# X-RAY REQUEST
+# ==========================================
+
+def get_xray_request_by_examination(
+    examination_id,
+):
+
+    if not examination_id:
+        return None
+
     try:
+
         response = (
             admin_supabase
             .table("xray_requests")
             .select("*")
-            .eq("examination_id", examination_id)
-            .order("requested_at", desc=True)
+            .eq(
+                "examination_id",
+                examination_id,
+            )
+            .order(
+                "requested_at",
+                desc=True,
+            )
             .limit(1)
             .execute()
         )
+
         rows = response.data or []
-        return rows[0] if rows else None
-    except Exception as e:
-        print(f"Error fetching xray request: {e}")
+
+        return (
+            rows[0]
+            if rows
+            else None
+        )
+
+    except Exception as exc:
+
+        print(
+            f"Error fetching X-ray request: {exc}"
+        )
+
         return None
 
-def get_xray_images_by_request(request_id):
-    """Get all X-ray images for a request."""
+
+def get_xray_images_by_request(
+    request_id,
+):
+
+    if not request_id:
+        return []
+
     try:
+
         response = (
             admin_supabase
             .table("xray_images")
             .select("*")
-            .eq("request_id", request_id)
-            .order("uploaded_at", desc=True)
+            .eq(
+                "request_id",
+                request_id,
+            )
+            .order(
+                "uploaded_at",
+                desc=True,
+            )
             .execute()
         )
+
         return response.data or []
-    except Exception as e:
-        print(f"Error fetching xray images: {e}")
+
+    except Exception as exc:
+
+        print(
+            f"Error fetching X-ray images: {exc}"
+        )
+
         return []
 
 
-def get_xray_image_url(image_path):
-    """Get a signed URL for an X-ray image (1 hour)."""
+def get_xray_image_url(
+    image_path,
+):
+
     if not image_path:
         return None
+
     try:
+
         response = (
             admin_supabase
             .storage
             .from_("xray-images")
-            .create_signed_url(image_path, 3600)
+            .create_signed_url(
+                image_path,
+                3600,
+            )
         )
-        return response.get("signedURL")
-    except Exception as e:
-        print(f"Error creating X-ray signed URL: {e}")
+
+        return response.get(
+            "signedURL"
+        )
+
+    except Exception as exc:
+
+        print(
+            "Error creating X-ray signed URL: "
+            f"{exc}"
+        )
+
         return None
 
-def get_xray_ai_result(image_id):
-    """Get the AI result for an X-ray image."""
+
+# ==========================================
+# X-RAY AI RESULT
+# ==========================================
+
+def get_xray_ai_result(
+    image_id,
+):
+
+    if not image_id:
+        return None
+
     try:
+
         response = (
             admin_supabase
             .table("xray_ai_results")
             .select("*")
-            .eq("image_id", image_id)
-            .order("processed_at", desc=True)
+            .eq(
+                "image_id",
+                image_id,
+            )
+            .order(
+                "processed_at",
+                desc=True,
+            )
             .limit(1)
             .execute()
         )
+
         rows = response.data or []
-        return rows[0] if rows else None
-    except Exception as e:
-        print(f"Error fetching AI result: {e}")
+
+        return (
+            rows[0]
+            if rows
+            else None
+        )
+
+    except Exception as exc:
+
+        print(
+            f"Error fetching AI result: {exc}"
+        )
+
         return None
 
-def get_xray_review(request_id):
-    """Get the doctor's review for an X-ray request (if any)."""
+
+# ==========================================
+# X-RAY REVIEW
+# ==========================================
+
+def get_xray_review(
+    request_id,
+):
+
+    if not request_id:
+        return None
+
     try:
+
         response = (
             admin_supabase
             .table("xray_reviews")
             .select("*")
-            .eq("request_id", request_id)
-            .order("reviewed_at", desc=True)
+            .eq(
+                "request_id",
+                request_id,
+            )
+            .order(
+                "reviewed_at",
+                desc=True,
+            )
             .limit(1)
             .execute()
         )
+
         rows = response.data or []
-        return rows[0] if rows else None
-    except Exception as e:
-        print(f"Error fetching X-ray review: {e}")
+
+        return (
+            rows[0]
+            if rows
+            else None
+        )
+
+    except Exception as exc:
+
+        print(
+            f"Error fetching X-ray review: {exc}"
+        )
+
         return None
 
-def get_xray_ready_examinations(hospital_id=None):
+
+# ==========================================
+# X-RAY READY
+# ==========================================
+
+def get_xray_ready_examinations(
+    hospital_id=None,
+):
     """
-    Get all examinations with status = 'X-Ray Ready'.
+    Get examinations with status =
+    X-Ray Ready.
     """
+
     query = (
         admin_supabase
         .table("examinations")
@@ -1134,6 +1564,7 @@ def get_xray_ready_examinations(hospital_id=None):
             created_at,
             chief_complaint,
             physical_examination,
+
             patients!inner (
                 patient_id,
                 patient_code,
@@ -1145,53 +1576,366 @@ def get_xray_ready_examinations(hospital_id=None):
                 sex,
                 contact_number,
                 hospital_id,
+
                 hospitals (
                     hospital_id,
                     hospital_name
                 )
             )
         """)
-        .eq("status", "X-Ray Ready")
-        .order("created_at", desc=False)
+        .eq(
+            "status",
+            "X-Ray Ready",
+        )
+        .order(
+            "created_at",
+            desc=False,
+        )
     )
 
     if hospital_id:
-        query = query.eq("patients.hospital_id", hospital_id)
+
+        query = query.eq(
+            "patients.hospital_id",
+            hospital_id,
+        )
 
     response = query.execute()
+
     return response.data or []
 
-def get_medications_by_examination(examination_id):
-    """Get all medications for an examination."""
+
+# ==========================================
+# MEDICATIONS
+# ==========================================
+
+def get_medications_by_examination(
+    examination_id,
+):
+
+    if not examination_id:
+        return []
+
     try:
+
         response = (
             admin_supabase
             .table("medications")
             .select("*")
-            .eq("examination_id", examination_id)
-            .order("prescribed_at", desc=False)
+            .eq(
+                "examination_id",
+                examination_id,
+            )
+            .order(
+                "prescribed_at",
+                desc=False,
+            )
             .execute()
         )
+
         return response.data or []
-    except Exception as e:
-        print(f"Error fetching medications: {e}")
+
+    except Exception as exc:
+
+        print(
+            f"Error fetching medications: {exc}"
+        )
+
         return []
 
 
-def get_referral_by_examination(examination_id):
-    """Get the referral for an examination (if any)."""
+# ==========================================
+# REFERRAL
+# ==========================================
+
+def get_referral_by_examination(
+    examination_id,
+):
+
+    if not examination_id:
+        return None
+
     try:
+
         response = (
             admin_supabase
             .table("referrals")
             .select("*")
-            .eq("examination_id", examination_id)
-            .order("referred_at", desc=True)
+            .eq(
+                "examination_id",
+                examination_id,
+            )
+            .order(
+                "referred_at",
+                desc=True,
+            )
             .limit(1)
             .execute()
         )
+
         rows = response.data or []
-        return rows[0] if rows else None
-    except Exception as e:
-        print(f"Error fetching referral: {e}")
-        return None 
+
+        return (
+            rows[0]
+            if rows
+            else None
+        )
+
+    except Exception as exc:
+
+        print(
+            f"Error fetching referral: {exc}"
+        )
+
+        return None
+
+# ==========================================
+# PENDING X-RAY REQUESTS
+# ==========================================
+
+def get_pending_xray_requests(
+    hospital_id=None,
+):
+    """
+    Get pending X-Ray requests for the physician
+    Patient Queue.
+
+    Returns one flattened dictionary per pending
+    X-Ray request.
+
+    Structure:
+
+        {
+            "request_id": "...",
+            "examination_id": "...",
+            "hospital_id": "...",
+            "requested_by": "...",
+            "body_part": "Chest",
+            "clinical_indication": "...",
+            "priority": "Routine",
+            "status": "Pending",
+            "requested_at": "...",
+            "updated_at": "...",
+
+            "examination": {...},
+
+            "patients": {...}
+        }
+    """
+
+    try:
+
+        query = (
+            admin_supabase
+            .table("xray_requests")
+            .select("""
+                request_id,
+                examination_id,
+                hospital_id,
+                requested_by,
+                body_part,
+                clinical_indication,
+                priority,
+                status,
+                requested_at,
+                updated_at,
+
+                examinations!inner (
+                    examination_id,
+                    patient_id,
+                    examination_type,
+                    examination_date,
+                    status,
+                    created_by,
+                    created_at,
+
+                    patients!inner (
+                        patient_id,
+                        patient_code,
+                        first_name,
+                        middle_name,
+                        last_name,
+                        suffix,
+                        date_of_birth,
+                        sex,
+                        contact_number,
+                        hospital_id
+                    )
+                )
+            """)
+            .eq(
+                "status",
+                "Pending",
+            )
+            .order(
+                "requested_at",
+                desc=False,
+            )
+        )
+
+        # ------------------------------------------
+        # HOSPITAL FILTER
+        # ------------------------------------------
+
+        if hospital_id:
+
+            query = query.eq(
+                "hospital_id",
+                hospital_id,
+            )
+
+        response = query.execute()
+
+        rows = response.data or []
+
+        print(
+            "PENDING X-RAY REQUESTS FOUND:",
+            len(rows),
+        )
+
+        print(
+            "PENDING X-RAY RAW DATA:",
+            rows,
+        )
+
+        pending_requests = []
+
+        # ------------------------------------------
+        # PROCESS REQUESTS
+        # ------------------------------------------
+
+        for request in rows:
+
+            examination = (
+                request.get("examinations")
+            )
+
+            # --------------------------------------
+            # SUPABASE MAY RETURN A LIST
+            # --------------------------------------
+
+            if isinstance(
+                examination,
+                list,
+            ):
+
+                examination = (
+                    examination[0]
+                    if examination
+                    else None
+                )
+
+            if not examination:
+
+                print(
+                    "Skipping X-Ray request "
+                    f"{request.get('request_id')}: "
+                    "missing examination."
+                )
+
+                continue
+
+            # --------------------------------------
+            # GET PATIENT
+            # --------------------------------------
+
+            patient = (
+                examination.get("patients")
+            )
+
+            if isinstance(
+                patient,
+                list,
+            ):
+
+                patient = (
+                    patient[0]
+                    if patient
+                    else None
+                )
+
+            if not patient:
+
+                print(
+                    "Skipping X-Ray request "
+                    f"{request.get('request_id')}: "
+                    "missing patient."
+                )
+
+                continue
+
+            # --------------------------------------
+            # FLATTEN DATA
+            # --------------------------------------
+
+            flattened = {
+
+                # X-Ray request
+                "request_id": request.get(
+                    "request_id"
+                ),
+
+                "examination_id": request.get(
+                    "examination_id"
+                ),
+
+                "hospital_id": request.get(
+                    "hospital_id"
+                ),
+
+                "requested_by": request.get(
+                    "requested_by"
+                ),
+
+                "body_part": request.get(
+                    "body_part"
+                ),
+
+                "clinical_indication": (
+                    request.get(
+                        "clinical_indication"
+                    )
+                ),
+
+                "priority": request.get(
+                    "priority"
+                ),
+
+                "status": request.get(
+                    "status"
+                ),
+
+                "requested_at": request.get(
+                    "requested_at"
+                ),
+
+                "updated_at": request.get(
+                    "updated_at"
+                ),
+
+                # Examination
+                "examination": examination,
+
+                # Patient
+                "patients": patient,
+            }
+
+            pending_requests.append(
+                flattened
+            )
+
+        print(
+            "PENDING X-RAY REQUESTS RETURNED:",
+            len(pending_requests),
+        )
+
+        return pending_requests
+
+    except Exception as exc:
+
+        print(
+            "Failed to fetch pending X-Ray "
+            f"requests: {exc}"
+        )
+
+        return []
