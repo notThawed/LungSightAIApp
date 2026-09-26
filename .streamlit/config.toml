@@ -10,9 +10,9 @@ base = "light"
 # font = "sans serif"
 
 [server]
-# enableStaticServing = true
+enableStaticServing = true
 
 [client]
-# showSidebarNavigation = false
-# toolbarMode = "minimal" 
+showSidebarNavigation = false
+toolbarMode = "minimal" 
 
