@@ -7,3 +7,5 @@ supabase
 psycopg2-binary
 python-dotenv
 streamlit-drawable-canvas
+torch
+torchvision

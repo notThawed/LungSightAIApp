@@ -3,6 +3,32 @@ from pathlib import Path
 
 import streamlit as st
 
+def hide_streamlit_sidebar():
+    st.markdown(
+        """
+        <style>
+
+        /* Hide the entire Streamlit sidebar */
+        [data-testid="stSidebar"] {
+            display: none !important;
+        }
+
+        /* Hide the sidebar expand/collapse button */
+        [data-testid="stSidebarCollapsedControl"] {
+            display: none !important;
+        }
+
+        /* Remove the space reserved for the sidebar */
+        section[data-testid="stSidebar"] {
+            width: 0 !important;
+            min-width: 0 !important;
+        }
+
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 # ==================================================
 # PROJECT ROOT
@@ -168,6 +194,8 @@ if not st.session_state.logged_in:
         "grace_info",
         None,
     )
+
+    hide_streamlit_sidebar()
 
     show_login()
 
