@@ -1939,3 +1939,129 @@ def get_pending_xray_requests(
         )
 
         return []
+
+
+def get_completed_patient_records(
+    hospital_id=None,
+):
+    """
+    Get unique patients who have at least one
+    completed examination.
+
+    A patient appears only once even when the
+    patient has multiple completed examinations.
+
+    The returned patient dictionaries contain
+    basic patient information only. Detailed
+    examination history is loaded separately
+    using get_examinations_by_patient().
+    """
+
+    try:
+
+        query = (
+            admin_supabase
+            .table("examinations")
+            .select("""
+                examination_id,
+                patient_id,
+                status,
+
+                patients!inner (
+                    patient_id,
+                    patient_code,
+                    first_name,
+                    middle_name,
+                    last_name,
+                    suffix,
+                    date_of_birth,
+                    sex,
+                    contact_number,
+                    address,
+                    hospital_id,
+
+                    hospitals (
+                        hospital_id,
+                        hospital_name,
+                        hospital_code
+                    )
+                )
+            """)
+            .eq(
+                "status",
+                "Completed",
+            )
+            .order(
+                "created_at",
+                desc=True,
+            )
+        )
+
+        if hospital_id:
+
+            query = query.eq(
+                "patients.hospital_id",
+                hospital_id,
+            )
+
+        response = query.execute()
+
+        rows = response.data or []
+
+        unique_patients = {}
+        latest_examination = {}
+
+        for row in rows:
+
+            patient = (
+                row.get("patients")
+                or {}
+            )
+
+            if isinstance(
+                patient,
+                list,
+            ):
+
+                patient = (
+                    patient[0]
+                    if patient
+                    else None
+                )
+
+            if not patient:
+                continue
+
+            patient_id = patient.get(
+                "patient_id"
+            )
+
+            if not patient_id:
+                continue
+
+            # --------------------------------------
+            # KEEP ONLY ONE PATIENT ENTRY
+            # --------------------------------------
+
+            if patient_id not in unique_patients:
+
+                unique_patients[
+                    patient_id
+                ] = patient
+
+                latest_examination[
+                    patient_id
+                ] = row
+
+        return list(
+            unique_patients.values()
+        )
+
+    except Exception as exc:
+
+        print(
+            "Failed to fetch completed "
+            f"patient records: {exc}"
+        )
+
+        return []

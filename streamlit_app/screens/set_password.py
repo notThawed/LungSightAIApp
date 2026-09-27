@@ -82,12 +82,13 @@ def show():
 
             st.session_state["invite_session_ready"] = True
 
-        except Exception:
+        except Exception as e:
 
             st.error(
-                "This invitation link is invalid or has expired. "
-                "Please request a new invitation from your administrator."
+                "Failed to establish the invitation session."
             )
+
+            st.exception(e)
 
             return
 

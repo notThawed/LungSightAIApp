@@ -1,7 +1,7 @@
 from components.sidebar import show_physician_sidebar
 from components.navbar import show_top_navbar
 
-from pages.physician import dashboard, patient_queue, review_patient, records, profile
+from pages.physician import dashboard, patient_queue, review_patient, physician_patient_records, profile
 from pages.hospital_administrator import subscription_gate
 
 def show_physician_layout():
@@ -33,7 +33,7 @@ def show_physician_layout():
 
     elif page == "Patient Records":
 
-        records.show()
+        physician_patient_records.show()
 
     elif page == "Profile":
 

@@ -2166,7 +2166,7 @@ def render_metrics(
         metric_card(
             "Patients waiting",
             total_patients,
-            "patients",
+            "groups",
             tone="blue",
         )
 
@@ -2175,7 +2175,7 @@ def render_metrics(
         metric_card(
             "Pending examinations",
             total_exams,
-            "examinations",
+            "pending_actions",
             tone="amber",
         )
 
@@ -2184,7 +2184,7 @@ def render_metrics(
         metric_card(
             "X-Ray requests",
             xray_count,
-            "pending",
+            "radiology",
             tone="blue",
         )
 
@@ -2195,7 +2195,7 @@ def render_metrics(
             format_waiting(
                 longest
             ),
-            "waiting",
+            "hourglass_top",
             tone="red",
         )
 

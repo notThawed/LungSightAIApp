@@ -114,7 +114,15 @@ st.set_page_config(
 # login flow moves the token into query parameters.
 # ==================================================
 
-if st.query_params.get("access_token"):
+access_token = st.query_params.get(
+    "access_token"
+)
+
+refresh_token = st.query_params.get(
+    "refresh_token"
+)
+
+if access_token and refresh_token:
 
     from screens.set_password import show as show_set_password
 

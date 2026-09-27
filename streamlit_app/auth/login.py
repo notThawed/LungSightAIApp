@@ -79,7 +79,7 @@ def show_login_form():
         st.markdown(
             "<p class='ls-login-title'>Sign-In</p>"
             "<p class='ls-login-subtitle'>"
-            "Test Edit for a new Commit"
+            "Access your hospital's LungSight workspace."
             "</p>",
             unsafe_allow_html=True,
         )

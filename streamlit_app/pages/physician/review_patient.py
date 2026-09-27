@@ -1116,7 +1116,7 @@ def render_metrics(
         metric_card(
             "X-Ray ready",
             total,
-            "examinations",
+            "medical_information",
             tone="blue",
         )
 
@@ -1125,7 +1125,7 @@ def render_metrics(
         metric_card(
             "Patients to review",
             patients,
-            "patients",
+            "pending",
             tone="amber",
         )
 
