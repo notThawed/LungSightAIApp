@@ -23,7 +23,7 @@ from backend.fetches import (
 
 REDIRECT_URL = os.getenv(
     "INVITE_REDIRECT_URL",
-    "http://localhost:8501/app/static/redirect.html",
+    "https://notthawed.github.io/LungSightAuthRedirect/",
 )
 
 
