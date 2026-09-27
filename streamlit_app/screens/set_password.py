@@ -21,8 +21,13 @@ def show():
         unsafe_allow_html=True,
     )
 
-    access_token = st.query_params.get("access_token")
-    refresh_token = st.query_params.get("refresh_token")
+    access_token = st.session_state.get(
+    "invite_access_token"
+)
+
+    refresh_token = st.session_state.get(
+        "invite_refresh_token"
+)
 
     st.title("Set Your Password")
     st.caption("Complete your LungSight account setup.")
@@ -43,10 +48,31 @@ def show():
         if st.button("Go to Login", type="primary"):
 
             # Clear the invite session state
-            st.session_state.pop("password_set_success", None)
-            st.session_state.pop("invite_session_ready", None)
+            st.session_state.pop(
+                "password_set_success",
+                None,
+            )
 
-            # Clear the query params so Streamlit returns to the login page
+            st.session_state.pop(
+                "invite_session_ready",
+                None,
+            )
+
+            st.session_state.pop(
+                "invite_access_token",
+                None,
+            )
+
+            st.session_state.pop(
+                "invite_refresh_token",
+                None,
+            )
+
+            st.session_state.pop(
+                "invite_type",
+                None,
+            )
+
             st.query_params.clear()
 
             st.rerun()

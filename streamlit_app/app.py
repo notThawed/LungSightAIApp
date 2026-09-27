@@ -122,7 +122,34 @@ refresh_token = st.query_params.get(
     "refresh_token"
 )
 
+invite_type = st.query_params.get(
+    "type"
+)
+
 if access_token and refresh_token:
+
+    st.session_state["invite_access_token"] = (
+        access_token
+    )
+
+    st.session_state["invite_refresh_token"] = (
+        refresh_token
+    )
+
+    st.session_state["invite_type"] = (
+        invite_type
+    )
+
+
+if (
+    st.session_state.get(
+        "invite_access_token"
+    )
+    and
+    st.session_state.get(
+        "invite_refresh_token"
+    )
+):
 
     from screens.set_password import show as show_set_password
 
