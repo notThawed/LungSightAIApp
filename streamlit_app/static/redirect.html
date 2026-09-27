@@ -6,13 +6,12 @@
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
-
-    <title>LungSight - Redirecting</title>
+    <title>LungSight - Completing Setup</title>
 </head>
 
 <body>
 
-    <p>Redirecting to LungSight...</p>
+    <p>Completing your LungSight account setup...</p>
 
     <script>
         (function () {
@@ -37,29 +36,33 @@
             const type =
                 params.get("type");
 
-            if (
-                accessToken &&
-                refreshToken
-            ) {
-
-                const query =
-                    new URLSearchParams({
-                        access_token: accessToken,
-                        refresh_token: refreshToken,
-                        ...(type
-                            ? { type: type }
-                            : {}
-                        )
-                    });
-
-                window.location.replace(
-                    "/?" + query.toString()
-                );
-
+            if (!accessToken || !refreshToken) {
+                window.location.replace("/");
                 return;
             }
 
-            window.location.replace("/");
+            const query = new URLSearchParams();
+
+            query.set(
+                "access_token",
+                accessToken
+            );
+
+            query.set(
+                "refresh_token",
+                refreshToken
+            );
+
+            if (type) {
+                query.set(
+                    "type",
+                    type
+                );
+            }
+
+            window.location.replace(
+                "/?" + query.toString()
+            );
 
         })();
     </script>
