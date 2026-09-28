@@ -1,7 +1,9 @@
 import streamlit as st
+import pathlib as Path
 
 from backend.backend_utils.followup_utils import (
     get_patients_with_follow_ups,
+    get_patients_with_upcoming_follow_ups,
     get_upcoming_follow_ups_by_patient,
     get_follow_up_history,
     update_follow_up_status,
@@ -17,7 +19,6 @@ from streamlit_app.components.ui import (
     section_title,
     show_rows,
     full_name,
-    format_date,
     pill,
     metric_card,
     remember,
@@ -97,6 +98,7 @@ def format_datetime(
 ):
 
     if not date_value:
+
         return "—"
 
     try:
@@ -187,7 +189,9 @@ def format_datetime(
                 f"{time_value}"
             )
 
-        return str(date_value)
+        return str(
+            date_value
+        )
 
 
 def follow_up_datetime(
@@ -202,6 +206,43 @@ def follow_up_datetime(
             "follow_up_time"
         ),
     )
+
+
+# ============================================================
+# STATUS
+# ============================================================
+
+def status_tone(
+    status,
+):
+
+    normalized = (
+        str(status or "")
+        .strip()
+        .lower()
+    )
+
+    if normalized == "scheduled":
+
+        return "blue"
+
+    if normalized == "completed":
+
+        return "green"
+
+    if normalized == "missed":
+
+        return "red"
+
+    if normalized == "cancelled":
+
+        return "red"
+
+    if normalized == "rescheduled":
+
+        return "amber"
+
+    return "gray"
 
 
 # ============================================================
@@ -238,38 +279,6 @@ def select_patient(
     )
 
     st.rerun()
-
-
-# ============================================================
-# STATUS HELPERS
-# ============================================================
-
-def status_tone(
-    status,
-):
-
-    normalized = (
-        str(status or "")
-        .strip()
-        .lower()
-    )
-
-    if normalized == "scheduled":
-        return "blue"
-
-    if normalized == "completed":
-        return "green"
-
-    if normalized == "missed":
-        return "red"
-
-    if normalized == "cancelled":
-        return "red"
-
-    if normalized == "rescheduled":
-        return "amber"
-
-    return "gray"
 
 
 # ============================================================
@@ -375,13 +384,16 @@ def show_follow_up_action_dialog(
         "Follow-Up Notes",
         value=current_notes,
         height=120,
-        key=f"physician_followup_notes_{follow_up_id}",
+        key=(
+            f"physician_followup_notes_"
+            f"{follow_up_id}"
+        ),
     )
 
     st.divider()
 
     # ========================================================
-    # ALREADY COMPLETED
+    # COMPLETED
     # ========================================================
 
     if status == "Completed":
@@ -392,7 +404,10 @@ def show_follow_up_action_dialog(
 
         if st.button(
             "Close",
-            key=f"physician_followup_close_completed_{follow_up_id}",
+            key=(
+                f"physician_followup_close_"
+                f"completed_{follow_up_id}"
+            ),
             width="stretch",
         ):
 
@@ -401,7 +416,7 @@ def show_follow_up_action_dialog(
         return
 
     # ========================================================
-    # ACTIONS
+    # COMPLETE / MISSED
     # ========================================================
 
     if status in (
@@ -415,14 +430,20 @@ def show_follow_up_action_dialog(
 
             if st.button(
                 "Mark Completed",
-                key=f"physician_complete_{follow_up_id}",
+                key=(
+                    f"physician_complete_"
+                    f"{follow_up_id}"
+                ),
                 type="primary",
                 width="stretch",
             ):
 
                 result = complete_follow_up(
                     follow_up_id,
-                    notes=notes.strip() or None,
+                    notes=(
+                        notes.strip()
+                        or None
+                    ),
                 )
 
                 if result.get("success"):
@@ -446,7 +467,10 @@ def show_follow_up_action_dialog(
 
             if st.button(
                 "Mark Missed",
-                key=f"physician_missed_{follow_up_id}",
+                key=(
+                    f"physician_missed_"
+                    f"{follow_up_id}"
+                ),
                 width="stretch",
             ):
 
@@ -476,51 +500,67 @@ def show_follow_up_action_dialog(
     # RESCHEDULE
     # ========================================================
 
-    st.divider()
-
-    section_title(
-        "Reschedule"
-    )
-
-    new_date = st.date_input(
-        "New Follow-Up Date",
-        key=f"physician_reschedule_date_{follow_up_id}",
-    )
-
-    new_time = st.time_input(
-        "New Follow-Up Time",
-        key=f"physician_reschedule_time_{follow_up_id}",
-    )
-
-    if st.button(
-        "Reschedule Follow-Up",
-        key=f"physician_reschedule_{follow_up_id}",
-        width="stretch",
+    if status not in (
+        "Completed",
+        "Cancelled",
     ):
 
-        result = reschedule_follow_up(
-            follow_up_id,
-            new_date,
-            new_time.strftime("%H:%M:%S"),
-            notes.strip() or None,
+        st.divider()
+
+        section_title(
+            "Reschedule"
         )
 
-        if result.get("success"):
+        new_date = st.date_input(
+            "New Follow-Up Date",
+            key=(
+                f"physician_reschedule_date_"
+                f"{follow_up_id}"
+            ),
+        )
 
-            remember(
-                "Follow-up rescheduled successfully."
+        new_time = st.time_input(
+            "New Follow-Up Time",
+            key=(
+                f"physician_reschedule_time_"
+                f"{follow_up_id}"
+            ),
+        )
+
+        if st.button(
+            "Reschedule Follow-Up",
+            key=(
+                f"physician_reschedule_"
+                f"{follow_up_id}"
+            ),
+            width="stretch",
+        ):
+
+            result = reschedule_follow_up(
+                follow_up_id,
+                new_date,
+                new_time.strftime(
+                    "%H:%M:%S"
+                ),
+                notes.strip() or None,
             )
 
-            st.rerun()
+            if result.get("success"):
 
-        else:
-
-            st.error(
-                result.get(
-                    "message",
-                    "Failed to reschedule follow-up.",
+                remember(
+                    "Follow-up rescheduled successfully."
                 )
-            )
+
+                st.rerun()
+
+            else:
+
+                st.error(
+                    result.get(
+                        "message",
+                        "Failed to reschedule follow-up.",
+                    )
+                )
 
     # ========================================================
     # CANCEL
@@ -531,9 +571,14 @@ def show_follow_up_action_dialog(
         "Cancelled",
     ):
 
+        st.divider()
+
         if st.button(
             "Cancel Follow-Up",
-            key=f"physician_cancel_{follow_up_id}",
+            key=(
+                f"physician_cancel_"
+                f"{follow_up_id}"
+            ),
             width="stretch",
         ):
 
@@ -611,15 +656,14 @@ def render_patient_list(
 
         with col2:
 
-            button_label = (
+            if st.button(
                 "Selected"
                 if is_selected
-                else "View"
-            )
-
-            if st.button(
-                button_label,
-                key=f"physician_patient_{patient_id}",
+                else "View",
+                key=(
+                    f"physician_patient_"
+                    f"{patient_id}"
+                ),
                 type=(
                     "primary"
                     if is_selected
@@ -745,7 +789,10 @@ def render_patient_followups(
 
                     if st.button(
                         "Manage",
-                        key=f"physician_manage_{follow_up['follow_up_id']}",
+                        key=(
+                            f"physician_manage_"
+                            f"{follow_up['follow_up_id']}"
+                        ),
                         type="primary",
                         width="stretch",
                     ):
@@ -831,21 +878,44 @@ def render_patient_followups(
 
 def render_metrics(
     patients,
+    upcoming_patients,
 ):
 
     total_patients = len(
         patients
     )
 
-    m1 = st.columns(1)[0]
+    upcoming_total = len(
+        upcoming_patients
+    )
 
-    with m1:
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
 
         metric_card(
             "Patients With Follow-Ups",
             total_patients,
             "event",
             tone="blue",
+        )
+
+    with col2:
+
+        metric_card(
+            "Patients With Upcoming Follow-Ups",
+            upcoming_total,
+            "event_repeat",
+            tone="red",
+        )
+
+    with col3:
+
+        metric_card(
+            "Scheduled Follow-Ups",
+            upcoming_total,
+            "calendar_month",
+            tone="green",
         )
 
 
@@ -893,19 +963,36 @@ def show():
     # LOAD PATIENTS
     # ========================================================
 
+    effective_hospital_id = (
+        None
+        if role_id == ROLE_SUPERADMIN
+        else hospital_id
+    )
+
     patients = (
         get_patients_with_follow_ups(
-            hospital_id=(
-                None
-                if role_id == ROLE_SUPERADMIN
-                else hospital_id
-            )
+            hospital_id=effective_hospital_id
         )
     )
 
-    render_metrics(
-        patients
+    upcoming_patients = (
+        get_patients_with_upcoming_follow_ups(
+            hospital_id=effective_hospital_id
+        )
     )
+
+    # ========================================================
+    # METRICS
+    # ========================================================
+
+    render_metrics(
+        patients,
+        upcoming_patients,
+    )
+
+    # ========================================================
+    # SELECTED PATIENT
+    # ========================================================
 
     selected_patient = (
         st.session_state.get(

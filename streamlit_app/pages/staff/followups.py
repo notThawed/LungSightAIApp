@@ -2,8 +2,10 @@ import streamlit as st
 
 from backend.backend_utils.followup_utils import (
     get_patients_with_follow_ups,
+    get_patients_with_upcoming_follow_ups,
     get_upcoming_follow_ups_by_patient,
     get_follow_up_history,
+    get_hospital_follow_ups,
 )
 
 from streamlit_app.components.ui import (
@@ -11,7 +13,6 @@ from streamlit_app.components.ui import (
     page_header,
     empty_state,
     section_title,
-    show_rows,
     full_name,
     pill,
     metric_card,
@@ -82,6 +83,7 @@ def format_datetime(
 ):
 
     if not date_value:
+
         return "—"
 
     try:
@@ -99,6 +101,10 @@ def format_datetime(
                 "+00:00",
             )
 
+        # ----------------------------------------------------
+        # DATETIME VALUE
+        # ----------------------------------------------------
+
         if "T" in date_text:
 
             dt = datetime.fromisoformat(
@@ -113,14 +119,22 @@ def format_datetime(
                 "%B %d, %Y at %I:%M %p"
             )
 
+        # ----------------------------------------------------
+        # DATE VALUE
+        # ----------------------------------------------------
+
         date_obj = datetime.strptime(
-            date_text,
+            date_text[:10],
             "%Y-%m-%d",
         )
 
         formatted_date = date_obj.strftime(
             "%B %d, %Y"
         )
+
+        # ----------------------------------------------------
+        # TIME VALUE
+        # ----------------------------------------------------
 
         if time_value:
 
@@ -151,7 +165,9 @@ def format_datetime(
 
     except Exception:
 
-        return str(date_value)
+        return str(
+            date_value
+        )
 
 
 def follow_up_datetime(
@@ -183,18 +199,23 @@ def status_tone(
     )
 
     if normalized == "scheduled":
+
         return "blue"
 
     if normalized == "completed":
+
         return "green"
 
     if normalized == "missed":
+
         return "red"
 
     if normalized == "cancelled":
+
         return "red"
 
     if normalized == "rescheduled":
+
         return "amber"
 
     return "gray"
@@ -290,7 +311,10 @@ def render_patient_list(
                 "Selected"
                 if is_selected
                 else "View",
-                key=f"staff_followup_patient_{patient_id}",
+                key=(
+                    f"staff_followup_patient_"
+                    f"{patient_id}"
+                ),
                 type=(
                     "primary"
                     if is_selected
@@ -339,7 +363,7 @@ def render_patient_followups(
         st.rerun()
 
     # ========================================================
-    # UPCOMING
+    # UPCOMING FOLLOW-UPS
     # ========================================================
 
     upcoming = (
@@ -407,7 +431,7 @@ def render_patient_followups(
                     )
 
     # ========================================================
-    # HISTORY
+    # FOLLOW-UP HISTORY
     # ========================================================
 
     st.divider()
@@ -482,18 +506,64 @@ def render_patient_followups(
 
 def render_metrics(
     patients,
+    upcoming_patients,
+    upcoming_follow_ups,
 ):
 
-    total = len(
+    total_patients = len(
         patients
     )
 
-    metric_card(
-        "Patients With Follow-Ups",
-        total,
-        "event",
-        tone="blue",
+    total_upcoming_patients = len(
+        upcoming_patients
     )
+
+    total_scheduled_follow_ups = len(
+        upcoming_follow_ups
+    )
+
+    col1, col2, col3 = st.columns(
+        3
+    )
+
+    # --------------------------------------------------------
+    # PATIENTS WITH FOLLOW-UPS
+    # --------------------------------------------------------
+
+    with col1:
+
+        metric_card(
+            "Patients With Follow-Ups",
+            total_patients,
+            "event",
+            tone="blue",
+        )
+
+    # --------------------------------------------------------
+    # PATIENTS WITH UPCOMING FOLLOW-UPS
+    # --------------------------------------------------------
+
+    with col2:
+
+        metric_card(
+            "Patients With Upcoming Follow-Ups",
+            total_upcoming_patients,
+            "event_repeat",
+            tone="red",
+        )
+
+    # --------------------------------------------------------
+    # SCHEDULED FOLLOW-UPS
+    # --------------------------------------------------------
+
+    with col3:
+
+        metric_card(
+            "Scheduled Follow-Ups",
+            total_scheduled_follow_ups,
+            "calendar_month",
+            tone="green",
+        )
 
 
 # ============================================================
@@ -509,7 +579,12 @@ def show():
     show_flash_message()
 
     role_id = current_role_id()
+
     hospital_id = current_hospital_id()
+
+    # ========================================================
+    # ACCESS CONTROL
+    # ========================================================
 
     if role_id not in (
         ROLE_STAFF,
@@ -523,10 +598,18 @@ def show():
 
         return
 
+    # ========================================================
+    # PAGE HEADER
+    # ========================================================
+
     page_header(
         "Follow Ups",
         "View patient follow-up schedules and follow-up history.",
     )
+
+    # ========================================================
+    # REFRESH
+    # ========================================================
 
     if st.button(
         "Refresh",
@@ -535,21 +618,80 @@ def show():
         width="stretch",
     ):
 
+        clear_follow_up_state()
+
         st.rerun()
+
+    # ========================================================
+    # HOSPITAL FILTER
+    # ========================================================
+
+    effective_hospital_id = (
+        None
+        if role_id == ROLE_SUPERADMIN
+        else hospital_id
+    )
+
+    # ========================================================
+    # ALL PATIENTS WITH FOLLOW-UPS
+    # ========================================================
 
     patients = (
         get_patients_with_follow_ups(
-            hospital_id=(
-                None
-                if role_id == ROLE_SUPERADMIN
-                else hospital_id
-            )
+            hospital_id=effective_hospital_id
         )
     )
 
-    render_metrics(
-        patients
+    # ========================================================
+    # PATIENTS WITH UPCOMING FOLLOW-UPS
+    # ========================================================
+
+    upcoming_patients = (
+        get_patients_with_upcoming_follow_ups(
+            hospital_id=effective_hospital_id
+        )
     )
+
+    # ========================================================
+    # UPCOMING FOLLOW-UP RECORDS
+    # ========================================================
+
+    upcoming_follow_ups = (
+        get_hospital_follow_ups(
+            hospital_id=effective_hospital_id,
+            status="Scheduled",
+        )
+    )
+
+    # --------------------------------------------------------
+    # ALSO INCLUDE RESCHEDULED FOLLOW-UPS
+    # --------------------------------------------------------
+
+    rescheduled_follow_ups = (
+        get_hospital_follow_ups(
+            hospital_id=effective_hospital_id,
+            status="Rescheduled",
+        )
+    )
+
+    upcoming_follow_ups = (
+        upcoming_follow_ups
+        + rescheduled_follow_ups
+    )
+
+    # ========================================================
+    # METRICS
+    # ========================================================
+
+    render_metrics(
+        patients,
+        upcoming_patients,
+        upcoming_follow_ups,
+    )
+
+    # ========================================================
+    # SELECTED PATIENT
+    # ========================================================
 
     selected_patient = (
         st.session_state.get(
@@ -563,11 +705,19 @@ def show():
         )
     )
 
+    # ========================================================
+    # PATIENT DETAIL
+    # ========================================================
+
     if selected_patient:
 
         render_patient_followups(
             selected_patient
         )
+
+    # ========================================================
+    # PATIENT LIST
+    # ========================================================
 
     else:
 

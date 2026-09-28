@@ -1223,3 +1223,156 @@ def get_follow_up_counts(
             counts["rescheduled"] += 1
 
     return counts
+
+
+def get_patients_with_upcoming_follow_ups(
+    hospital_id=None,
+):
+    """
+    Get unique patients who have at least one
+    Scheduled or Rescheduled follow-up.
+
+    The patients are ordered by their earliest
+    upcoming follow-up date and time.
+    """
+
+    try:
+
+        query = (
+            admin_supabase
+            .table("follow_ups")
+            .select("""
+                patient_id,
+                follow_up_date,
+                follow_up_time,
+                status,
+
+                patients!inner (
+                    patient_id,
+                    patient_code,
+                    first_name,
+                    middle_name,
+                    last_name,
+                    suffix,
+                    date_of_birth,
+                    sex,
+                    contact_number,
+                    hospital_id,
+
+                    hospitals (
+                        hospital_id,
+                        hospital_name,
+                        hospital_code
+                    )
+                )
+            """)
+            .in_(
+                "status",
+                [
+                    "Scheduled",
+                    "Rescheduled",
+                ],
+            )
+            .order(
+                "follow_up_date",
+                desc=False,
+            )
+            .order(
+                "follow_up_time",
+                desc=False,
+            )
+        )
+
+        # ----------------------------------------------------
+        # HOSPITAL FILTER
+        # ----------------------------------------------------
+
+        if hospital_id:
+
+            query = query.eq(
+                "patients.hospital_id",
+                hospital_id,
+            )
+
+        response = query.execute()
+
+        rows = response.data or []
+
+        # ----------------------------------------------------
+        # UNIQUE PATIENTS
+        # ----------------------------------------------------
+
+        patients = {}
+
+        for row in rows:
+
+            patient = row.get(
+                "patients"
+            )
+
+            if isinstance(
+                patient,
+                list,
+            ):
+
+                patient = (
+                    patient[0]
+                    if patient
+                    else None
+                )
+
+            if not patient:
+
+                continue
+
+            patient_id = patient.get(
+                "patient_id"
+            )
+
+            if not patient_id:
+
+                continue
+
+            # Because the query is already ordered
+            # by date/time ascending, the first
+            # follow-up we encounter is the earliest.
+            if patient_id not in patients:
+
+                patient = dict(
+                    patient
+                )
+
+                patient[
+                    "upcoming_follow_up_date"
+                ] = row.get(
+                    "follow_up_date"
+                )
+
+                patient[
+                    "upcoming_follow_up_time"
+                ] = row.get(
+                    "follow_up_time"
+                )
+
+                patient[
+                    "upcoming_follow_up_status"
+                ] = row.get(
+                    "status"
+                )
+
+                patients[
+                    patient_id
+                ] = patient
+
+        return list(
+            patients.values()
+        )
+
+    except Exception as exc:
+
+        print(
+            "Failed to fetch patients with "
+            f"upcoming follow-ups: {exc}"
+        )
+
+        return []
