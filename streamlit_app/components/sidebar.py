@@ -105,6 +105,11 @@ PHYSICIAN_NAV = [
                 "Patient records",
                 "folder_shared",
             ),
+            (
+                "Follow-Ups",
+                "Follow-ups",
+                "assignment",
+            ),
         ],
     },
 ]

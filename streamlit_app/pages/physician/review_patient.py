@@ -15,6 +15,10 @@ from backend.crud import (
     update_examination,
 )
 
+from backend.backend_utils.followup_utils import (
+    create_follow_up,
+)
+
 from streamlit_app.components.ui import (
     load_css,
     page_header,
@@ -877,6 +881,66 @@ def show_xray_review_dialog(
         )
 
         # ====================================================
+        # FOLLOW-UP
+        # ====================================================
+
+        st.divider()
+
+        section_title(
+            "Follow-Up"
+        )
+
+        st.caption(
+            "Schedule a follow-up appointment for this patient "
+            "if continued monitoring is required."
+        )
+
+        schedule_follow_up = st.checkbox(
+            "Schedule Follow-Up",
+            value=False,
+            key=(
+                f"xray_{examination_id}_"
+                "schedule_follow_up"
+            ),
+        )
+
+        follow_up_date = None
+        follow_up_time = None
+        follow_up_notes = None
+
+        if schedule_follow_up:
+
+            follow_up_date = st.date_input(
+                "Follow-Up Date",
+                key=(
+                    f"xray_{examination_id}_"
+                    "follow_up_date"
+                ),
+            )
+
+            follow_up_time = st.time_input(
+                "Follow-Up Time",
+                key=(
+                    f"xray_{examination_id}_"
+                    "follow_up_time"
+                ),
+            )
+
+            follow_up_notes = st.text_area(
+                "Follow-Up Notes",
+                height=100,
+                key=(
+                    f"xray_{examination_id}_"
+                    "follow_up_notes"
+                ),
+                placeholder=(
+                    "Example: Reassess symptoms, "
+                    "review response to treatment, "
+                    "and repeat examination if needed."
+                ),
+            )
+
+        # ====================================================
         # ACTIONS
         # ====================================================
 
@@ -930,11 +994,23 @@ def show_xray_review_dialog(
 
         return
 
+    if schedule_follow_up and not follow_up_date:
+
+        st.error(
+            "Please select a follow-up date."
+        )
+
+        return
+
     # ========================================================
     # SAVE
     # ========================================================
 
     try:
+
+        # ====================================================
+        # SAVE X-RAY REVIEW
+        # ====================================================
 
         save_xray_review(
             request_id=request[
@@ -950,6 +1026,10 @@ def show_xray_review_dialog(
                 or None
             ),
         )
+
+        # ====================================================
+        # COMPLETE EXAMINATION
+        # ====================================================
 
         update_examination(
             examination_id=examination_id,
@@ -970,12 +1050,60 @@ def show_xray_review_dialog(
             ),
         )
 
+        # ====================================================
+        # CREATE FOLLOW-UP
+        # ====================================================
+
+        if schedule_follow_up:
+
+            follow_up_result = create_follow_up(
+                patient_id=patient.get(
+                    "patient_id"
+                ),
+                examination_id=examination_id,
+                follow_up_date=follow_up_date,
+                follow_up_time=follow_up_time,
+                notes=(
+                    follow_up_notes.strip()
+                    if follow_up_notes
+                    and follow_up_notes.strip()
+                    else None
+                ),
+                created_by=user_id,
+            )
+
+            if not follow_up_result.get(
+                "success"
+            ):
+
+                st.error(
+                    "The examination was completed, "
+                    "but the follow-up could not be scheduled: "
+                    f"{follow_up_result.get('message')}"
+                )
+
+                return
+
+        # ====================================================
+        # CLEAR STATE
+        # ====================================================
+
         clear_review_state()
 
-        remember(
-            "X-Ray reviewed successfully. "
-            "Examination completed."
-        )
+        if schedule_follow_up:
+
+            remember(
+                "X-Ray reviewed successfully. "
+                "Examination completed and "
+                "follow-up scheduled."
+            )
+
+        else:
+
+            remember(
+                "X-Ray reviewed successfully. "
+                "Examination completed."
+            )
 
         st.rerun()
 
