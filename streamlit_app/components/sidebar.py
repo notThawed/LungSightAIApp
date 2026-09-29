@@ -215,7 +215,7 @@ STAFF_NAV = [
         "items": [
             (
                 "Register Patient",
-                "Register new patient",
+                "Admit Patient",
                 "person_add",
             ),
             (
