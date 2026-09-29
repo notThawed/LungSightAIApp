@@ -24,6 +24,10 @@ from streamlit_app.components.ui import (
     show_flash_message,
 )
 
+from backend.backend_utils.subscription_usage import (
+    can_analyze_xray,
+)
+
 
 # ============================================================
 # CONFIG
@@ -216,6 +220,21 @@ def show_perform_xray_dialog(patient, examination):
     if quality_status is None:
         st.error("Please mark the quality check.")
         return
+
+    # ---------- Subscription limit ----------
+    hospital_id = current_hospital_id()
+
+    subscription_check = can_analyze_xray(hospital_id)
+
+    if not subscription_check.get("allowed"):
+        st.error(
+            subscription_check.get(
+                "message",
+                "Monthly X-Ray limit Reached.",
+            )
+        )
+        return
+
 
     # ---------- Save ----------
     try:

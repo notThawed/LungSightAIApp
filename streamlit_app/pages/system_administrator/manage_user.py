@@ -38,6 +38,10 @@ from streamlit_app.components.ui import (
     show_flash_message,
 )
 
+from backend.backend_utils.subscription_usage import (
+    can_create_user,
+)
+
 
 # Column widths: employee id, name, role, hospital, status, last login, 3 buttons
 WIDTHS = [1.2, 2.9, 1.7, 2, 1.1, 1.8, 0.5, 0.5, 0.5]
@@ -327,6 +331,18 @@ def render_user_form(user=None):
         done_message, fail_message = "User updated.", "Failed to update user."
 
     else:
+
+        subscription_check = can_create_user(hospital_id)
+
+        if not subscription_check.get("allowed"):
+            errors.error(
+                subscription_check.get(
+                    "message",
+                    "User limit reached",
+                )
+            )
+            return
+
         with st.spinner("Creating user..."):
             result = create_user(
                 email=email.strip(),

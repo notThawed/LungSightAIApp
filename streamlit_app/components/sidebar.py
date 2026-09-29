@@ -276,6 +276,22 @@ HOSPITAL_ADMIN_NAV = [
             ),
         ],
     },
+
+    {
+        "section": "Subscription Management",
+        "items": [
+            (
+                "Subscription Usage",
+                "Subscription Usage",
+                "data_usage",
+            ),
+            (
+                "Subscription Settings",
+                "Subscription Settings",
+                "payments",
+            ),
+        ],
+    },
 ]
 
 

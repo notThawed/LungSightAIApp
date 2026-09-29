@@ -39,8 +39,8 @@ def create_user(
                 email,
                 options={
                     "redirect_to": (
-                        "http://localhost:8501/"
-                        "app/static/redirect.html"
+                        "https://notthawed.github.io/"
+                        "LungSightAuthRedirect/"
                     ),
                     "data": {
                         "first_name": first_name,
