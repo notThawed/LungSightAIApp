@@ -1,5 +1,9 @@
 import streamlit as st
 
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
+
 from backend.fetches import (
     get_all_patients,
     get_all_hospitals,
@@ -31,8 +35,6 @@ from streamlit_app.components.ui import (
     show_flash_message,
 )
 
-from datetime import date
-
 
 # ============================================================
 # CONFIG
@@ -48,6 +50,7 @@ WIDTHS = [
     1,
 ]
 
+
 WIDTHS_SUPERADMIN = [
     1.6,
     1.3,
@@ -58,6 +61,7 @@ WIDTHS_SUPERADMIN = [
     1,
 ]
 
+
 HEADERS = [
     "Patient ID",
     "Name",
@@ -67,6 +71,7 @@ HEADERS = [
     "Hospital",
     "Records",
 ]
+
 
 HEADERS_SUPERADMIN = [
     "Hospital",
@@ -80,14 +85,15 @@ HEADERS_SUPERADMIN = [
 
 
 EXAM_WIDTHS = [
-    1.5,
-    2,
+    1.8,
+    2.3,
     1.5,
     1,
 ]
 
+
 EXAM_HEADERS = [
-    "Date",
+    "Completed",
     "Examination",
     "Status",
     "View",
@@ -100,6 +106,7 @@ MEDICAL_WIDTHS = [
     2.5,
     1,
 ]
+
 
 MEDICAL_HEADERS = [
     "Date",
@@ -120,6 +127,157 @@ STATUS_TONES = {
 
 
 ROLE_SUPERADMIN = 1
+
+
+MANILA_TZ = ZoneInfo(
+    "Asia/Manila"
+)
+
+
+# ============================================================
+# DATE / TIME HELPERS
+# ============================================================
+
+def parse_datetime(
+    value,
+):
+
+    if not value:
+
+        return None
+
+    if isinstance(
+        value,
+        datetime,
+    ):
+
+        parsed = value
+
+    else:
+
+        try:
+
+            parsed = datetime.fromisoformat(
+                str(value).replace(
+                    "Z",
+                    "+00:00",
+                )
+            )
+
+        except (
+            ValueError,
+            TypeError,
+        ):
+
+            return None
+
+    if parsed.tzinfo is None:
+
+        parsed = parsed.replace(
+            tzinfo=MANILA_TZ
+        )
+
+    return parsed.astimezone(
+        MANILA_TZ
+    )
+
+
+def get_completion_datetime(
+    examination,
+):
+
+    return (
+        examination.get(
+            "time_of_discharge"
+        )
+        or examination.get(
+            "reviewed_at"
+        )
+    )
+
+
+def format_completion_datetime(
+    examination,
+):
+
+    completed_at = get_completion_datetime(
+        examination
+    )
+
+    parsed = parse_datetime(
+        completed_at
+    )
+
+    if not parsed:
+
+        return "—"
+
+    return parsed.strftime(
+        "%b %d, %Y • %I:%M %p"
+    )
+
+
+# ============================================================
+# EXAMINATION TYPE HELPERS
+# ============================================================
+
+def is_follow_up_examination(
+    examination,
+):
+
+    examination_type = (
+        examination.get(
+            "examination_type"
+        )
+        or ""
+    )
+
+    normalized = (
+        str(
+            examination_type
+        )
+        .strip()
+        .lower()
+        .replace(
+            "_",
+            " ",
+        )
+    )
+
+    return (
+        "follow-up" in normalized
+        or "follow up" in normalized
+    )
+
+
+def split_examination_history(
+    examinations,
+):
+
+    general_consults = []
+
+    follow_up_examinations = []
+
+    for examination in examinations:
+
+        if is_follow_up_examination(
+            examination
+        ):
+
+            follow_up_examinations.append(
+                examination
+            )
+
+        else:
+
+            general_consults.append(
+                examination
+            )
+
+    return (
+        general_consults,
+        follow_up_examinations,
+    )
 
 
 # ============================================================
@@ -261,6 +419,113 @@ def open_dialog(
 
 
 # ============================================================
+# EXAMINATION TABLE
+# ============================================================
+
+def render_examination_table(
+    examinations,
+    patient,
+):
+
+    if not examinations:
+
+        return
+
+    with st.container(
+        key="patient_exam_records"
+    ):
+
+        table_header(
+            EXAM_HEADERS,
+            EXAM_WIDTHS,
+            "patient_exams",
+        )
+
+        for examination in examinations:
+
+            examination_id = (
+                examination[
+                    "examination_id"
+                ]
+            )
+
+            status = (
+                examination.get(
+                    "status"
+                )
+                or "—"
+            )
+
+            completed_datetime = (
+                format_completion_datetime(
+                    examination
+                )
+            )
+
+            with table_row(
+                f"patient_exam_{examination_id}",
+                EXAM_WIDTHS,
+            ) as cols:
+
+                text_cell(
+                    cols[0],
+                    completed_datetime,
+                )
+
+                text_cell(
+                    cols[1],
+                    examination.get(
+                        "examination_type"
+                    )
+                    or "General Consultation",
+                )
+
+                pill_cell(
+                    cols[2],
+                    status,
+                    STATUS_TONES.get(
+                        status,
+                        "grey",
+                    ),
+                )
+
+                if cols[3].button(
+                    "View",
+                    key=(
+                        f"record_exam_view_"
+                        f"{examination_id}"
+                    ),
+                    width="stretch",
+                ):
+
+                    # ----------------------------------------
+                    # MOVE TO EXAMINATIONS PAGE
+                    # ----------------------------------------
+
+                    st.session_state[
+                        "current_page"
+                    ] = "Examinations"
+
+                    st.session_state[
+                        "examination_dialog"
+                    ] = "view_exam"
+
+                    st.session_state[
+                        "selected_patient"
+                    ] = patient
+
+                    st.session_state[
+                        "selected_examination"
+                    ] = examination
+
+                    st.session_state[
+                        "patient_records_dialog"
+                    ] = None
+
+                    st.rerun()
+
+
+# ============================================================
 # PATIENT RECORDS DIALOG
 # ============================================================
 
@@ -280,11 +545,19 @@ def show_patient_records(
         get_examinations_by_patient(
             patient_id
         )
+        or []
     )
 
     medical_records = (
         get_medical_records_by_patient(
             patient_id
+        )
+        or []
+    )
+
+    general_consults, follow_up_examinations = (
+        split_examination_history(
+            examinations
         )
     )
 
@@ -356,144 +629,77 @@ def show_patient_records(
         )
 
         # ====================================================
-        # INTERNAL EXAMINATION RECORDS
+        # GENERAL CONSULT EXAMINATION HISTORY
         # ====================================================
 
         section_title(
-            "Examination Records"
+            "General Consult Examination History"
         )
 
-        if not examinations:
+        if not general_consults:
 
             empty_state(
-                "No examination records found for this patient."
+                "No general consultation examinations found."
             )
 
-            if st.button(
-                "Examine Patient",
-                key=(
-                    "records_examine_"
-                    f"{patient_id}"
-                ),
-                icon=":material/clinical_notes:",
-                type="primary",
-                width="stretch",
-            ):
+            if not follow_up_examinations:
 
-                # ------------------------------------------------
-                # MOVE TO EXAMINATIONS PAGE
-                # ------------------------------------------------
+                if st.button(
+                    "Examine Patient",
+                    key=(
+                        "records_examine_"
+                        f"{patient_id}"
+                    ),
+                    icon=":material/clinical_notes:",
+                    type="primary",
+                    width="stretch",
+                ):
 
-                st.session_state[
-                    "current_page"
-                ] = "Examinations"
+                    st.session_state[
+                        "current_page"
+                    ] = "Examinations"
 
-                st.session_state[
-                    "examination_dialog"
-                ] = "history"
+                    st.session_state[
+                        "examination_dialog"
+                    ] = "history"
 
-                st.session_state[
-                    "selected_patient"
-                ] = patient
+                    st.session_state[
+                        "selected_patient"
+                    ] = patient
 
-                st.session_state[
-                    "patient_records_dialog"
-                ] = None
+                    st.session_state[
+                        "patient_records_dialog"
+                    ] = None
 
-                st.rerun()
+                    st.rerun()
 
         else:
 
-            with st.container(
-                key="patient_exam_records"
-            ):
+            render_examination_table(
+                general_consults,
+                patient,
+            )
 
-                table_header(
-                    EXAM_HEADERS,
-                    EXAM_WIDTHS,
-                    "patient_exams",
-                )
+        # ====================================================
+        # FOLLOW-UP EXAMINATION HISTORY
+        # ====================================================
 
-                for examination in examinations:
+        section_title(
+            "Follow-Up Examination History"
+        )
 
-                    examination_id = (
-                        examination[
-                            "examination_id"
-                        ]
-                    )
+        if not follow_up_examinations:
 
-                    status = (
-                        examination.get(
-                            "status"
-                        )
-                        or "—"
-                    )
+            empty_state(
+                "No follow-up examinations found."
+            )
 
-                    with table_row(
-                        f"patient_exam_{examination_id}",
-                        EXAM_WIDTHS,
-                    ) as cols:
+        else:
 
-                        text_cell(
-                            cols[0],
-                            format_date(
-                                examination.get(
-                                    "examination_date"
-                                )
-                            ),
-                        )
-
-                        text_cell(
-                            cols[1],
-                            examination.get(
-                                "examination_type"
-                            ),
-                        )
-
-                        pill_cell(
-                            cols[2],
-                            status,
-                            STATUS_TONES.get(
-                                status,
-                                "grey",
-                            ),
-                        )
-
-                        if cols[3].button(
-                            "View",
-                            key=(
-                                f"record_exam_view_"
-                                f"{examination_id}"
-                            ),
-                            width="stretch",
-                        ):
-
-                            # ------------------------------------
-                            # IMPORTANT:
-                            # Go to Examinations page
-                            # ------------------------------------
-
-                            st.session_state[
-                                "current_page"
-                            ] = "Examinations"
-
-                            st.session_state[
-                                "examination_dialog"
-                            ] = "view_exam"
-
-                            st.session_state[
-                                "selected_patient"
-                            ] = patient
-
-                            st.session_state[
-                                "selected_examination"
-                            ] = examination
-
-                            st.session_state[
-                                "patient_records_dialog"
-                            ] = None
-
-                            st.rerun()
+            render_examination_table(
+                follow_up_examinations,
+                patient,
+            )
 
         # ====================================================
         # PREVIOUS EXTERNAL MEDICAL HISTORIES
@@ -962,6 +1168,7 @@ def show_add_medical_record(
             st.rerun()
 
         if not submitted:
+
             return
 
         if not facility_name.strip():
@@ -1187,12 +1394,14 @@ def show_filters(
                 )
                 != hospital_filter
             ):
+
                 continue
 
             if (
                 search
                 and search not in text
             ):
+
                 continue
 
             if (
@@ -1202,6 +1411,7 @@ def show_filters(
                 )
                 != sex
             ):
+
                 continue
 
             matches.append(
@@ -1258,6 +1468,7 @@ def show_filters(
             search
             and search not in text
         ):
+
             continue
 
         if (
@@ -1267,6 +1478,7 @@ def show_filters(
             )
             != sex
         ):
+
             continue
 
         matches.append(

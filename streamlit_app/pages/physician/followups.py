@@ -1,11 +1,11 @@
 import streamlit as st
-import pathlib as Path
 
 from backend.backend_utils.followup_utils import (
     get_patients_with_follow_ups,
     get_patients_with_upcoming_follow_ups,
     get_upcoming_follow_ups_by_patient,
     get_follow_up_history,
+    get_follow_up_counts,
     update_follow_up_status,
     reschedule_follow_up,
     cancel_follow_up,
@@ -86,6 +86,66 @@ def patient_code(patient):
         patient.get("patient_code")
         or patient.get("patient_id")
     )
+
+
+# ============================================================
+# EXAMINATION HELPERS
+# ============================================================
+
+def source_examination(
+    follow_up,
+):
+    """
+    Return the original examination that created
+    the follow-up.
+    """
+
+    examination = (
+        follow_up.get(
+            "source_examination"
+        )
+        or {}
+    )
+
+    if isinstance(
+        examination,
+        list,
+    ):
+        return (
+            examination[0]
+            if examination
+            else {}
+        )
+
+    return examination
+
+
+def follow_up_examination(
+    follow_up,
+):
+    """
+    Return the new examination performed during
+    the actual follow-up visit.
+    """
+
+    examination = (
+        follow_up.get(
+            "follow_up_examination"
+        )
+        or {}
+    )
+
+    if isinstance(
+        examination,
+        list,
+    ):
+        return (
+            examination[0]
+            if examination
+            else {}
+        )
+
+    return examination
 
 
 # ============================================================
@@ -282,6 +342,120 @@ def select_patient(
 
 
 # ============================================================
+# EXAMINATION DISPLAY
+# ============================================================
+
+def render_source_examination(
+    follow_up,
+):
+
+    examination = source_examination(
+        follow_up
+    )
+
+    if not examination:
+
+        st.info(
+            "No source examination is linked "
+            "to this follow-up."
+        )
+
+        return
+
+    section_title(
+        "Source Examination"
+    )
+
+    show_rows([
+        (
+            "Examination",
+            examination.get(
+                "examination_type"
+            )
+            or "—",
+        ),
+        (
+            "Examination Date",
+            format_datetime(
+                examination.get(
+                    "examination_date"
+                )
+            ),
+        ),
+        (
+            "Diagnosis",
+            examination.get(
+                "diagnosis"
+            )
+            or "—",
+        ),
+        (
+            "Status",
+            examination.get(
+                "status"
+            )
+            or "—",
+        ),
+    ])
+
+
+def render_follow_up_examination(
+    follow_up,
+):
+
+    examination = follow_up_examination(
+        follow_up
+    )
+
+    section_title(
+        "Follow-Up Examination"
+    )
+
+    if not examination:
+
+        st.info(
+            "No follow-up examination has been "
+            "linked yet. This means the patient "
+            "has not yet been linked to a new "
+            "examination for this follow-up visit."
+        )
+
+        return
+
+    show_rows([
+        (
+            "Examination",
+            examination.get(
+                "examination_type"
+            )
+            or "—",
+        ),
+        (
+            "Examination Date",
+            format_datetime(
+                examination.get(
+                    "examination_date"
+                )
+            ),
+        ),
+        (
+            "Diagnosis",
+            examination.get(
+                "diagnosis"
+            )
+            or "—",
+        ),
+        (
+            "Status",
+            examination.get(
+                "status"
+            )
+            or "—",
+        ),
+    ])
+
+
+# ============================================================
 # FOLLOW-UP ACTION DIALOG
 # ============================================================
 
@@ -333,45 +507,29 @@ def show_follow_up_action_dialog(
 
     st.divider()
 
-    examination = (
-        follow_up.get(
-            "examinations"
-        )
-        or {}
+    # ========================================================
+    # SOURCE EXAMINATION
+    # ========================================================
+
+    render_source_examination(
+        follow_up
     )
 
-    if examination:
+    st.divider()
 
-        section_title(
-            "Related Examination"
-        )
+    # ========================================================
+    # FOLLOW-UP EXAMINATION
+    # ========================================================
 
-        show_rows([
-            (
-                "Examination",
-                examination.get(
-                    "examination_type"
-                )
-                or "—",
-            ),
-            (
-                "Examination Date",
-                format_datetime(
-                    examination.get(
-                        "examination_date"
-                    )
-                ),
-            ),
-            (
-                "Diagnosis",
-                examination.get(
-                    "diagnosis"
-                )
-                or "—",
-            ),
-        ])
+    render_follow_up_examination(
+        follow_up
+    )
 
-        st.divider()
+    st.divider()
+
+    # ========================================================
+    # NOTES
+    # ========================================================
 
     current_notes = (
         follow_up.get(
@@ -416,6 +574,50 @@ def show_follow_up_action_dialog(
         return
 
     # ========================================================
+    # CANCELLED
+    # ========================================================
+
+    if status == "Cancelled":
+
+        st.warning(
+            "This follow-up has been cancelled."
+        )
+
+        if st.button(
+            "Close",
+            key=(
+                f"physician_followup_close_"
+                f"cancelled_{follow_up_id}"
+            ),
+            width="stretch",
+        ):
+
+            st.rerun()
+
+        return
+
+    # ========================================================
+    # FOLLOW-UP EXAMINATION STATUS
+    # ========================================================
+
+    linked_examination = follow_up_examination(
+        follow_up
+    )
+
+    if status in (
+        "Scheduled",
+        "Rescheduled",
+    ) and not linked_examination:
+
+        st.info(
+            "No follow-up examination is linked yet. "
+            "The follow-up can be managed or rescheduled, "
+            "but it should only be marked completed after "
+            "the patient's follow-up examination has been "
+            "performed and linked."
+        )
+
+    # ========================================================
     # COMPLETE / MISSED
     # ========================================================
 
@@ -438,30 +640,40 @@ def show_follow_up_action_dialog(
                 width="stretch",
             ):
 
-                result = complete_follow_up(
-                    follow_up_id,
-                    notes=(
-                        notes.strip()
-                        or None
-                    ),
-                )
+                if not linked_examination:
 
-                if result.get("success"):
-
-                    remember(
-                        "Follow-up marked as completed."
+                    st.warning(
+                        "A follow-up examination must be "
+                        "linked before the follow-up can "
+                        "be marked as completed."
                     )
-
-                    st.rerun()
 
                 else:
 
-                    st.error(
-                        result.get(
-                            "message",
-                            "Failed to complete follow-up.",
-                        )
+                    result = complete_follow_up(
+                        follow_up_id,
+                        notes=(
+                            notes.strip()
+                            or None
+                        ),
                     )
+
+                    if result.get("success"):
+
+                        remember(
+                            "Follow-up marked as completed."
+                        )
+
+                        st.rerun()
+
+                    else:
+
+                        st.error(
+                            result.get(
+                                "message",
+                                "Failed to complete follow-up.",
+                            )
+                        )
 
         with col2:
 
@@ -511,8 +723,73 @@ def show_follow_up_action_dialog(
             "Reschedule"
         )
 
+        from datetime import date, time
+
+        default_date = (
+            follow_up.get(
+                "follow_up_date"
+            )
+        )
+
+        default_time = (
+            follow_up.get(
+                "follow_up_time"
+            )
+        )
+
+        try:
+
+            if isinstance(
+                default_date,
+                str,
+            ):
+
+                default_date = date.fromisoformat(
+                    default_date[:10]
+                )
+
+        except Exception:
+
+            default_date = date.today()
+
+        try:
+
+            if isinstance(
+                default_time,
+                str,
+            ):
+
+                default_time = time.fromisoformat(
+                    default_time[:8]
+                )
+
+        except Exception:
+
+            default_time = time(
+                9,
+                0,
+            )
+
+        if not isinstance(
+            default_date,
+            date,
+        ):
+
+            default_date = date.today()
+
+        if not isinstance(
+            default_time,
+            time,
+        ):
+
+            default_time = time(
+                9,
+                0,
+            )
+
         new_date = st.date_input(
             "New Follow-Up Date",
+            value=default_date,
             key=(
                 f"physician_reschedule_date_"
                 f"{follow_up_id}"
@@ -521,6 +798,7 @@ def show_follow_up_action_dialog(
 
         new_time = st.time_input(
             "New Follow-Up Time",
+            value=default_time,
             key=(
                 f"physician_reschedule_time_"
                 f"{follow_up_id}"
@@ -626,7 +904,8 @@ def render_patient_list(
     )
 
     st.caption(
-        "Select a patient to view their follow-up schedule and history."
+        "Select a patient to view their follow-up schedule "
+        "and follow-up history."
     )
 
     for patient in patients:
@@ -735,6 +1014,10 @@ def render_patient_followups(
 
         for follow_up in upcoming:
 
+            follow_up_id = follow_up.get(
+                "follow_up_id"
+            )
+
             status = (
                 follow_up.get(
                     "status"
@@ -742,11 +1025,12 @@ def render_patient_followups(
                 or "Scheduled"
             )
 
-            examination = (
-                follow_up.get(
-                    "examinations"
-                )
-                or {}
+            source_exam = source_examination(
+                follow_up
+            )
+
+            follow_exam = follow_up_examination(
+                follow_up
             )
 
             with st.container(
@@ -778,11 +1062,42 @@ def render_patient_followups(
                         f"{follow_up.get('notes') or '—'}"
                     )
 
-                    if examination:
+                    if source_exam:
 
                         st.caption(
-                            "Related examination: "
-                            f"{examination.get('examination_type') or '—'}"
+                            "Source examination: "
+                            f"{source_exam.get('examination_type') or '—'}"
+                        )
+
+                        if source_exam.get(
+                            "diagnosis"
+                        ):
+
+                            st.caption(
+                                "Source diagnosis: "
+                                f"{source_exam.get('diagnosis')}"
+                            )
+
+                    if follow_exam:
+
+                        st.caption(
+                            "Follow-up examination: "
+                            f"{follow_exam.get('examination_type') or '—'}"
+                        )
+
+                        if follow_exam.get(
+                            "diagnosis"
+                        ):
+
+                            st.caption(
+                                "Follow-up diagnosis: "
+                                f"{follow_exam.get('diagnosis')}"
+                            )
+
+                    else:
+
+                        st.caption(
+                            "Follow-up examination: Not linked yet"
                         )
 
                 with col2:
@@ -791,7 +1106,7 @@ def render_patient_followups(
                         "Manage",
                         key=(
                             f"physician_manage_"
-                            f"{follow_up['follow_up_id']}"
+                            f"{follow_up_id}"
                         ),
                         type="primary",
                         width="stretch",
@@ -835,11 +1150,12 @@ def render_patient_followups(
                 or "Unknown"
             )
 
-            examination = (
-                follow_up.get(
-                    "examinations"
-                )
-                or {}
+            source_exam = source_examination(
+                follow_up
+            )
+
+            follow_exam = follow_up_examination(
+                follow_up
             )
 
             with st.container(
@@ -864,11 +1180,42 @@ def render_patient_followups(
                     f"{follow_up.get('notes') or '—'}"
                 )
 
-                if examination:
+                if source_exam:
 
                     st.caption(
-                        "Related examination: "
-                        f"{examination.get('examination_type') or '—'}"
+                        "Source examination: "
+                        f"{source_exam.get('examination_type') or '—'}"
+                    )
+
+                    if source_exam.get(
+                        "diagnosis"
+                    ):
+
+                        st.caption(
+                            "Source diagnosis: "
+                            f"{source_exam.get('diagnosis')}"
+                        )
+
+                if follow_exam:
+
+                    st.caption(
+                        "Follow-up examination: "
+                        f"{follow_exam.get('examination_type') or '—'}"
+                    )
+
+                    if follow_exam.get(
+                        "diagnosis"
+                    ):
+
+                        st.caption(
+                            "Follow-up diagnosis: "
+                            f"{follow_exam.get('diagnosis')}"
+                        )
+
+                else:
+
+                    st.caption(
+                        "Follow-up examination: Not linked"
                     )
 
 
@@ -879,17 +1226,32 @@ def render_patient_followups(
 def render_metrics(
     patients,
     upcoming_patients,
+    follow_up_counts,
 ):
 
     total_patients = len(
         patients
     )
 
-    upcoming_total = len(
+    upcoming_patients_total = len(
         upcoming_patients
     )
 
-    col1, col2, col3 = st.columns(3)
+    scheduled_total = (
+        follow_up_counts.get(
+            "scheduled",
+            0,
+        )
+    )
+
+    completed_total = (
+        follow_up_counts.get(
+            "completed",
+            0,
+        )
+    )
+
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
 
@@ -904,7 +1266,7 @@ def render_metrics(
 
         metric_card(
             "Patients With Upcoming Follow-Ups",
-            upcoming_total,
+            upcoming_patients_total,
             "event_repeat",
             tone="red",
         )
@@ -913,8 +1275,17 @@ def render_metrics(
 
         metric_card(
             "Scheduled Follow-Ups",
-            upcoming_total,
+            scheduled_total,
             "calendar_month",
+            tone="green",
+        )
+
+    with col4:
+
+        metric_card(
+            "Completed Follow-Ups",
+            completed_total,
+            "check_circle",
             tone="green",
         )
 
@@ -981,6 +1352,12 @@ def show():
         )
     )
 
+    follow_up_counts = (
+        get_follow_up_counts(
+            hospital_id=effective_hospital_id
+        )
+    )
+
     # ========================================================
     # METRICS
     # ========================================================
@@ -988,6 +1365,7 @@ def show():
     render_metrics(
         patients,
         upcoming_patients,
+        follow_up_counts,
     )
 
     # ========================================================

@@ -507,10 +507,20 @@ def create_examination(
     bp_systolic=None,
     bp_diastolic=None,
     temperature=None,
+    follow_up_sequence=None,
 ):
     """
     Create an examination together with optional
-    consent and initial nurse vitals.
+    consent, initial nurse vitals, and follow-up sequence.
+
+    Initial examination:
+        follow_up_sequence = None
+
+    Follow-up examination:
+        follow_up_sequence = 1, 2, 3, ...
+
+    The sequence is stored in:
+        examinations.follow_up_sequence
     """
 
     try:
@@ -521,7 +531,9 @@ def create_examination(
 
         examination_data = {
             "patient_id": patient_id,
+
             "examination_type": examination_type,
+
             "examination_date": (
                 examination_date.isoformat()
                 if examination_date
@@ -529,11 +541,23 @@ def create_examination(
                     timezone.utc
                 ).isoformat()
             ),
+
             "created_by": created_by,
+
             "status": "Pending",
+
             "time_in": datetime.now(
                 timezone.utc
             ).isoformat(),
+
+            # NULL for initial examinations.
+            # 1, 2, 3, ... for follow-up
+            # examinations.
+            "follow_up_sequence": (
+                int(follow_up_sequence)
+                if follow_up_sequence is not None
+                else None
+            ),
         }
 
         exam_response = (
@@ -544,6 +568,7 @@ def create_examination(
         )
 
         if not exam_response.data:
+
             return None
 
         examination = exam_response.data[0]
@@ -560,23 +585,31 @@ def create_examination(
 
             consent_data = {
                 "examination_id": examination_id,
+
                 "consent_type": "Treatment",
+
                 "given": True,
+
                 "signed_by_name": (
                     consent_signed_by_name
                 ),
+
                 "signed_by_type": (
                     consent_signed_by_type
                 ),
+
                 "guardian_name": (
                     consent_guardian_name
                 ),
+
                 "guardian_relation": (
                     consent_guardian_relation
                 ),
+
                 "signed_at": datetime.now(
                     timezone.utc
                 ).isoformat(),
+
                 "witnessed_by": (
                     consent_witnessed_by
                 ),
@@ -601,10 +634,15 @@ def create_examination(
 
             vitals_data = {
                 "examination_id": examination_id,
+
                 "bp_systolic": bp_systolic,
+
                 "bp_diastolic": bp_diastolic,
+
                 "temperature": temperature,
+
                 "recorded_by": created_by,
+
                 "recorded_by_role": "nurse",
             }
 

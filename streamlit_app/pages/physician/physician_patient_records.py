@@ -1,5 +1,8 @@
 import streamlit as st
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 
 from backend.fetches import (
     get_completed_patient_records,
@@ -75,15 +78,15 @@ PATIENT_HEADERS = [
 
 
 EXAMINATION_WIDTHS = [
-    1.5,
     1.8,
+    2.0,
     1.8,
     1.5,
 ]
 
 
 EXAMINATION_HEADERS = [
-    "Date",
+    "Completed",
     "Examination",
     "Diagnosis",
     "Status",
@@ -96,6 +99,11 @@ STATUS_TONES = {
     "In Progress": "blue",
     "Cancelled": "red",
 }
+
+
+MANILA_TZ = ZoneInfo(
+    "Asia/Manila"
+)
 
 
 # ============================================================
@@ -126,7 +134,9 @@ def current_hospital_id():
     )
 
 
-def patient_name(patient):
+def patient_name(
+    patient,
+):
 
     return full_name(
         patient.get("first_name"),
@@ -136,7 +146,9 @@ def patient_name(patient):
     )
 
 
-def patient_code(patient):
+def patient_code(
+    patient,
+):
 
     return (
         patient.get("patient_code")
@@ -144,7 +156,9 @@ def patient_code(patient):
     )
 
 
-def hospital_name(patient):
+def hospital_name(
+    patient,
+):
 
     hospitals = patient.get(
         "hospitals"
@@ -175,6 +189,194 @@ def hospital_name(patient):
         )
 
     return "—"
+
+
+# ============================================================
+# DATE / TIME HELPERS
+# ============================================================
+
+def parse_datetime(
+    value,
+):
+
+    if not value:
+
+        return None
+
+    if isinstance(
+        value,
+        datetime,
+    ):
+
+        parsed = value
+
+    else:
+
+        try:
+
+            parsed = datetime.fromisoformat(
+                str(value).replace(
+                    "Z",
+                    "+00:00",
+                )
+            )
+
+        except (
+            ValueError,
+            TypeError,
+        ):
+
+            return None
+
+    if parsed.tzinfo is None:
+
+        parsed = parsed.replace(
+            tzinfo=MANILA_TZ
+        )
+
+    return parsed.astimezone(
+        MANILA_TZ
+    )
+
+
+def get_completion_datetime(
+    examination,
+):
+
+    return (
+        examination.get(
+            "time_of_discharge"
+        )
+        or examination.get(
+            "reviewed_at"
+        )
+    )
+
+
+def format_completion_datetime(
+    examination,
+):
+
+    completed_at = get_completion_datetime(
+        examination
+    )
+
+    parsed = parse_datetime(
+        completed_at
+    )
+
+    if not parsed:
+
+        return "—"
+
+    return parsed.strftime(
+        "%B %d, %Y • %I:%M %p"
+    )
+
+
+def format_completion_date(
+    examination,
+):
+
+    completed_at = get_completion_datetime(
+        examination
+    )
+
+    parsed = parse_datetime(
+        completed_at
+    )
+
+    if not parsed:
+
+        return "—"
+
+    return parsed.strftime(
+        "%B %d, %Y"
+    )
+
+
+def format_completion_time(
+    examination,
+):
+
+    completed_at = get_completion_datetime(
+        examination
+    )
+
+    parsed = parse_datetime(
+        completed_at
+    )
+
+    if not parsed:
+
+        return "—"
+
+    return parsed.strftime(
+        "%I:%M %p"
+    )
+
+
+# ============================================================
+# EXAMINATION TYPE HELPERS
+# ============================================================
+
+def is_follow_up_examination(
+    examination,
+):
+
+    examination_type = (
+        examination.get(
+            "examination_type"
+        )
+        or ""
+    )
+
+    normalized = (
+        str(
+            examination_type
+        )
+        .strip()
+        .lower()
+        .replace(
+            "_",
+            " ",
+        )
+    )
+
+    return (
+        "follow-up" in normalized
+        or "follow up" in normalized
+    )
+
+
+def split_examination_history(
+    examinations,
+):
+
+    general_consults = []
+
+    follow_up_examinations = []
+
+    for examination in examinations:
+
+        if is_follow_up_examination(
+            examination
+        ):
+
+            follow_up_examinations.append(
+                examination
+            )
+
+        else:
+
+            general_consults.append(
+                examination
+            )
+
+    return (
+        general_consults,
+        follow_up_examinations,
+    )
 
 
 # ============================================================
@@ -474,15 +676,24 @@ def render_examination(
         or "—"
     )
 
-    title = (
-        f"Examination {index}"
+    completed_datetime = (
+        format_completion_datetime(
+            examination
+        )
+    )
+
+    examination_type = (
+        examination.get(
+            "examination_type"
+        )
+        or "General Consultation"
     )
 
     with st.expander(
         (
-            f"{title} • "
-            f"{format_date(examination_date)} • "
-            f"{status}"
+            f"{examination_type} • "
+            f"{status} • "
+            f"{completed_datetime}"
         ),
         expanded=(
             index == 1
@@ -498,24 +709,36 @@ def render_examination(
         )
 
         show_rows([
-            (
-                "Examination date",
-                format_date(
-                    examination_date
-                ),
-            ),
 
             (
                 "Examination type",
-                examination.get(
-                    "examination_type"
-                )
-                or "—",
+                examination_type,
             ),
 
             (
                 "Status",
                 status,
+            ),
+
+            (
+                "Completed date",
+                format_completion_date(
+                    examination
+                ),
+            ),
+
+            (
+                "Completed time",
+                format_completion_time(
+                    examination
+                ),
+            ),
+
+            (
+                "Examination date",
+                format_date(
+                    examination_date
+                ),
             ),
 
             (
@@ -1054,6 +1277,39 @@ def render_examination(
 
 
 # ============================================================
+# EXAMINATION HISTORY SECTION
+# ============================================================
+
+def render_examination_history_section(
+    title,
+    examinations,
+    empty_message,
+):
+
+    section_title(
+        title
+    )
+
+    if not examinations:
+
+        st.caption(
+            empty_message
+        )
+
+        return
+
+    for index, examination in enumerate(
+        examinations,
+        start=1,
+    ):
+
+        render_examination(
+            examination,
+            index,
+        )
+
+
+# ============================================================
 # EXTERNAL MEDICAL RECORDS
 # ============================================================
 
@@ -1229,10 +1485,6 @@ def render_patient_record(
 
     st.divider()
 
-    section_title(
-        "Examination history"
-    )
-
     examinations = (
         get_examinations_by_patient(
             patient_id
@@ -1248,25 +1500,39 @@ def render_patient_record(
         ) == "Completed"
     ]
 
-    if not completed_examinations:
-
-        empty_state(
-            "No completed examinations found for this patient."
+    general_consults, follow_up_examinations = (
+        split_examination_history(
+            completed_examinations
         )
+    )
 
-    else:
+    # ========================================================
+    # GENERAL CONSULT EXAMINATION HISTORY
+    # ========================================================
 
-        for index, examination in enumerate(
-            completed_examinations,
-            start=1,
-        ):
-
-            render_examination(
-                examination,
-                index,
-            )
+    render_examination_history_section(
+        "General Consult Examination History",
+        general_consults,
+        "No completed general consultation examinations found.",
+    )
 
     st.divider()
+
+    # ========================================================
+    # FOLLOW-UP EXAMINATION HISTORY
+    # ========================================================
+
+    render_examination_history_section(
+        "Follow-Up Examination History",
+        follow_up_examinations,
+        "No completed follow-up examinations found.",
+    )
+
+    st.divider()
+
+    # ========================================================
+    # EXTERNAL MEDICAL RECORDS
+    # ========================================================
 
     render_external_records(
         patient

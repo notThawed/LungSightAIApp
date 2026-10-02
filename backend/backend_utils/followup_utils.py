@@ -25,16 +25,6 @@ def serialize_date(value):
     """
     Convert a Python date/datetime value into a
     PostgreSQL/JSON-safe date string.
-
-    Examples:
-        date(2026, 9, 25)
-        -> "2026-09-25"
-
-        datetime(...)
-        -> "2026-09-25"
-
-        string
-        -> unchanged
     """
 
     if value is None:
@@ -53,35 +43,16 @@ def serialize_time(value):
     """
     Convert a Python time/datetime value into a
     PostgreSQL/JSON-safe time string.
-
-    Examples:
-        time(14, 30)
-        -> "14:30:00"
-
-        time(14, 30, 15)
-        -> "14:30:15"
-
-        datetime(...)
-        -> "14:30:15"
-
-        string
-        -> unchanged
     """
 
     if value is None:
         return None
 
     if isinstance(value, datetime):
-
-        return value.time().strftime(
-            "%H:%M:%S"
-        )
+        return value.time().strftime("%H:%M:%S")
 
     if isinstance(value, time):
-
-        return value.strftime(
-            "%H:%M:%S"
-        )
+        return value.strftime("%H:%M:%S")
 
     return str(value)
 
@@ -96,18 +67,13 @@ def serialize_datetime(value):
         return None
 
     if isinstance(value, datetime):
-
         return value.isoformat()
 
     if isinstance(value, date):
-
         return value.isoformat()
 
     if isinstance(value, time):
-
-        return value.strftime(
-            "%H:%M:%S"
-        )
+        return value.strftime("%H:%M:%S")
 
     return str(value)
 
@@ -131,41 +97,27 @@ def make_json_safe(value):
     """
     Recursively convert values into types that
     Python's JSON encoder can safely serialize.
-
-    This is intentionally defensive because values
-    coming from Streamlit widgets can sometimes remain
-    as Python date/time objects.
     """
 
     if value is None:
-
         return None
 
     if isinstance(value, datetime):
-
         return value.isoformat()
 
     if isinstance(value, date):
-
         return value.isoformat()
 
     if isinstance(value, time):
-
-        return value.strftime(
-            "%H:%M:%S"
-        )
+        return value.strftime("%H:%M:%S")
 
     if isinstance(value, dict):
-
         return {
-            str(key): make_json_safe(
-                item
-            )
+            str(key): make_json_safe(item)
             for key, item in value.items()
         }
 
     if isinstance(value, (list, tuple)):
-
         return [
             make_json_safe(item)
             for item in value
@@ -180,7 +132,6 @@ def make_json_safe(value):
             bool,
         ),
     ):
-
         return value
 
     return str(value)
@@ -190,25 +141,128 @@ def validate_json_payload(payload):
     """
     Force a JSON serialization check before
     sending the payload to Supabase.
-
-    This guarantees that datetime.time,
-    datetime.date, or other unsupported Python
-    objects cannot reach the Supabase request.
     """
 
-    safe_payload = make_json_safe(
-        payload
-    )
+    safe_payload = make_json_safe(payload)
 
-    # --------------------------------------------------------
-    # Explicit JSON validation
-    # --------------------------------------------------------
-
-    json.dumps(
-        safe_payload
-    )
+    json.dumps(safe_payload)
 
     return safe_payload
+
+
+# ============================================================
+# FOLLOW-UP EXAMINATION SEQUENCE
+# ============================================================
+
+def get_next_follow_up_sequence(
+    patient_id,
+):
+    """
+    Get the next follow-up examination sequence
+    number for a patient.
+
+    Example:
+
+        Existing:
+            Follow-Up Examination 001
+            Follow-Up Examination 002
+
+        Returns:
+            3
+
+    Initial examinations do not use a sequence.
+
+    The sequence is stored in:
+
+        examinations.follow_up_sequence
+    """
+
+    if not patient_id:
+        return None
+
+    try:
+
+        response = (
+            admin_supabase
+            .table("examinations")
+            .select(
+                "follow_up_sequence"
+            )
+            .eq(
+                "patient_id",
+                patient_id,
+            )
+            .not_.is_(
+                "follow_up_sequence",
+                "null",
+            )
+            .order(
+                "follow_up_sequence",
+                desc=True,
+            )
+            .limit(1)
+            .execute()
+        )
+
+        rows = response.data or []
+
+        # --------------------------------------------
+        # NO PREVIOUS FOLLOW-UP EXAMINATIONS
+        # --------------------------------------------
+
+        if not rows:
+            return 1
+
+        highest_sequence = rows[0].get(
+            "follow_up_sequence"
+        )
+
+        if highest_sequence is None:
+            return 1
+
+        return int(
+            highest_sequence
+        ) + 1
+
+    except Exception as exc:
+
+        print(
+            "Failed to determine next "
+            f"follow-up sequence: {exc}"
+        )
+
+        return None
+
+
+def format_follow_up_examination_name(
+    sequence,
+):
+    """
+    Convert a numeric follow-up sequence into
+    the display name used by the application.
+
+    Examples:
+
+        1  -> Follow-Up Examination 001
+        2  -> Follow-Up Examination 002
+        10 -> Follow-Up Examination 010
+    """
+
+    if sequence is None:
+        return None
+
+    try:
+
+        sequence = int(sequence)
+
+    except (TypeError, ValueError):
+
+        return None
+
+    return (
+        f"Follow-Up Examination "
+        f"{sequence:03d}"
+    )
 
 
 # ============================================================
@@ -226,8 +280,16 @@ def create_follow_up(
     """
     Create a scheduled follow-up.
 
-    The function intentionally converts ALL date/time
-    values into strings before Supabase receives them.
+    examination_id refers to the ORIGINAL examination
+    that resulted in the physician scheduling a follow-up.
+
+    The value is stored as:
+
+        source_examination_id
+
+    follow_up_examination_id remains NULL until the
+    patient actually returns and a new examination
+    is created for the follow-up visit.
     """
 
     try:
@@ -249,26 +311,34 @@ def create_follow_up(
         )
 
         # ====================================================
-        # BUILD RAW PAYLOAD
+        # BUILD PAYLOAD
         # ====================================================
 
         follow_up_data = {
             "patient_id": patient_id,
-            "examination_id": examination_id,
+
+            "source_examination_id": examination_id,
+
+            "follow_up_examination_id": None,
+
             "follow_up_date": serialized_date,
+
             "follow_up_time": serialized_time,
+
             "notes": (
                 notes.strip()
                 if isinstance(notes, str)
                 and notes.strip()
                 else None
             ),
+
             "status": "Scheduled",
+
             "created_by": created_by,
         }
 
         # ====================================================
-        # FORCE JSON-SAFE PAYLOAD
+        # JSON SAFETY
         # ====================================================
 
         follow_up_data = validate_json_payload(
@@ -276,7 +346,7 @@ def create_follow_up(
         )
 
         # ====================================================
-        # FINAL SAFETY CHECK
+        # FINAL DATE/TIME SAFETY CHECK
         # ====================================================
 
         if not isinstance(
@@ -285,7 +355,6 @@ def create_follow_up(
             ),
             (str, type(None)),
         ):
-
             raise TypeError(
                 "follow_up_date was not converted "
                 "to a JSON-safe string."
@@ -297,14 +366,13 @@ def create_follow_up(
             ),
             (str, type(None)),
         ):
-
             raise TypeError(
                 "follow_up_time was not converted "
                 "to a JSON-safe string."
             )
 
         # ====================================================
-        # INSERT INTO SUPABASE
+        # INSERT
         # ====================================================
 
         response = (
@@ -313,10 +381,6 @@ def create_follow_up(
             .insert(follow_up_data)
             .execute()
         )
-
-        # ====================================================
-        # CHECK RESPONSE
-        # ====================================================
 
         if not response.data:
 
@@ -331,6 +395,99 @@ def create_follow_up(
             "success": True,
             "message": (
                 "Follow-up scheduled successfully."
+            ),
+            "data": response.data[0],
+        }
+
+    except Exception as exc:
+
+        return {
+            "success": False,
+            "message": str(exc),
+        }
+
+
+# ============================================================
+# LINK FOLLOW-UP TO RE-EXAMINATION
+# ============================================================
+
+def link_follow_up_examination(
+    follow_up_id,
+    follow_up_examination_id,
+):
+    """
+    Link a follow-up appointment to the NEW examination
+    created when the patient actually returns.
+
+    Relationship:
+
+        source_examination_id
+            ↓
+        Original examination
+
+        follow_up_examination_id
+            ↓
+        New follow-up examination
+    """
+
+    try:
+
+        if not follow_up_id:
+
+            return {
+                "success": False,
+                "message": (
+                    "Follow-up ID is required."
+                ),
+            }
+
+        if not follow_up_examination_id:
+
+            return {
+                "success": False,
+                "message": (
+                    "Follow-up examination ID "
+                    "is required."
+                ),
+            }
+
+        follow_up_data = {
+            "follow_up_examination_id": (
+                follow_up_examination_id
+            ),
+            "updated_at": utc_now(),
+        }
+
+        follow_up_data = validate_json_payload(
+            follow_up_data
+        )
+
+        response = (
+            admin_supabase
+            .table("follow_ups")
+            .update(follow_up_data)
+            .eq(
+                "follow_up_id",
+                follow_up_id,
+            )
+            .execute()
+        )
+
+        if not response.data:
+
+            return {
+                "success": False,
+                "message": (
+                    "Follow-up could not be linked "
+                    "to the re-examination."
+                ),
+            }
+
+        return {
+            "success": True,
+            "message": (
+                "Follow-up examination linked "
+                "successfully."
             ),
             "data": response.data[0],
         }
@@ -364,10 +521,6 @@ def update_follow_up(
 
         follow_up_data = {}
 
-        # ----------------------------------------------------
-        # DATE
-        # ----------------------------------------------------
-
         if follow_up_date is not None:
 
             follow_up_data[
@@ -375,10 +528,6 @@ def update_follow_up(
             ] = serialize_date(
                 follow_up_date
             )
-
-        # ----------------------------------------------------
-        # TIME
-        # ----------------------------------------------------
 
         if follow_up_time is not None:
 
@@ -388,17 +537,11 @@ def update_follow_up(
                 follow_up_time
             )
 
-        # ----------------------------------------------------
-        # NOTES
-        # ----------------------------------------------------
-
         if notes is not None:
 
-            follow_up_data["notes"] = notes
-
-        # ----------------------------------------------------
-        # STATUS
-        # ----------------------------------------------------
+            follow_up_data[
+                "notes"
+            ] = notes
 
         if status is not None:
 
@@ -415,25 +558,13 @@ def update_follow_up(
                 "status"
             ] = status
 
-        # ----------------------------------------------------
-        # UPDATED TIMESTAMP
-        # ----------------------------------------------------
-
         follow_up_data[
             "updated_at"
         ] = utc_now()
 
-        # ----------------------------------------------------
-        # JSON SAFETY
-        # ----------------------------------------------------
-
         follow_up_data = validate_json_payload(
             follow_up_data
         )
-
-        # ----------------------------------------------------
-        # UPDATE
-        # ----------------------------------------------------
 
         response = (
             admin_supabase
@@ -552,6 +683,9 @@ def reschedule_follow_up(
 ):
     """
     Reschedule an existing follow-up.
+
+    The original follow-up record is retained.
+    Its status becomes Rescheduled.
     """
 
     try:
@@ -569,7 +703,9 @@ def reschedule_follow_up(
 
         if notes is not None:
 
-            follow_up_data["notes"] = notes
+            follow_up_data[
+                "notes"
+            ] = notes
 
         follow_up_data = validate_json_payload(
             follow_up_data
@@ -619,7 +755,7 @@ def cancel_follow_up(
     follow_up_id,
 ):
     """
-    Cancel a follow-up without deleting it.
+    Cancel a follow-up without deleting the record.
     """
 
     return update_follow_up_status(
@@ -638,6 +774,9 @@ def complete_follow_up(
 ):
     """
     Mark a follow-up as completed.
+
+    Completing the appointment and linking the
+    follow-up examination are separate operations.
     """
 
     try:
@@ -649,7 +788,9 @@ def complete_follow_up(
 
         if notes is not None:
 
-            follow_up_data["notes"] = notes
+            follow_up_data[
+                "notes"
+            ] = notes
 
         follow_up_data = validate_json_payload(
             follow_up_data
@@ -700,6 +841,9 @@ def delete_follow_up(
 ):
     """
     Permanently delete a follow-up.
+
+    This should generally be avoided for clinical records.
+    Prefer Cancelled when possible.
     """
 
     try:
@@ -739,12 +883,16 @@ def get_follow_up(
     follow_up_id,
 ):
     """
-    Get one follow-up with patient and
-    examination information.
+    Get one complete follow-up record.
+
+    Includes:
+
+        Patient
+        Original/source examination
+        Follow-up examination
     """
 
     if not follow_up_id:
-
         return None
 
     try:
@@ -754,6 +902,7 @@ def get_follow_up(
             .table("follow_ups")
             .select("""
                 *,
+
                 patients (
                     patient_id,
                     patient_code,
@@ -766,12 +915,47 @@ def get_follow_up(
                     contact_number,
                     hospital_id
                 ),
-                examinations (
+
+                source_examination:examinations!follow_ups_source_examination_id_fkey (
                     examination_id,
+                    patient_id,
                     examination_type,
                     examination_date,
+                    history_of_present_illness,
+                    chief_complaint,
+                    physical_examination,
                     diagnosis,
-                    status
+                    plans_orders,
+                    disposition,
+                    disposition_notes,
+                    time_in,
+                    time_of_discharge,
+                    status,
+                    created_by,
+                    reviewed_by,
+                    reviewed_at,
+                    follow_up_sequence
+                ),
+
+                follow_up_examination:examinations!follow_ups_follow_up_examination_id_fkey (
+                    examination_id,
+                    patient_id,
+                    examination_type,
+                    examination_date,
+                    history_of_present_illness,
+                    chief_complaint,
+                    physical_examination,
+                    diagnosis,
+                    plans_orders,
+                    disposition,
+                    disposition_notes,
+                    time_in,
+                    time_of_discharge,
+                    status,
+                    created_by,
+                    reviewed_by,
+                    reviewed_at,
+                    follow_up_sequence
                 )
             """)
             .eq(
@@ -785,7 +969,6 @@ def get_follow_up(
         rows = response.data or []
 
         if not rows:
-
             return None
 
         return rows[0]
@@ -811,7 +994,6 @@ def get_follow_ups_by_patient(
     """
 
     if not patient_id:
-
         return []
 
     try:
@@ -821,12 +1003,25 @@ def get_follow_ups_by_patient(
             .table("follow_ups")
             .select("""
                 *,
-                examinations (
+
+                source_examination:examinations!follow_ups_source_examination_id_fkey (
                     examination_id,
+                    patient_id,
                     examination_type,
                     examination_date,
                     diagnosis,
-                    status
+                    status,
+                    follow_up_sequence
+                ),
+
+                follow_up_examination:examinations!follow_ups_follow_up_examination_id_fkey (
+                    examination_id,
+                    patient_id,
+                    examination_type,
+                    examination_date,
+                    diagnosis,
+                    status,
+                    follow_up_sequence
                 )
             """)
             .eq(
@@ -869,7 +1064,6 @@ def get_upcoming_follow_ups_by_patient(
     """
 
     if not patient_id:
-
         return []
 
     try:
@@ -879,11 +1073,25 @@ def get_upcoming_follow_ups_by_patient(
             .table("follow_ups")
             .select("""
                 *,
-                examinations (
+
+                source_examination:examinations!follow_ups_source_examination_id_fkey (
                     examination_id,
+                    patient_id,
                     examination_type,
                     examination_date,
-                    diagnosis
+                    diagnosis,
+                    status,
+                    follow_up_sequence
+                ),
+
+                follow_up_examination:examinations!follow_ups_follow_up_examination_id_fkey (
+                    examination_id,
+                    patient_id,
+                    examination_type,
+                    examination_date,
+                    diagnosis,
+                    status,
+                    follow_up_sequence
                 )
             """)
             .eq(
@@ -933,7 +1141,6 @@ def get_follow_up_history(
     """
 
     if not patient_id:
-
         return []
 
     try:
@@ -943,11 +1150,25 @@ def get_follow_up_history(
             .table("follow_ups")
             .select("""
                 *,
-                examinations (
+
+                source_examination:examinations!follow_ups_source_examination_id_fkey (
                     examination_id,
+                    patient_id,
                     examination_type,
                     examination_date,
-                    diagnosis
+                    diagnosis,
+                    status,
+                    follow_up_sequence
+                ),
+
+                follow_up_examination:examinations!follow_ups_follow_up_examination_id_fkey (
+                    examination_id,
+                    patient_id,
+                    examination_type,
+                    examination_date,
+                    diagnosis,
+                    status,
+                    follow_up_sequence
                 )
             """)
             .eq(
@@ -1053,7 +1274,6 @@ def get_patients_with_follow_ups(
                 patient,
                 list,
             ):
-
                 patient = (
                     patient[0]
                     if patient
@@ -1061,7 +1281,6 @@ def get_patients_with_follow_ups(
                 )
 
             if not patient:
-
                 continue
 
             patient_id = patient.get(
@@ -1069,7 +1288,6 @@ def get_patients_with_follow_ups(
             )
 
             if not patient_id:
-
                 continue
 
             patients[
@@ -1123,12 +1341,24 @@ def get_hospital_follow_ups(
                     hospital_id
                 ),
 
-                examinations (
+                source_examination:examinations!follow_ups_source_examination_id_fkey (
                     examination_id,
+                    patient_id,
                     examination_type,
                     examination_date,
                     diagnosis,
-                    status
+                    status,
+                    follow_up_sequence
+                ),
+
+                follow_up_examination:examinations!follow_ups_follow_up_examination_id_fkey (
+                    examination_id,
+                    patient_id,
+                    examination_type,
+                    examination_date,
+                    diagnosis,
+                    status,
+                    follow_up_sequence
                 )
             """)
             .order(
@@ -1225,6 +1455,10 @@ def get_follow_up_counts(
     return counts
 
 
+# ============================================================
+# GET PATIENTS WITH UPCOMING FOLLOW-UPS
+# ============================================================
+
 def get_patients_with_upcoming_follow_ups(
     hospital_id=None,
 ):
@@ -1232,7 +1466,7 @@ def get_patients_with_upcoming_follow_ups(
     Get unique patients who have at least one
     Scheduled or Rescheduled follow-up.
 
-    The patients are ordered by their earliest
+    Patients are ordered by their earliest
     upcoming follow-up date and time.
     """
 
@@ -1283,10 +1517,6 @@ def get_patients_with_upcoming_follow_ups(
             )
         )
 
-        # ----------------------------------------------------
-        # HOSPITAL FILTER
-        # ----------------------------------------------------
-
         if hospital_id:
 
             query = query.eq(
@@ -1297,10 +1527,6 @@ def get_patients_with_upcoming_follow_ups(
         response = query.execute()
 
         rows = response.data or []
-
-        # ----------------------------------------------------
-        # UNIQUE PATIENTS
-        # ----------------------------------------------------
 
         patients = {}
 
@@ -1314,7 +1540,6 @@ def get_patients_with_upcoming_follow_ups(
                 patient,
                 list,
             ):
-
                 patient = (
                     patient[0]
                     if patient
@@ -1322,7 +1547,6 @@ def get_patients_with_upcoming_follow_ups(
                 )
 
             if not patient:
-
                 continue
 
             patient_id = patient.get(
@@ -1330,12 +1554,8 @@ def get_patients_with_upcoming_follow_ups(
             )
 
             if not patient_id:
-
                 continue
 
-            # Because the query is already ordered
-            # by date/time ascending, the first
-            # follow-up we encounter is the earliest.
             if patient_id not in patients:
 
                 patient = dict(
