@@ -21,7 +21,6 @@ from backend.fetches import (
 
 
 from streamlit_app.components.ui import (
-    load_css,
     page_header,
     empty_state,
     section_title,
@@ -37,6 +36,9 @@ from streamlit_app.components.ui import (
     remember,
     show_flash_message,
 )
+
+from shared.assets import load_css
+
 
 
 # ============================================================
@@ -320,32 +322,179 @@ def format_completion_time(
 # EXAMINATION TYPE HELPERS
 # ============================================================
 
-def is_follow_up_examination(
+def is_follow_up_examination(examination):
+    """
+    Determines whether an examination is a follow-up.
+    Priority:
+      1. follow_up_sequence is not None  -> follow-up
+      2. examination_type contains "follow-up"/"follow up"
+    """
+
+    sequence = examination.get("follow_up_sequence")
+
+    if sequence is not None:
+        try:
+            if int(sequence) > 0:
+                return True
+        except (TypeError, ValueError):
+            # sequence is present but not a usable int — still treat as follow-up
+            return True
+
+    examination_type = examination.get("examination_type") or ""
+
+    normalized = (
+        str(examination_type)
+        .strip()
+        .lower()
+        .replace("_", " ")
+        .replace("-", " ")
+    )
+
+    return (
+        "follow up" in normalized
+        or "followup" in normalized
+    )
+
+
+def get_follow_up_sequence(examination):
+    """
+    Safely returns the follow-up sequence number.
+    Falls back to deriving it from examination_type
+    (e.g. "Follow-Up Examination 003") when the
+    database column is missing.
+    """
+
+    value = examination.get("follow_up_sequence")
+
+    if value is not None:
+        try:
+            sequence = int(value)
+            if sequence > 0:
+                return sequence
+        except (TypeError, ValueError):
+            pass
+
+    # Fallback: parse trailing digits from examination_type
+    examination_type = examination.get("examination_type") or ""
+
+    import re
+    match = re.search(r"(\d+)\s*$", str(examination_type))
+
+    if match:
+        try:
+            sequence = int(match.group(1))
+            if sequence > 0:
+                return sequence
+        except (TypeError, ValueError):
+            pass
+
+    return None
+
+
+
+def get_display_examination_type(
     examination,
 ):
+    """
+    Returns the examination type exactly as it
+    should appear in Patient Records.
+
+    Follow-up examinations are displayed using
+    their stored follow-up sequence:
+
+        Follow-Up Examination 001
+        Follow-Up Examination 002
+        Follow-Up Examination 003
+
+    General examinations retain their original
+    examination type.
+    """
 
     examination_type = (
         examination.get(
             "examination_type"
         )
-        or ""
+        or "General Consultation"
     )
 
-    normalized = (
-        str(
-            examination_type
-        )
-        .strip()
-        .lower()
-        .replace(
-            "_",
-            " ",
-        )
+    # --------------------------------------------------------
+    # GENERAL EXAMINATION
+    # --------------------------------------------------------
+
+    if not is_follow_up_examination(
+        examination
+    ):
+
+        return examination_type
+
+    # --------------------------------------------------------
+    # FOLLOW-UP EXAMINATION
+    # --------------------------------------------------------
+
+    sequence = get_follow_up_sequence(
+        examination
     )
 
-    return (
-        "follow-up" in normalized
-        or "follow up" in normalized
+    if sequence is not None:
+
+        return (
+            "Follow-Up Examination "
+            f"{sequence:03d}"
+        )
+
+    # --------------------------------------------------------
+    # FALLBACK FOR OLD RECORDS
+    # --------------------------------------------------------
+
+    return "Follow-Up Examination"
+
+
+def sort_follow_up_examinations(
+    examinations,
+):
+    """
+    Sort follow-up examinations by their
+    follow-up sequence.
+
+    Example:
+
+        003
+        001
+        002
+
+    becomes:
+
+        001
+        002
+        003
+
+    Examinations without a sequence are placed
+    after numbered follow-ups.
+    """
+
+    def sort_key(
+        examination,
+    ):
+
+        sequence = get_follow_up_sequence(
+            examination
+        )
+
+        if sequence is None:
+
+            return (
+                1,
+                999999,
+            )
+
+        return (
+            0,
+            sequence,
+        )
+
+    return sorted(
+        examinations,
+        key=sort_key,
     )
 
 
@@ -372,6 +521,16 @@ def split_examination_history(
             general_consults.append(
                 examination
             )
+
+    # --------------------------------------------------------
+    # SORT FOLLOW-UPS BY SEQUENCE
+    # --------------------------------------------------------
+
+    follow_up_examinations = (
+        sort_follow_up_examinations(
+            follow_up_examinations
+        )
+    )
 
     return (
         general_consults,
@@ -682,11 +841,14 @@ def render_examination(
         )
     )
 
+    # --------------------------------------------------------
+    # DISPLAY EXAMINATION TYPE
+    # --------------------------------------------------------
+
     examination_type = (
-        examination.get(
-            "examination_type"
+        get_display_examination_type(
+            examination
         )
-        or "General Consultation"
     )
 
     with st.expander(

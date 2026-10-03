@@ -579,6 +579,7 @@ def has_follow_up_examination(
 def clear_dialog_state():
     keys = [
         "selected_follow_up",
+        "selected_patient_follow_ups",
         "selected_examination",
         "edit_patient",
         "history_patient",
@@ -653,6 +654,83 @@ def group_pending_by_patient(
             "oldest_waiting"
         ],
         reverse=True,
+    )
+
+    return grouped
+
+
+# ============================================================
+# GROUP ACTIVE FOLLOW-UPS BY PATIENT
+# ============================================================
+
+def group_active_follow_ups_by_patient(follow_ups):
+    """
+    Group active (Scheduled / Rescheduled) follow-ups
+    by patient.
+
+    Returns a list of dicts:
+        {
+            "patient": {...},
+            "follow_ups": [ ...all active follow-ups... ],
+            "next_follow_up": { ...earliest by date/time... },
+        }
+
+    Sorted by the earliest upcoming follow-up date/time.
+    """
+
+    by_patient = {}
+
+    for follow_up in follow_ups:
+
+        status = get_follow_up_status(follow_up)
+
+        if status not in ACTIVE_FOLLOW_UP_STATUSES:
+            continue
+
+        patient = get_follow_up_patient(follow_up)
+
+        patient_id = patient.get("patient_id")
+
+        if not patient_id:
+            continue
+
+        if patient_id not in by_patient:
+
+            by_patient[patient_id] = {
+                "patient": patient,
+                "follow_ups": [],
+                "next_follow_up": None,
+            }
+
+        by_patient[patient_id]["follow_ups"].append(follow_up)
+
+    # ------------------------------------------------------
+    # SORT EACH PATIENT'S FOLLOW-UPS BY DATE, THEN PICK
+    # THE EARLIEST AS next_follow_up
+    # ------------------------------------------------------
+
+    for entry in by_patient.values():
+
+        entry["follow_ups"].sort(
+            key=lambda item: (
+                follow_up_date_value(item)
+                or date.max
+            )
+        )
+
+        entry["next_follow_up"] = entry["follow_ups"][0]
+
+    # ------------------------------------------------------
+    # SORT PATIENTS BY THEIR EARLIEST UPCOMING FOLLOW-UP
+    # ------------------------------------------------------
+
+    grouped = list(by_patient.values())
+
+    grouped.sort(
+        key=lambda item: (
+            follow_up_date_value(item["next_follow_up"])
+            or date.max
+        )
     )
 
     return grouped
@@ -1314,6 +1392,217 @@ def show_xray_request_dialog(
 
 
 # ============================================================
+# PATIENT-LEVEL FOLLOW-UP DIALOG (GROUPED)
+# ============================================================
+
+@st.dialog(
+    "Patient Follow-Ups",
+    width="large",
+)
+def show_patient_follow_ups_dialog(
+    patient,
+    follow_ups,
+):
+    """
+    Lists ALL active follow-ups for one patient.
+
+    The physician picks the specific follow-up
+    to manage, which then opens the existing
+    show_follow_up_dialog().
+    """
+
+    with st.container(key=DIALOG_KEY):
+
+        # ----------------------------------------------------
+        # PATIENT SUMMARY
+        # ----------------------------------------------------
+
+        section_title("Patient")
+
+        show_rows([
+            (
+                "Patient",
+                patient_name(patient),
+            ),
+            (
+                "Patient ID",
+                patient_code(patient),
+            ),
+            (
+                "Active follow-ups",
+                str(len(follow_ups)),
+            ),
+        ])
+
+        st.divider()
+
+        section_title(
+            f"Active Follow-Ups ({len(follow_ups)})"
+        )
+
+        st.caption(
+            "Select a follow-up to view details, "
+            "start the examination, reschedule, "
+            "or cancel it."
+        )
+
+        # ----------------------------------------------------
+        # LIST EACH FOLLOW-UP
+        # ----------------------------------------------------
+
+        for follow_up in follow_ups:
+
+            follow_up_id = get_follow_up_id(
+                follow_up
+            )
+
+            status = get_follow_up_status(
+                follow_up
+            )
+
+            source_exam = get_source_examination(
+                follow_up
+            )
+
+            linked_exam = get_follow_up_examination(
+                follow_up
+            )
+
+            scheduled_at = format_follow_up_datetime(
+                follow_up
+            )
+
+            with st.expander(
+                (
+                    f"{scheduled_at} • "
+                    f"{status}"
+                ),
+                expanded=False,
+            ):
+
+                # --------------------------------------------
+                # STATUS
+                # --------------------------------------------
+
+                st.markdown(
+                    f"**Status:** "
+                    f"{pill(status, follow_up_status_tone(status))}",
+                    unsafe_allow_html=True,
+                )
+
+                # --------------------------------------------
+                # SCHEDULED DATE / TIME
+                # --------------------------------------------
+
+                st.markdown(
+                    "**Scheduled:** "
+                    f"{scheduled_at}"
+                )
+
+                # --------------------------------------------
+                # SOURCE EXAMINATION
+                # --------------------------------------------
+
+                if source_exam:
+
+                    st.markdown(
+                        "**Source Examination:** "
+                        f"{source_exam.get('examination_type') or 'Examination'}"
+                    )
+
+                    st.caption(
+                        "Date: "
+                        f"{format_datetime(examination_datetime(source_exam))}"
+                    )
+
+                # --------------------------------------------
+                # LINKED FOLLOW-UP EXAMINATION
+                # --------------------------------------------
+
+                if linked_exam:
+
+                    linked_status = (
+                        linked_exam.get("status")
+                        or "Pending"
+                    )
+
+                    linked_tone = (
+                        "green"
+                        if linked_status == "Completed"
+                        else "amber"
+                    )
+
+                    st.markdown(
+                        f"**Examination:** "
+                        f"{pill(linked_status, linked_tone)}",
+                        unsafe_allow_html=True,
+                    )
+
+                else:
+
+                    st.caption(
+                        "No follow-up examination "
+                        "started yet."
+                    )
+
+                # --------------------------------------------
+                # NOTES
+                # --------------------------------------------
+
+                notes = (
+                    follow_up.get("notes")
+                    or follow_up.get("follow_up_notes")
+                )
+
+                if notes:
+
+                    st.markdown(
+                        f"**Notes:** {notes}"
+                    )
+
+                # --------------------------------------------
+                # MANAGE BUTTON
+                # --------------------------------------------
+
+                if st.button(
+                    "Manage This Follow-Up",
+                    key=(
+                        f"manage_follow_up_"
+                        f"{follow_up_id}"
+                    ),
+                    icon=":material/event_note:",
+                    type="primary",
+                    width="stretch",
+                ):
+
+                    st.session_state.pop(
+                        "selected_patient_follow_ups",
+                        None,
+                    )
+
+                    st.session_state[
+                        "selected_follow_up"
+                    ] = follow_up
+
+                    st.rerun()
+
+        st.divider()
+
+        if st.button(
+            "Close",
+            key="patient_follow_ups_close",
+            width="stretch",
+        ):
+
+            st.session_state.pop(
+                "selected_patient_follow_ups",
+                None,
+            )
+
+            st.rerun()
+
+
+# ============================================================
 # FOLLOW-UP DETAILS DIALOG
 # ============================================================
 
@@ -1345,6 +1634,30 @@ def show_follow_up_dialog(
         follow_up
     )
 
+    # ----------------------------------------------------
+    # RESOLVE STATE
+    # ----------------------------------------------------
+
+    linked_status = (
+        linked_exam.get("status")
+        if linked_exam
+        else None
+    )
+
+    exam_completed = (
+        linked_status == "Completed"
+    )
+
+    is_active = (
+        status in ACTIVE_FOLLOW_UP_STATUSES
+    )
+
+    can_start = is_active and not linked_exam
+    can_mark_completed = is_active and exam_completed
+    can_reschedule_or_cancel = (
+        is_active and not exam_completed
+    )
+
     with st.container(
         key=DIALOG_KEY
     ):
@@ -1357,29 +1670,67 @@ def show_follow_up_dialog(
             "Follow-Up Details"
         )
 
+        follow_up_sequence = (
+            linked_exam.get(
+                "follow_up_sequence"
+            )
+            if linked_exam
+            else None
+        )
+
+        if follow_up_sequence is not None:
+
+            examination_display_name = (
+                f"Follow-Up Examination "
+                f"{int(follow_up_sequence):03d}"
+            )
+
+        else:
+
+            examination_display_name = (
+                linked_exam.get(
+                    "examination_type"
+                )
+                if linked_exam
+                else "Follow-Up Examination"
+            ) or "Follow-Up Examination"
+
         show_rows([
             (
-                "Patient",
-                patient_name(patient),
+                "Examination",
+                examination_display_name,
             ),
             (
-                "Patient ID",
-                patient_code(patient),
-            ),
-            (
-                "Schedule",
-                format_follow_up_datetime(
-                    follow_up
-                ),
+                "Examination Date",
+                format_datetime(
+                    examination_datetime(
+                        linked_exam
+                    )
+                )
+                if linked_exam
+                else "—",
             ),
             (
                 "Status",
                 pill(
-                    status,
-                    follow_up_status_tone(
-                        status
+                    linked_status or "Not Started",
+                    (
+                        "green"
+                        if linked_status == "Completed"
+                        else "amber"
+                        if linked_status == "Pending"
+                        else "grey"
                     ),
                 ),
+            ),
+            (
+                "Examination ID",
+                (
+                    linked_exam.get("examination_id")
+                    if linked_exam
+                    else "—"
+                )
+                or "—",
             ),
         ])
 
@@ -1460,20 +1811,6 @@ def show_follow_up_dialog(
 
         if linked_exam:
 
-            linked_status = (
-                linked_exam.get(
-                    "status"
-                )
-                or "Pending"
-            )
-
-            linked_tone = (
-                "green"
-                if linked_status
-                == "Completed"
-                else "amber"
-            )
-
             show_rows([
                 (
                     "Examination",
@@ -1493,8 +1830,12 @@ def show_follow_up_dialog(
                 (
                     "Status",
                     pill(
-                        linked_status,
-                        linked_tone,
+                        linked_status or "Pending",
+                        (
+                            "green"
+                            if linked_status == "Completed"
+                            else "amber"
+                        ),
                     ),
                 ),
                 (
@@ -1564,10 +1905,11 @@ def show_follow_up_dialog(
 
         st.divider()
 
-        if (
-            status in ACTIVE_FOLLOW_UP_STATUSES
-            and not linked_exam
-        ):
+        # ====================================================
+        # 1. START FOLLOW-UP EXAMINATION
+        # ====================================================
+
+        if can_start:
 
             st.markdown(
                 "**Patient has arrived for the "
@@ -1708,87 +2050,83 @@ def show_follow_up_dialog(
                         f"follow-up examination: {error}"
                     )
 
-        elif linked_exam:
+        # ====================================================
+        # 2. EXAM IN PROGRESS (Pending)
+        # ====================================================
 
-            linked_status = (
-                linked_exam.get(
-                    "status"
-                )
-                or "Pending"
+        elif linked_exam and linked_status == "Pending":
+
+            st.info(
+                "This follow-up examination "
+                "is already waiting in the "
+                "Patient Queue."
             )
 
-            if linked_status == "Pending":
+        # ====================================================
+        # 3. EXAM COMPLETED → MARK FOLLOW-UP COMPLETED
+        # ====================================================
 
-                st.info(
-                    "This follow-up examination "
-                    "is already waiting in the "
-                    "Patient Queue."
-                )
+        elif can_mark_completed:
 
-            elif linked_status == "Completed":
+            st.success(
+                "The examination has been "
+                "completed. This follow-up "
+                "can now be marked as "
+                "completed."
+            )
 
-                if status in ACTIVE_FOLLOW_UP_STATUSES:
+            if st.button(
+                "Mark Follow-Up Completed",
+                key=(
+                    f"complete_follow_up_"
+                    f"{follow_up_id}"
+                ),
+                icon=":material/check_circle:",
+                type="primary",
+                width="stretch",
+            ):
 
-                    st.success(
-                        "The examination has been "
-                        "completed. This follow-up "
-                        "can now be marked as "
-                        "completed."
+                try:
+
+                    result = complete_follow_up(
+                        follow_up_id
                     )
 
-                    if st.button(
-                        "Mark Follow-Up Completed",
-                        key=(
-                            f"complete_follow_up_"
-                            f"{follow_up_id}"
-                        ),
-                        icon=":material/check_circle:",
-                        type="primary",
-                        width="stretch",
-                    ):
+                    if result:
 
-                        try:
+                        st.session_state.pop(
+                            "selected_follow_up",
+                            None,
+                        )
 
-                            result = (
-                                complete_follow_up(
-                                    follow_up_id
-                                )
-                            )
+                        remember(
+                            "Follow-up completed "
+                            "successfully."
+                        )
 
-                            if result:
+                        st.rerun()
 
-                                st.session_state.pop(
-                                    "selected_follow_up",
-                                    None,
-                                )
+                    else:
 
-                                remember(
-                                    "Follow-up completed "
-                                    "successfully."
-                                )
+                        st.error(
+                            "The follow-up "
+                            "could not be "
+                            "completed."
+                        )
 
-                                st.rerun()
+                except Exception as error:
 
-                            else:
+                    st.error(
+                        "Failed to complete "
+                        f"follow-up: {error}"
+                    )
 
-                                st.error(
-                                    "The follow-up "
-                                    "could not be "
-                                    "completed."
-                                )
+        # ====================================================
+        # 4. RESCHEDULE / CANCEL
+        #    Only while the exam is NOT completed
+        # ====================================================
 
-                        except Exception as error:
-
-                            st.error(
-                                "Failed to complete "
-                                f"follow-up: {error}"
-                            )
-
-        # ----------------------------------------------------
-        # RESCHEDULE / CANCEL
-        # ----------------------------------------------------
-
-        if status in ACTIVE_FOLLOW_UP_STATUSES:
+        if can_reschedule_or_cancel:
 
             st.divider()
 
@@ -1855,6 +2193,10 @@ def show_follow_up_dialog(
                         f"follow-up: {error}"
                     )
 
+        # ----------------------------------------------------
+        # CLOSE
+        # ----------------------------------------------------
+
         if st.button(
             "Close",
             key=(
@@ -1899,11 +2241,6 @@ def show_reschedule_dialog(
         or date.today()
     )
 
-    # Streamlit requires the default value to be
-    # inside the min/max range.
-    #
-    # Since this is a RESCHEDULE action, the new
-    # appointment must be today or a future date.
     min_date = date.today()
 
     if current_date < min_date:
@@ -1962,10 +2299,6 @@ def show_reschedule_dialog(
             "patient's follow-up examination."
         )
 
-        # ----------------------------------------------------
-        # DATE
-        # ----------------------------------------------------
-
         new_date = st.date_input(
             "Follow-Up Date",
             value=current_date,
@@ -1977,10 +2310,6 @@ def show_reschedule_dialog(
             ),
         )
 
-        # ----------------------------------------------------
-        # TIME
-        # ----------------------------------------------------
-
         new_time = st.time_input(
             "Follow-Up Time",
             value=current_time,
@@ -1991,10 +2320,6 @@ def show_reschedule_dialog(
         )
 
         st.divider()
-
-        # ----------------------------------------------------
-        # ACTION BUTTONS
-        # ----------------------------------------------------
 
         col1, col2 = st.columns(2)
 
@@ -2041,10 +2366,6 @@ def show_reschedule_dialog(
 
     if save:
 
-        # ----------------------------------------------------
-        # DATE VALIDATION
-        # ----------------------------------------------------
-
         if new_date < min_date:
 
             st.error(
@@ -2054,10 +2375,6 @@ def show_reschedule_dialog(
 
             return
 
-        # ----------------------------------------------------
-        # RESCHEDULE
-        # ----------------------------------------------------
-
         try:
 
             result = reschedule_follow_up(
@@ -2065,10 +2382,6 @@ def show_reschedule_dialog(
                 new_date=new_date,
                 new_time=new_time,
             )
-
-            # ------------------------------------------------
-            # SUCCESS
-            # ------------------------------------------------
 
             if result and result.get(
                 "success"
@@ -2090,10 +2403,6 @@ def show_reschedule_dialog(
 
                 st.rerun()
 
-            # ------------------------------------------------
-            # BACKEND FAILURE
-            # ------------------------------------------------
-
             else:
 
                 message = (
@@ -2114,10 +2423,6 @@ def show_reschedule_dialog(
                         "be rescheduled."
                     )
                 )
-
-        # ----------------------------------------------------
-        # UNEXPECTED ERROR
-        # ----------------------------------------------------
 
         except Exception as error:
 
@@ -2822,12 +3127,6 @@ def show_complete_exam_dialog(
                 ),
             )
 
-            # ------------------------------------------------
-            # If this examination belongs to a follow-up,
-            # complete the follow-up only after the
-            # examination itself is completed.
-            # ------------------------------------------------
-
             follow_up_id = (
                 st.session_state.get(
                     "active_follow_up_id"
@@ -3363,16 +3662,9 @@ def render_follow_up_table(
     key_prefix="followups",
 ):
 
-    active_follow_ups = [
-        follow_up
-        for follow_up in follow_ups
-        if get_follow_up_status(
-            follow_up
-        )
-        in ACTIVE_FOLLOW_UP_STATUSES
-    ]
+    grouped = group_active_follow_ups_by_patient(follow_ups)
 
-    if not active_follow_ups:
+    if not grouped:
 
         empty_state(
             "There are no scheduled follow-up "
@@ -3380,15 +3672,6 @@ def render_follow_up_table(
         )
 
         return
-
-    active_follow_ups.sort(
-        key=lambda item: (
-            follow_up_date_value(
-                item
-            )
-            or date.max
-        )
-    )
 
     with st.container(
         key=(
@@ -3403,57 +3686,69 @@ def render_follow_up_table(
             key_prefix,
         )
 
-        for follow_up in active_follow_ups:
+        for entry in grouped:
 
-            follow_up_id = (
-                get_follow_up_id(
-                    follow_up
-                )
+            patient = entry["patient"]
+            patient_id = patient.get("patient_id")
+
+            next_follow_up = entry["next_follow_up"]
+            all_follow_ups = entry["follow_ups"]
+
+            source_exam = get_source_examination(
+                next_follow_up
             )
 
-            patient = (
-                get_follow_up_patient(
-                    follow_up
-                )
+            # ------------------------------------------------
+            # STATUS PILL
+            #
+            # Priority:
+            #   1. If ANY follow-up is Rescheduled -> amber
+            #   2. Else use the next follow-up's own status
+            # ------------------------------------------------
+
+            has_rescheduled = any(
+                get_follow_up_status(item) == "Rescheduled"
+                for item in all_follow_ups
             )
 
-            source_exam = (
-                get_source_examination(
-                    follow_up
+            if has_rescheduled:
+                status_label = "Rescheduled"
+                status_tone = "amber"
+            else:
+                status_label = get_follow_up_status(
+                    next_follow_up
                 )
-            )
+                status_tone = follow_up_status_tone(
+                    status_label
+                )
 
-            status = (
-                get_follow_up_status(
-                    follow_up
-                )
-            )
+            # ------------------------------------------------
+            # FOLLOW-UP COUNT BADGE
+            # ------------------------------------------------
 
-            linked_exam = (
-                get_follow_up_examination(
-                    follow_up
+            patient_sub = patient_code(patient)
+
+            if len(all_follow_ups) > 1:
+                patient_sub = (
+                    f"{patient_sub} • "
+                    f"{len(all_follow_ups)} follow-ups"
                 )
-            )
 
             with table_row(
-                f"{key_prefix}_row_{follow_up_id}",
+                f"{key_prefix}_row_{patient_id}",
                 FOLLOW_UP_WIDTHS,
             ) as columns:
 
                 name_cell(
                     columns[0],
-                    patient_name(
-                        patient
-                    ),
-                    sub=patient_code(
-                        patient
-                    ),
+                    patient_name(patient),
+                    sub=patient_sub,
                 )
 
                 text_cell(
                     columns[1],
                     format_follow_up_datetime(
-                        follow_up
+                        next_follow_up
                     ),
                 )
 
@@ -3465,44 +3760,17 @@ def render_follow_up_table(
                     or "Examination",
                 )
 
-                if linked_exam:
-
-                    linked_status = (
-                        linked_exam.get(
-                            "status"
-                        )
-                        or "Pending"
-                    )
-
-                    pill_cell(
-                        columns[3],
-                        (
-                            "Exam "
-                            f"{linked_status}"
-                        ),
-                        (
-                            "green"
-                            if linked_status
-                            == "Completed"
-                            else "amber"
-                        ),
-                    )
-
-                else:
-
-                    pill_cell(
-                        columns[3],
-                        status,
-                        follow_up_status_tone(
-                            status
-                        ),
-                    )
+                pill_cell(
+                    columns[3],
+                    status_label,
+                    status_tone,
+                )
 
                 if columns[4].button(
                     "Manage",
                     key=(
                         f"{key_prefix}_"
-                        f"manage_{follow_up_id}"
+                        f"manage_{patient_id}"
                     ),
                     icon=":material/event_note:",
                     type="primary",
@@ -3512,8 +3780,11 @@ def render_follow_up_table(
                     clear_dialog_state()
 
                     st.session_state[
-                        "selected_follow_up"
-                    ] = follow_up
+                        "selected_patient_follow_ups"
+                    ] = {
+                        "patient": patient,
+                        "follow_ups": all_follow_ups,
+                    }
 
                     st.rerun()
 
@@ -3528,18 +3799,12 @@ def show():
     # CSS
     # --------------------------------------------------------
 
-    load_css(
-        "system_admin_css/base.css",
-        "physician_css/patient_queue.css",
-    )
+    load_css("patient_queue.css")
 
     show_flash_message()
 
     role_id = current_role_id()
-
-    hospital_id = (
-        current_hospital_id()
-    )
+    hospital_id = current_hospital_id()
 
     # --------------------------------------------------------
     # ACCESS
@@ -3570,9 +3835,7 @@ def show():
     # PAGE
     # --------------------------------------------------------
 
-    with st.container(
-        key=PAGE_KEY
-    ):
+    with st.container(key=PAGE_KEY):
 
         page_header(
             "Follow-Up Management",
@@ -3598,10 +3861,8 @@ def show():
 
         try:
 
-            pending = (
-                get_pending_examinations(
-                    hospital_id=filter_hospital
-                )
+            pending = get_pending_examinations(
+                hospital_id=filter_hospital
             )
 
         except Exception as error:
@@ -3619,10 +3880,8 @@ def show():
 
         try:
 
-            xray_requests = (
-                get_pending_xray_requests(
-                    hospital_id=filter_hospital
-                )
+            xray_requests = get_pending_xray_requests(
+                hospital_id=filter_hospital
             )
 
         except Exception as error:
@@ -3644,11 +3903,7 @@ def show():
             xray_requests = [
                 request
                 for request in xray_requests
-                if str(
-                    request.get(
-                        "requested_by"
-                    )
-                )
+                if str(request.get("requested_by"))
                 == str(user_id)
             ]
 
@@ -3658,16 +3913,11 @@ def show():
 
         try:
 
-            follow_ups = (
-                get_hospital_follow_ups(
-                    hospital_id=filter_hospital
-                )
+            follow_ups = get_hospital_follow_ups(
+                hospital_id=filter_hospital
             )
 
-            follow_ups = (
-                follow_ups
-                or []
-            )
+            follow_ups = follow_ups or []
 
         except Exception as error:
 
@@ -3682,11 +3932,7 @@ def show():
         # GROUP DATA
         # ----------------------------------------------------
 
-        grouped = (
-            group_pending_by_patient(
-                pending
-            )
-        )
+        grouped = group_pending_by_patient(pending)
 
         # ----------------------------------------------------
         # METRICS
@@ -3766,21 +4012,17 @@ def show():
     # DIALOGS
     # ========================================================
 
-    if st.session_state.get(
-        "selected_examination"
-    ):
+    # --------------------------------------------------------
+    # 1. COMPLETE EXAMINATION
+    # --------------------------------------------------------
 
-        examination = (
-            st.session_state[
-                "selected_examination"
-            ]
-        )
+    if st.session_state.get("selected_examination"):
 
-        patient = (
-            st.session_state.get(
-                "edit_patient"
-            )
-        )
+        examination = st.session_state[
+            "selected_examination"
+        ]
+
+        patient = st.session_state.get("edit_patient")
 
         if patient:
 
@@ -3789,54 +4031,61 @@ def show():
                 examination,
             )
 
-    elif st.session_state.get(
-        "pending_exams_patient"
-    ):
+    # --------------------------------------------------------
+    # 2. MULTIPLE PENDING EXAMINATIONS
+    # --------------------------------------------------------
 
-        data = (
-            st.session_state[
-                "pending_exams_patient"
-            ]
-        )
+    elif st.session_state.get("pending_exams_patient"):
+
+        data = st.session_state[
+            "pending_exams_patient"
+        ]
 
         show_pending_exams_dialog(
             data["patient"],
             data["exams"],
         )
 
-    elif st.session_state.get(
-        "xray_request_patient"
-    ):
+    # --------------------------------------------------------
+    # 3. X-RAY REQUEST DETAILS
+    # --------------------------------------------------------
+
+    elif st.session_state.get("xray_request_patient"):
 
         show_xray_request_dialog(
-            st.session_state[
-                "xray_request_patient"
-            ]
+            st.session_state["xray_request_patient"]
         )
 
-    elif st.session_state.get(
-        "selected_follow_up"
-    ):
+    # --------------------------------------------------------
+    # 4. PATIENT-LEVEL FOLLOW-UPS (GROUPED VIEW)
+    # --------------------------------------------------------
 
-        follow_up = (
-            st.session_state[
-                "selected_follow_up"
-            ]
+    elif st.session_state.get("selected_patient_follow_ups"):
+
+        data = st.session_state[
+            "selected_patient_follow_ups"
+        ]
+
+        show_patient_follow_ups_dialog(
+            data["patient"],
+            data["follow_ups"],
         )
 
-        # Refresh the selected follow-up
-        # so the dialog displays the newest
-        # linked examination/status.
+    # --------------------------------------------------------
+    # 5. SINGLE FOLLOW-UP DETAILS
+    # --------------------------------------------------------
 
-        follow_up_id = get_follow_up_id(
-            follow_up
-        )
+    elif st.session_state.get("selected_follow_up"):
+
+        follow_up = st.session_state[
+            "selected_follow_up"
+        ]
+
+        follow_up_id = get_follow_up_id(follow_up)
 
         try:
 
-            refreshed = get_follow_up(
-                follow_up_id
-            )
+            refreshed = get_follow_up(follow_up_id)
 
             if refreshed:
 
@@ -3850,31 +4099,25 @@ def show():
 
             pass
 
-        show_follow_up_dialog(
-            follow_up
-        )
+        show_follow_up_dialog(follow_up)
 
-    elif st.session_state.get(
-        "reschedule_follow_up_id"
-    ):
+    # --------------------------------------------------------
+    # 6. RESCHEDULE FOLLOW-UP
+    # --------------------------------------------------------
 
-        follow_up_id = (
-            st.session_state[
-                "reschedule_follow_up_id"
-            ]
-        )
+    elif st.session_state.get("reschedule_follow_up_id"):
+
+        follow_up_id = st.session_state[
+            "reschedule_follow_up_id"
+        ]
 
         try:
 
-            follow_up = get_follow_up(
-                follow_up_id
-            )
+            follow_up = get_follow_up(follow_up_id)
 
             if follow_up:
 
-                show_reschedule_dialog(
-                    follow_up
-                )
+                show_reschedule_dialog(follow_up)
 
             else:
 
@@ -3895,19 +4138,21 @@ def show():
                 f"{error}"
             )
 
-    elif st.session_state.get(
-        "history_patient"
-    ):
+    # --------------------------------------------------------
+    # 7. PATIENT HISTORY DIALOG
+    # --------------------------------------------------------
+
+    elif st.session_state.get("history_patient"):
 
         show_patient_history_dialog(
-            st.session_state[
-                "history_patient"
-            ]
+            st.session_state["history_patient"]
         )
 
-    elif st.session_state.get(
-        "previous_examinations_patient"
-    ):
+    # --------------------------------------------------------
+    # 8. PREVIOUS EXAMINATIONS DIALOG
+    # --------------------------------------------------------
+
+    elif st.session_state.get("previous_examinations_patient"):
 
         show_previous_examinations_dialog(
             st.session_state[
@@ -3915,9 +4160,11 @@ def show():
             ]
         )
 
-    elif st.session_state.get(
-        "previous_medical_records_patient"
-    ):
+    # --------------------------------------------------------
+    # 9. PREVIOUS MEDICAL RECORDS DIALOG
+    # --------------------------------------------------------
+
+    elif st.session_state.get("previous_medical_records_patient"):
 
         show_previous_medical_records_dialog(
             st.session_state[

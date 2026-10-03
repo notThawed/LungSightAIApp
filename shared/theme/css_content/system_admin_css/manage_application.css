@@ -1,3 +1,1055 @@
-/*
-System Admin CSS
-*/
+/* =========================================================
+   LUNGSIGHT — SYSTEM ADMIN
+   Manage Hospital Applications
+   shared/theme/css_content/system_admin_css/manage_application.css
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   MATERIAL SYMBOLS
+   --------------------------------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0');
+
+/* ---------------------------------------------------------
+   ROOT / GLOBAL
+   --------------------------------------------------------- */
+
+:root {
+    --ls-primary: #176b87;
+    --ls-primary-dark: #0f526a;
+    --ls-primary-soft: #eaf6fa;
+
+    --ls-accent: #2b8ca8;
+    --ls-success: #16845b;
+    --ls-success-soft: #eaf8f1;
+
+    --ls-warning: #b7791f;
+    --ls-warning-soft: #fff7e8;
+
+    --ls-danger: #c0392b;
+    --ls-danger-soft: #fff0ee;
+
+    --ls-text: #172b35;
+    --ls-text-soft: #52636c;
+    --ls-muted: #7a8990;
+
+    --ls-border: #dce6ea;
+    --ls-border-light: #e9eff2;
+
+    --ls-background: #f7fafb;
+    --ls-card: #ffffff;
+
+    --ls-radius-sm: 8px;
+    --ls-radius-md: 14px;
+    --ls-radius-lg: 20px;
+
+    --ls-shadow-sm:
+        0 2px 8px rgba(23, 55, 66, 0.05);
+
+    --ls-shadow-md:
+        0 8px 24px rgba(23, 55, 66, 0.08);
+
+    --ls-shadow-lg:
+        0 16px 40px rgba(23, 55, 66, 0.11);
+}
+
+/* ---------------------------------------------------------
+   MATERIAL SYMBOLS — SAFETY NET
+   --------------------------------------------------------- */
+
+.material-symbols-rounded,
+.material-symbols-outlined,
+.ma-metric-icon .material-symbols-rounded,
+.ma-metric-icon .material-symbols-outlined {
+    font-family: "Material Symbols Rounded" !important;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------------------------------------------------
+   PAGE WRAPPER
+   Streamlit renders st.container(key="ma_page") as
+   <div class="st-key-ma_page" data-testid="stVerticalBlock">
+   --------------------------------------------------------- */
+
+div[class*="st-key-ma_page"] {
+    animation: maFadeIn 0.35s ease-out;
+}
+
+@keyframes maFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ---------------------------------------------------------
+   PAGE HEADER
+   --------------------------------------------------------- */
+
+.ma-page-title {
+    margin: 0 0 4px;
+
+    color: var(--ls-text);
+
+    font-size: 1.75rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.025em;
+
+    line-height: 1.18;
+}
+
+.ma-page-caption {
+    margin: 0 0 22px;
+
+    color: var(--ls-text-soft);
+
+    font-size: 0.92rem;
+
+    line-height: 1.6;
+}
+
+/* ---------------------------------------------------------
+   METRIC CARDS
+   --------------------------------------------------------- */
+
+.ma-metric {
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+
+    padding: 20px 20px;
+
+    margin-bottom: 6px;
+
+    background: var(--ls-card);
+
+    border: 1px solid var(--ls-border);
+
+    border-radius: var(--ls-radius-md);
+
+    box-shadow: var(--ls-shadow-sm);
+
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease;
+
+    overflow: hidden;
+}
+
+.ma-metric::before {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    top: 0;
+    bottom: 0;
+
+    width: 4px;
+
+    background: var(--ls-border);
+
+    border-radius: 4px 0 0 4px;
+}
+
+.ma-metric:hover {
+    transform: translateY(-2px);
+
+    border-color: rgba(23, 107, 135, 0.28);
+
+    box-shadow: var(--ls-shadow-md);
+}
+
+.ma-metric-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 auto;
+
+    width: 44px;
+    height: 44px;
+
+    background: var(--ls-primary-soft);
+
+    border-radius: 11px;
+
+    color: var(--ls-primary);
+
+    font-family: "Material Symbols Rounded";
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+
+    font-size: 22px;
+
+    line-height: 1;
+}
+
+.ma-metric-title {
+    color: var(--ls-muted);
+
+    font-size: 0.68rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.1em;
+
+    text-transform: uppercase;
+
+    margin-bottom: 3px;
+}
+
+.ma-metric-value {
+    color: var(--ls-text);
+
+    font-size: 1.65rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.02em;
+
+    line-height: 1.1;
+}
+
+/* Metric tone variants */
+
+.ma-metric-amber::before {
+    background: var(--ls-warning);
+}
+
+.ma-metric-amber .ma-metric-icon {
+    background: var(--ls-warning-soft);
+
+    color: var(--ls-warning);
+}
+
+.ma-metric-green::before {
+    background: var(--ls-success);
+}
+
+.ma-metric-green .ma-metric-icon {
+    background: var(--ls-success-soft);
+
+    color: var(--ls-success);
+}
+
+.ma-metric-red::before {
+    background: var(--ls-danger);
+}
+
+.ma-metric-red .ma-metric-icon {
+    background: var(--ls-danger-soft);
+
+    color: var(--ls-danger);
+}
+
+.ma-metric-blue::before {
+    background: var(--ls-accent);
+}
+
+.ma-metric-blue .ma-metric-icon {
+    background: var(--ls-primary-soft);
+
+    color: var(--ls-primary);
+}
+
+/* ---------------------------------------------------------
+   PILLS
+   --------------------------------------------------------- */
+
+.ma-pills {
+    display: flex;
+
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 6px;
+}
+
+.ma-pill {
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 4px 10px;
+
+    border-radius: 999px;
+
+    font-size: 0.67rem;
+
+    font-weight: 750;
+
+    letter-spacing: 0.02em;
+
+    line-height: 1.4;
+
+    white-space: nowrap;
+
+    border: 1px solid transparent;
+}
+
+.ma-pill-green {
+    background: var(--ls-success-soft);
+
+    color: var(--ls-success);
+
+    border-color: rgba(22, 132, 91, 0.18);
+}
+
+.ma-pill-amber {
+    background: var(--ls-warning-soft);
+
+    color: var(--ls-warning);
+
+    border-color: rgba(183, 121, 31, 0.18);
+}
+
+.ma-pill-red {
+    background: var(--ls-danger-soft);
+
+    color: var(--ls-danger);
+
+    border-color: rgba(192, 57, 43, 0.18);
+}
+
+.ma-pill-blue {
+    background: var(--ls-primary-soft);
+
+    color: var(--ls-primary);
+
+    border-color: rgba(23, 107, 135, 0.18);
+}
+
+.ma-pill-grey {
+    background: #f0f3f5;
+
+    color: #64748b;
+
+    border-color: #dce4e8;
+}
+
+/* ---------------------------------------------------------
+   APPLICATION CARD
+   Streamlit renders st.container(key="app_card_<id>") as
+   <div class="st-key-app_card_<id>" data-testid="stVerticalBlock">
+   --------------------------------------------------------- */
+
+div[class*="st-key-app_card_"] {
+    position: relative;
+
+    padding: 18px 20px 14px;
+
+    margin-bottom: 14px;
+
+    background: var(--ls-card);
+
+    border: 1px solid var(--ls-border);
+
+    border-radius: var(--ls-radius-md);
+
+    box-shadow: var(--ls-shadow-sm);
+
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+}
+
+div[class*="st-key-app_card_"]:hover {
+    transform: translateY(-1px);
+
+    border-color: rgba(23, 107, 135, 0.28);
+
+    box-shadow: var(--ls-shadow-md);
+}
+
+.ma-card-top {
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 16px;
+
+    padding-bottom: 14px;
+
+    margin-bottom: 14px;
+
+    border-bottom: 1px solid var(--ls-border-light);
+}
+
+.ma-card-title {
+    margin: 0 0 3px;
+
+    color: var(--ls-text);
+
+    font-size: 1.02rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.01em;
+}
+
+.ma-card-meta {
+    margin: 0;
+
+    color: var(--ls-muted);
+
+    font-size: 0.76rem;
+
+    line-height: 1.5;
+}
+
+/* ---------------------------------------------------------
+   EMPTY STATE
+   --------------------------------------------------------- */
+
+.ma-empty {
+    padding: 26px 20px;
+
+    background: #f8fafb;
+
+    border: 1px dashed var(--ls-border);
+
+    border-radius: 12px;
+
+    color: var(--ls-muted);
+
+    font-size: 0.83rem;
+
+    text-align: center;
+}
+
+/* ---------------------------------------------------------
+   ROWS
+   --------------------------------------------------------- */
+
+.ma-rows {
+    overflow: hidden;
+
+    border: 1px solid var(--ls-border);
+
+    border-radius: 11px;
+
+    background: var(--ls-card);
+
+    margin-bottom: 14px;
+}
+
+.ma-row {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 18px;
+
+    padding: 10px 14px;
+
+    border-bottom: 1px solid var(--ls-border-light);
+}
+
+.ma-row:last-child {
+    border-bottom: none;
+}
+
+.ma-row span {
+    color: var(--ls-muted);
+
+    font-size: 0.72rem;
+
+    font-weight: 600;
+
+    letter-spacing: 0.01em;
+}
+
+.ma-row b {
+    max-width: 62%;
+
+    color: var(--ls-text);
+
+    font-size: 0.78rem;
+
+    font-weight: 700;
+
+    text-align: right;
+
+    overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------
+   NOTES
+   --------------------------------------------------------- */
+
+.ma-note {
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 10px;
+
+    padding: 12px 15px;
+
+    margin: 13px 0;
+
+    border-radius: 11px;
+
+    background: #f5f8f9;
+
+    border: 1px solid var(--ls-border);
+
+    color: var(--ls-text-soft);
+
+    font-size: 0.78rem;
+
+    line-height: 1.55;
+}
+
+.ma-note::before {
+    content: "info";
+
+    flex: 0 0 auto;
+
+    font-family: "Material Symbols Rounded";
+
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+
+    color: var(--ls-primary);
+
+    font-size: 18px;
+
+    line-height: 1.3;
+}
+
+.ma-note-green {
+    background: var(--ls-success-soft);
+
+    border-color: rgba(22, 132, 91, 0.18);
+
+    color: #2f5c4b;
+}
+
+.ma-note-green::before {
+    content: "check_circle";
+
+    color: var(--ls-success);
+}
+
+.ma-note-amber {
+    background: var(--ls-warning-soft);
+
+    border-color: rgba(183, 121, 31, 0.2);
+
+    color: #7a5518;
+}
+
+.ma-note-amber::before {
+    content: "warning";
+
+    color: var(--ls-warning);
+}
+
+.ma-note-red {
+    background: var(--ls-danger-soft);
+
+    border-color: rgba(192, 57, 43, 0.18);
+
+    color: #8c2b1f;
+}
+
+.ma-note-red::before {
+    content: "error";
+
+    color: var(--ls-danger);
+}
+
+/* ---------------------------------------------------------
+   DIALOG WRAPPER
+   Streamlit renders st.container(key="ma_dialog") as
+   <div class="st-key-ma_dialog" data-testid="stVerticalBlock">
+   --------------------------------------------------------- */
+
+div[class*="st-key-ma_dialog"] {
+    padding-top: 4px;
+}
+
+/* ---------------------------------------------------------
+   DIALOG HEADER
+   --------------------------------------------------------- */
+
+.ma-dialog-head {
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 14px;
+
+    padding-bottom: 14px;
+
+    margin-bottom: 16px;
+
+    border-bottom: 1px solid var(--ls-border-light);
+}
+
+.ma-dialog-title {
+    margin: 0 0 3px;
+
+    color: var(--ls-text);
+
+    font-size: 1.25rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.02em;
+
+    line-height: 1.25;
+}
+
+.ma-dialog-sub {
+    margin: 0;
+
+    color: var(--ls-muted);
+
+    font-size: 0.74rem;
+}
+
+.ma-dialog-text {
+    margin: 0 0 4px;
+
+    color: var(--ls-text-soft);
+
+    font-size: 0.88rem;
+
+    line-height: 1.65;
+}
+
+.ma-dialog-text b {
+    color: var(--ls-text);
+
+    font-weight: 750;
+}
+
+/* Section subtitle inside dialogs */
+
+.ma-subtitle {
+    margin: 14px 0 8px;
+
+    color: var(--ls-primary);
+
+    font-size: 0.68rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.1em;
+
+    text-transform: uppercase;
+}
+
+.ma-subtitle:first-child {
+    margin-top: 0;
+}
+
+/* ---------------------------------------------------------
+   INVOICE
+   --------------------------------------------------------- */
+
+.ma-inv {
+    padding: 22px 22px 20px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff 0%,
+            #f7fbfc 100%
+        );
+
+    border: 1px solid var(--ls-border);
+
+    border-radius: var(--ls-radius-md);
+
+    box-shadow: var(--ls-shadow-sm);
+
+    animation: maFadeIn 0.3s ease-out;
+}
+
+/* Invoice top row: label + number + status pill */
+
+.ma-inv-top {
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 16px;
+
+    padding-bottom: 16px;
+
+    margin-bottom: 18px;
+
+    border-bottom: 1px solid var(--ls-border-light);
+}
+
+.ma-inv-label {
+    margin: 0 0 4px;
+
+    color: var(--ls-primary);
+
+    font-size: 0.68rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.14em;
+
+    text-transform: uppercase;
+}
+
+.ma-inv-number {
+    margin: 0;
+
+    color: var(--ls-text);
+
+    font-size: 1.3rem;
+
+    font-weight: 800;
+
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    letter-spacing: 0.02em;
+}
+
+/* Two-column block: billed to / payment info */
+
+.ma-inv-grid {
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 18px;
+
+    margin-bottom: 20px;
+}
+
+.ma-inv-block {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 4px;
+}
+
+.ma-inv-block > span {
+    color: var(--ls-muted);
+
+    font-size: 0.67rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.08em;
+
+    text-transform: uppercase;
+
+    margin-top: 8px;
+}
+
+.ma-inv-block > span:first-child {
+    margin-top: 0;
+}
+
+.ma-inv-block > b {
+    color: var(--ls-text);
+
+    font-size: 0.83rem;
+
+    font-weight: 700;
+
+    overflow-wrap: anywhere;
+}
+
+.ma-inv-block > small {
+    display: block;
+
+    margin-top: 4px;
+
+    color: var(--ls-text-soft);
+
+    font-size: 0.72rem;
+
+    line-height: 1.6;
+}
+
+/* Line items */
+
+.ma-inv-lines {
+    border: 1px solid var(--ls-border);
+
+    border-radius: 11px;
+
+    overflow: hidden;
+
+    margin-bottom: 16px;
+
+    background: var(--ls-card);
+}
+
+.ma-inv-line {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 16px;
+
+    padding: 12px 15px;
+
+    border-bottom: 1px solid var(--ls-border-light);
+
+    font-size: 0.78rem;
+}
+
+.ma-inv-line:last-child {
+    border-bottom: none;
+}
+
+.ma-inv-line span {
+    color: var(--ls-text-soft);
+
+    font-weight: 600;
+}
+
+.ma-inv-line b {
+    color: var(--ls-text);
+
+    font-weight: 750;
+}
+
+.ma-inv-line-head {
+    background: #f5f8f9;
+}
+
+.ma-inv-line-head span {
+    color: var(--ls-muted);
+
+    font-size: 0.66rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.1em;
+
+    text-transform: uppercase;
+}
+
+/* Total */
+
+.ma-inv-total {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    padding: 15px 16px;
+
+    background: var(--ls-primary-soft);
+
+    border: 1px solid rgba(23, 107, 135, 0.16);
+
+    border-radius: 11px;
+}
+
+.ma-inv-total span {
+    color: var(--ls-text-soft);
+
+    font-size: 0.76rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.02em;
+}
+
+.ma-inv-total b {
+    color: var(--ls-primary);
+
+    font-size: 1.15rem;
+
+    font-weight: 850;
+
+    letter-spacing: -0.01em;
+}
+
+/* ---------------------------------------------------------
+   STREAMLIT BUTTONS INSIDE DIALOGS
+   --------------------------------------------------------- */
+
+div[data-testid="stDialog"] button {
+    border-radius: 9px !important;
+
+    font-weight: 700 !important;
+
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        background 0.15s ease !important;
+}
+
+div[data-testid="stDialog"] button:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 5px 14px rgba(23, 55, 66, 0.10);
+}
+
+div[data-testid="stDialog"] button[kind="primary"] {
+    background:
+        linear-gradient(
+            135deg,
+            var(--ls-primary),
+            var(--ls-accent)
+        ) !important;
+
+    border: none !important;
+
+    color: #ffffff !important;
+}
+
+div[data-testid="stDialog"] button[kind="primary"]:hover {
+    background:
+        linear-gradient(
+            135deg,
+            var(--ls-primary-dark),
+            var(--ls-primary)
+        ) !important;
+}
+
+/* ---------------------------------------------------------
+   STREAMLIT INPUTS INSIDE DIALOGS
+   --------------------------------------------------------- */
+
+div[data-testid="stDialog"] input,
+div[data-testid="stDialog"] textarea,
+div[data-testid="stDialog"] select {
+    border-radius: 9px !important;
+}
+
+div[data-testid="stDialog"] input:focus,
+div[data-testid="stDialog"] textarea:focus {
+    border-color: var(--ls-primary) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(23, 107, 135, 0.10) !important;
+}
+
+/* ---------------------------------------------------------
+   STREAMLIT TABS
+   Slight polish so they feel connected to the cards
+   --------------------------------------------------------- */
+
+div[data-testid="stTabs"] button[role="tab"] {
+    font-weight: 700;
+}
+
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+    color: var(--ls-primary) !important;
+}
+
+/* ---------------------------------------------------------
+   STREAMLIT ALERTS INSIDE DIALOGS
+   --------------------------------------------------------- */
+
+div[data-testid="stDialog"] [data-testid="stAlert"] {
+    border-radius: 10px !important;
+
+    font-size: 0.78rem !important;
+}
+
+/* ---------------------------------------------------------
+   RESPONSIVE
+   --------------------------------------------------------- */
+
+@media (max-width: 760px) {
+
+    .ma-page-title {
+        font-size: 1.4rem;
+    }
+
+    .ma-card-top {
+        flex-direction: column;
+
+        gap: 10px;
+    }
+
+    .ma-inv-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ma-row {
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 4px;
+    }
+
+    .ma-row b {
+        max-width: 100%;
+
+        text-align: left;
+    }
+
+    .ma-dialog-head {
+        flex-direction: column;
+
+        gap: 10px;
+    }
+}
+
+/* ---------------------------------------------------------
+   REDUCED MOTION
+   --------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+
+        animation-iteration-count: 1 !important;
+
+        transition-duration: 0.01ms !important;
+    }
+}

@@ -18,29 +18,8 @@ import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-CSS_DIR = (
-    PROJECT_ROOT / "shared" / "theme" / "css_content" / "system_admin_css"
-)
-
 # The Philippines has no daylight saving, so a fixed UTC+8 offset is enough
 PH_TIME = timezone(timedelta(hours=8))
-
-
-# ============================================================
-# CSS
-# ============================================================
-
-def load_css(*names):
-    """Load base.css plus any page-specific css files from system_admin_css/."""
-    css = ""
-
-    for name in ("base.css", *names):
-        path = CSS_DIR / name
-
-        if path.exists():
-            css += path.read_text(encoding="utf-8") + "\n"
-
-    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 
 # ============================================================
@@ -287,3 +266,127 @@ def show_flash_message():
 
     if message:
         st.toast(message)
+
+# ============================================================
+# RICHER CELLS (used by physician follow-up pages)
+# ============================================================
+
+def status_badge_cell(column, label, tone="grey", sub=""):
+    """
+    A pill with an optional caption underneath, used inside table rows.
+    """
+    sub_html = f"<small class='sa-cell-sub'>{safe(sub)}</small>" if sub else ""
+
+    column.markdown(
+        "<div class='sa-badgecell'>"
+        f"{pill(label, tone)}"
+        f"{sub_html}"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def meta_cell(column, primary, secondary=""):
+    """
+    A two-line cell — small bold primary on top, muted caption below.
+    """
+    secondary_html = (
+        f"<small class='sa-cell-sub'>{safe(secondary)}</small>"
+        if secondary
+        else ""
+    )
+
+    column.markdown(
+        "<div class='sa-metacell'>"
+        f"<b>{safe(primary)}</b>"
+        f"{secondary_html}"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def kpi_strip(items):
+    """
+    A horizontal strip of KPI blocks.
+
+    items = [
+        ("Patients With Follow-Ups", 12, "blue"),
+        ("Upcoming", 5, "amber"),
+        ...
+    ]
+    """
+    blocks = "".join(
+        f"<div class='sa-kpi sa-kpi-{tone}'>"
+        f"<div class='sa-kpi-value'>{value}</div>"
+        f"<div class='sa-kpi-label'>{safe(label)}</div>"
+        "</div>"
+        for label, value, tone in items
+    )
+
+    st.markdown(
+        f"<div class='sa-kpi-strip'>{blocks}</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def followup_card_open(key):
+    """
+    Opens a styled card wrapper. Pair with followup_card_close().
+    Because Streamlit doesn't render HTML containers around real widgets,
+    we simulate the card by opening a st.container with a key the CSS targets.
+    """
+    return st.container(key=key)
+
+
+def patient_summary_card(patient, meta_rows=None):
+    """
+    Renders a polished patient summary card.
+    """
+    name = full_name(
+        patient.get("first_name"),
+        patient.get("middle_name"),
+        patient.get("last_name"),
+        patient.get("suffix"),
+    )
+
+    code = (
+        patient.get("patient_code")
+        or patient.get("patient_id")
+        or "—"
+    )
+
+    rows_html_str = ""
+
+    if meta_rows:
+        rows_html_str = "".join(
+            f"<div class='sa-summary-row'>"
+            f"<span>{safe(label)}</span>"
+            f"<b>{safe(value)}</b>"
+            "</div>"
+            for label, value in meta_rows
+        )
+
+    st.markdown(
+        "<div class='sa-summary-card'>"
+        f"<div class='sa-summary-avatar'>{initials(name)}</div>"
+        "<div class='sa-summary-body'>"
+        f"<div class='sa-summary-name'>{safe(name)}</div>"
+        f"<div class='sa-summary-code'>{safe(code)}</div>"
+        f"<div class='sa-summary-rows'>{rows_html_str}</div>"
+        "</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def follow_up_entry_header(scheduled_at, status, tone="grey"):
+    """
+    Renders a compact header for a follow-up entry inside the case file.
+    """
+    st.markdown(
+        "<div class='sa-fu-header'>"
+        f"<div class='sa-fu-when'>{safe(scheduled_at)}</div>"
+        f"<div class='sa-fu-status'>{pill(status, tone)}</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )

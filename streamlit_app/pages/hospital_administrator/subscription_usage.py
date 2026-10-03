@@ -6,13 +6,15 @@ from backend.backend_utils.subscription_usage import (
 )
 
 from streamlit_app.components.ui import (
-    load_css,
     page_header,
     metric_card,
     show_rows,
     pill,
     show_flash_message,
 )
+
+from shared.assets import load_css
+
 
 
 # ============================================================

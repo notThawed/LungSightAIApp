@@ -596,10 +596,7 @@ def generate_patient_id():
 # EXAMINATIONS
 # ==========================================
 
-def get_examinations_by_patient(
-    patient_id,
-):
-
+def get_examinations_by_patient(patient_id):
     if not patient_id:
         return []
 
@@ -622,6 +619,7 @@ def get_examinations_by_patient(
             time_of_discharge,
             follow_up_date,
             follow_up_notes,
+            follow_up_sequence,
             status,
             created_by,
             reviewed_by,
@@ -629,18 +627,13 @@ def get_examinations_by_patient(
             created_at,
             updated_at
         """)
-        .eq(
-            "patient_id",
-            patient_id,
-        )
-        .order(
-            "examination_date",
-            desc=True,
-        )
+        .eq("patient_id", patient_id)
+        .order("examination_date", desc=True)
         .execute()
     )
 
     return response.data or []
+
 
 
 # ==========================================
@@ -1223,6 +1216,7 @@ def get_pending_examinations(
             patient_id,
             examination_type,
             examination_date,
+            follow_up_sequence,
             status,
             created_by,
             created_at,
@@ -1287,6 +1281,7 @@ def get_pending_xray_examinations(
             patient_id,
             examination_type,
             examination_date,
+            follow_up_sequence,
             status,
             created_by,
             created_at,

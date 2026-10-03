@@ -18,7 +18,6 @@ from backend.backend_utils.storage_utils import (
 )
 
 from streamlit_app.components.ui import (
-    load_css,
     page_header,
     section_title,
     metric_card,
@@ -34,6 +33,8 @@ from streamlit_app.components.ui import (
     format_date,
     show_flash_message,
 )
+
+from shared.assets import load_css
 
 
 # ============================================================

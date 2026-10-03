@@ -14,7 +14,6 @@ from backend.crud import (
 )
 
 from streamlit_app.components.ui import (
-    load_css,
     page_header,
     empty_state,
     note,
@@ -31,6 +30,9 @@ from streamlit_app.components.ui import (
     refresh_data,
     show_flash_message,
 )
+
+from shared.assets import load_css
+
 
 from backend.backend_utils.subscription_usage import (
     can_register_patient,

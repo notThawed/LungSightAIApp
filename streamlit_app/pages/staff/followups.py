@@ -9,7 +9,6 @@ from backend.backend_utils.followup_utils import (
 )
 
 from streamlit_app.components.ui import (
-    load_css,
     page_header,
     empty_state,
     section_title,
@@ -18,6 +17,8 @@ from streamlit_app.components.ui import (
     metric_card,
     show_flash_message,
 )
+
+from shared.assets import load_css
 
 
 # ============================================================

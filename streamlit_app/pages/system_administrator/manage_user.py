@@ -19,7 +19,6 @@ from backend.crud import (
 )
 
 from streamlit_app.components.ui import (
-    load_css,
     page_header,
     metric_card,
     empty_state,
@@ -37,6 +36,9 @@ from streamlit_app.components.ui import (
     remember,
     show_flash_message,
 )
+
+from shared.assets import load_css
+
 
 from backend.backend_utils.subscription_usage import (
     can_create_user,
