@@ -1,73 +1,169 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 /* ==========================================================
    LungSight hospital setup wizard
-   Same tokens as application.css, so this screen and the
-   application dialog feel like one product.
    ========================================================== */
 
 :root {
-  --ap-film:      #F2F6F7;
-  --ap-white:     #FFFFFF;
-  --ap-ink:       #12283A;
-  --ap-slate:     #5A6F7F;
-  --ap-mist:      #DDE8EB;
-  --ap-teal:      #0F7C88;
-  --ap-teal-dark: #0B626C;
-  --ap-teal-soft: #E8F4F6;
-  --ap-green:     #2E8B6A;
-  --ap-green-soft:#EAF6F1;
+  --ap-film:       #F2F6F7;
+  --ap-white:      #FFFFFF;
+  --ap-ink:        #12283A;
+  --ap-slate:      #5A6F7F;
+  --ap-mist:       #DDE8EB;
+  --ap-teal:       #0F7C88;
+  --ap-teal-dark:  #0B626C;
+  --ap-teal-soft:  #E8F4F6;
+  --ap-green:      #2E8B6A;
+  --ap-green-soft: #EAF6F1;
 
   --ap-font-display: 'Fraunces', Georgia, serif;
   --ap-font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
 
-.st-key-setup_wizard {
-  font-family: var(--ap-font-body);
-  color: var(--ap-ink);
-}
-
-.st-key-setup_wizard h1 {
-  font-family: var(--ap-font-display);
-  font-weight: 600;
+  --ap-radius-sm: 8px;
+  --ap-radius-md: 12px;
+  --ap-radius-lg: 16px;
 }
 
 
 /* ----------------------------------------------------------
-   Back to Login button — quiet, top-left, not competing
-   with the primary step navigation buttons
+   Material Symbols base
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard .material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-weight: 400;
+  font-style: normal;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  vertical-align: middle;
+}
+
+
+/* ----------------------------------------------------------
+   Wizard container
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard {
+  font-family: var(--ap-font-body);
+  color: var(--ap-ink);
+  max-width: 100%;
+}
+
+
+/* ----------------------------------------------------------
+   Brand header
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard .ls-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 1.1rem;
+}
+
+.st-key-setup_wizard .ls-brand-mark {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--ap-teal-soft);
+  color: var(--ap-teal);
+  font-size: 22px;
+}
+
+.st-key-setup_wizard .ls-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.st-key-setup_wizard .ls-brand-name {
+  font-family: var(--ap-font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+  margin: 0;
+}
+
+.st-key-setup_wizard .ls-brand-sub {
+  font-size: 0.75rem;
+  color: var(--ap-slate);
+  margin: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Sign out button
    ---------------------------------------------------------- */
 
 .st-key-setup_wizard .st-key-setup_back_to_login button {
   background: transparent !important;
-  border: none !important;
+  border: 1px solid var(--ap-mist) !important;
   color: var(--ap-slate) !important;
   font-weight: 500;
-  padding: 0.2rem 0;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.75rem;
   box-shadow: none !important;
 }
 
 .st-key-setup_wizard .st-key-setup_back_to_login button:hover {
+  border-color: var(--ap-teal) !important;
   color: var(--ap-teal) !important;
-  text-decoration: underline;
 }
 
 .st-key-setup_wizard .st-key-setup_back_to_login button p {
   color: inherit;
   font-weight: 500;
+  font-size: 0.82rem;
 }
 
 
 /* ----------------------------------------------------------
-   Progress tracker — same shape as the application dialog's
+   Page title
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard .ls-page-title {
+  margin-bottom: 1.25rem;
+}
+
+.st-key-setup_wizard .ls-page-title h1 {
+  font-family: var(--ap-font-display);
+  font-size: 1.65rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+  margin: 0 0 0.2rem;
+  letter-spacing: -0.01em;
+}
+
+.st-key-setup_wizard .ls-page-title p {
+  font-size: 0.9rem;
+  color: var(--ap-slate);
+  margin: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Progress tracker
    ---------------------------------------------------------- */
 
 .st-key-setup_wizard .ls-progress {
-  background: var(--ap-film);
+  background: var(--ap-white);
   border: 1px solid var(--ap-mist);
-  border-radius: 12px;
-  padding: 0.9rem 1.1rem 0.8rem;
-  margin-bottom: 0.5rem;
+  border-radius: var(--ap-radius-md);
+  padding: 1rem 1.15rem 0.9rem;
+  margin-bottom: 1.5rem;
 }
 
 .st-key-setup_wizard .ls-progress-top {
@@ -79,20 +175,20 @@
 
 .st-key-setup_wizard .ls-progress-title {
   font-family: var(--ap-font-display);
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--ap-ink);
   margin: 0;
 }
 
 .st-key-setup_wizard .ls-progress-meta {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--ap-slate);
   margin: 0.2rem 0 0;
 }
 
 .st-key-setup_wizard .ls-progress-percent {
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   font-weight: 700;
   line-height: 1;
   color: var(--ap-teal);
@@ -102,14 +198,15 @@
 .st-key-setup_wizard .ls-progress-percent small {
   display: block;
   margin-top: 0.2rem;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 500;
   color: var(--ap-slate);
+  letter-spacing: 0.02em;
 }
 
 .st-key-setup_wizard .ls-bar {
-  height: 6px;
-  margin: 0.75rem 0 0.9rem;
+  height: 5px;
+  margin: 0.85rem 0 1rem;
   background: var(--ap-mist);
   border-radius: 999px;
   overflow: hidden;
@@ -132,18 +229,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   text-align: center;
 }
 
 .st-key-setup_wizard .ls-step::before {
   content: "";
   position: absolute;
-  top: 12px;
+  top: 14px;
   right: 50%;
   width: 100%;
   height: 2px;
   background: var(--ap-mist);
+  z-index: 0;
 }
 
 .st-key-setup_wizard .ls-step:first-child::before {
@@ -158,17 +256,16 @@
 .st-key-setup_wizard .ls-dot {
   position: relative;
   z-index: 1;
-  width: 26px;
-  height: 26px;
-  display: flex;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   background: var(--ap-white);
   border: 2px solid var(--ap-mist);
   color: var(--ap-slate);
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 16px;
 }
 
 .st-key-setup_wizard .ls-step-done .ls-dot {
@@ -180,13 +277,14 @@
 .st-key-setup_wizard .ls-step-current .ls-dot {
   border-color: var(--ap-teal);
   color: var(--ap-teal);
-  box-shadow: 0 0 0 4px rgba(15, 124, 136, 0.16);
+  box-shadow: 0 0 0 4px rgba(15, 124, 136, 0.14);
 }
 
 .st-key-setup_wizard .ls-step-name {
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--ap-slate);
+  letter-spacing: 0.01em;
 }
 
 .st-key-setup_wizard .ls-step-done .ls-step-name {
@@ -204,48 +302,55 @@
    ---------------------------------------------------------- */
 
 .st-key-setup_wizard .ls-step-header {
-  margin: 0.35rem 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0.5rem 0 1.5rem;
+}
+
+.st-key-setup_wizard .ls-step-header-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--ap-teal-soft);
+  color: var(--ap-teal);
+}
+
+.st-key-setup_wizard .ls-step-header-icon .material-symbols-rounded {
+  font-size: 22px;
+}
+
+.st-key-setup_wizard .ls-step-header-text {
+  display: flex;
+  flex-direction: column;
 }
 
 .st-key-setup_wizard .ls-step-title {
   font-family: var(--ap-font-display);
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   font-weight: 600;
   color: var(--ap-ink);
   margin: 0;
+  line-height: 1.2;
 }
 
 .st-key-setup_wizard .ls-step-caption {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--ap-slate);
   margin: 0.15rem 0 0;
 }
 
 
 /* ----------------------------------------------------------
-   Upload card (logo / profile picture)
+   Upload heading
    ---------------------------------------------------------- */
 
-.st-key-setup_wizard .ls-upload-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.2rem;
-  background: var(--ap-film);
-  border: 1px dashed var(--ap-mist);
-  border-radius: 12px;
-  margin-bottom: 0.75rem;
-}
-
-.st-key-setup_wizard .ls-upload-card img,
-.st-key-setup_wizard .ls-upload-card [data-testid="stImage"] img {
-  border-radius: 10px;
-  object-fit: cover;
-  border: 1px solid var(--ap-mist);
-}
-
 .st-key-setup_wizard .ls-upload-label {
-  font-size: 0.8rem;
+  font-size: 0.83rem;
   font-weight: 600;
   color: var(--ap-ink);
   margin: 0 0 0.15rem;
@@ -254,12 +359,136 @@
 .st-key-setup_wizard .ls-upload-caption {
   font-size: 0.78rem;
   color: var(--ap-slate);
-  margin: 0;
+  margin: 0 0 0.85rem;
 }
 
 
 /* ----------------------------------------------------------
-   Label / value rows (review step, subscription)
+   Image previews — square (hospital logo) & circle (profile)
+   ----------------------------------------------------------
+   Uses st.container(key=...) so we get a stable DOM node.
+   The container is sized 120x120 with a specific
+   border-radius, and the image is clipped via
+   overflow: hidden on the container.
+   ---------------------------------------------------------- */
+
+/* -------- Square wrapper -------- */
+
+.st-key-setup_logo_preview_current,
+.st-key-setup_logo_preview_pending {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 0.5rem;
+  padding: 6px;
+  background: var(--ap-white);
+  border: 1px solid var(--ap-mist);
+  border-radius: var(--ap-radius-md);
+  box-shadow: 0 1px 2px rgba(18, 40, 58, 0.04);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.st-key-setup_logo_preview_current [data-testid="stImage"],
+.st-key-setup_logo_preview_pending [data-testid="stImage"] {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+}
+
+.st-key-setup_logo_preview_current [data-testid="stImage"] img,
+.st-key-setup_logo_preview_pending [data-testid="stImage"] img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  display: block;
+  border-radius: calc(var(--ap-radius-md) - 6px);
+}
+
+.st-key-setup_logo_preview_pending {
+  border-color: var(--ap-teal);
+  box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.12);
+}
+
+
+/* -------- Circle wrapper -------- */
+
+.st-key-setup_profile_preview_current,
+.st-key-setup_profile_preview_pending {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 0.5rem;
+  padding: 4px;
+  background: var(--ap-white);
+  border: 1px solid var(--ap-mist);
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(18, 40, 58, 0.04);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.st-key-setup_profile_preview_current [data-testid="stImage"],
+.st-key-setup_profile_preview_pending [data-testid="stImage"] {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+}
+
+.st-key-setup_profile_preview_current [data-testid="stImage"] img,
+.st-key-setup_profile_preview_pending [data-testid="stImage"] img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+}
+
+.st-key-setup_profile_preview_pending {
+  border-color: var(--ap-teal);
+  box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.12);
+}
+
+
+/* -------- Placeholders -------- */
+
+.st-key-setup_wizard .ls-preview-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.st-key-setup_wizard .ls-preview-empty .material-symbols-rounded {
+  font-size: 42px;
+  color: var(--ap-teal);
+}
+
+.st-key-setup_wizard .ls-preview-initials {
+  font-family: var(--ap-font-display);
+  font-size: 2.25rem;
+  font-weight: 600;
+  color: var(--ap-teal-dark);
+  letter-spacing: -0.02em;
+}
+
+.st-key-setup_wizard .ls-preview-square--empty,
+.st-key-setup_wizard .ls-preview-circle--empty {
+  background: var(--ap-teal-soft);
+}
+
+
+/* -------- Caption under the preview -------- */
+
+.st-key-setup_wizard .ls-preview-caption {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--ap-slate);
+  margin: 0 0 0.85rem;
+}
+
+
+/* ----------------------------------------------------------
+   Label / value rows
    ---------------------------------------------------------- */
 
 .st-key-setup_wizard .ls-rows {
@@ -270,9 +499,9 @@
   display: flex;
   justify-content: space-between;
   gap: 1.5rem;
-  padding: 0.5rem 0;
+  padding: 0.6rem 0;
   border-bottom: 1px solid var(--ap-mist);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   color: var(--ap-slate);
 }
 
@@ -288,14 +517,14 @@
 
 
 /* ----------------------------------------------------------
-   Review section boxes
+   Review sections
    ---------------------------------------------------------- */
 
 [class*="st-key-setup_section_"] {
-  padding: 0.9rem 1.1rem 1.3rem;
+  padding: 1rem 1.15rem 1.15rem;
   background: var(--ap-white);
   border: 1px solid var(--ap-mist);
-  border-radius: 12px;
+  border-radius: var(--ap-radius-md);
   margin-bottom: 0.85rem;
 }
 
@@ -303,63 +532,121 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.6rem;
   font-family: var(--ap-font-display);
-  font-size: 1rem;
+  font-size: 0.98rem;
   font-weight: 600;
   color: var(--ap-ink);
 }
 
-[class*="st-key-setup_section_"] .ls-review-avatar img {
-  border-radius: 10px;
+
+/* -------- Review avatar (square or circle, 64x64) -------- */
+
+.st-key-setup_wizard [class*="st-key-setup_review_avatar_"] {
+  width: 64px;
+  height: 64px;
+  padding: 3px;
+  background: var(--ap-white);
   border: 1px solid var(--ap-mist);
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.st-key-setup_wizard [class*="st-key-setup_review_avatar_"] .ls-review-avatar-inner {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.st-key-setup_wizard [class*="st-key-setup_review_avatar_"] .ls-review-avatar--square {
+  border-radius: calc(var(--ap-radius-sm) - 1px);
+}
+
+.st-key-setup_wizard [class*="st-key-setup_review_avatar_"] .ls-review-avatar--circle {
+  border-radius: 50%;
+}
+
+.st-key-setup_wizard [class*="st-key-setup_review_avatar_"] [data-testid="stImage"] {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+}
+
+.st-key-setup_wizard [class*="st-key-setup_review_avatar_"] [data-testid="stImage"] img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  display: block;
+}
+
+.st-key-setup_wizard [class*="st-key-setup_review_avatar_"] .ls-review-avatar--square [data-testid="stImage"] img {
+  border-radius: calc(var(--ap-radius-sm) - 2px);
+}
+
+.st-key-setup_wizard [class*="st-key-setup_review_avatar_"] .ls-review-avatar--circle [data-testid="stImage"] img {
+  border-radius: 50%;
 }
 
 
 /* ----------------------------------------------------------
-   Subscription plan box (step 3) — dark card like
-   the plan_summary box in application.css
+   Subscription plan card
    ---------------------------------------------------------- */
 
 .st-key-setup_plan {
-  padding: 1.25rem 1.5rem 1.4rem;
+  padding: 1.35rem 1.5rem 1.4rem;
   background: var(--ap-ink);
   border: 1px solid var(--ap-ink);
-  border-radius: 14px;
-  box-shadow: 0 14px 32px -16px rgba(18, 40, 58, 0.55);
-  margin-bottom: 0.75rem;
+  border-radius: var(--ap-radius-lg);
+  box-shadow: 0 16px 34px -18px rgba(18, 40, 58, 0.55);
+  margin-bottom: 1rem;
 }
 
 .st-key-setup_plan .ls-plan-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #A9BAC7;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.st-key-setup_plan .ls-plan-label .material-symbols-rounded {
+  font-size: 16px;
 }
 
 .st-key-setup_plan .ls-plan-name {
-  margin: 0 0 0.5rem;
+  margin: 0.35rem 0 0.5rem;
   font-family: var(--ap-font-display);
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 600;
   color: #FFFFFF;
 }
 
 .st-key-setup_plan .ls-plan-desc {
-  font-size: 0.85rem;
+  font-size: 0.83rem;
   color: #A9BAC7;
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.85rem;
+  line-height: 1.5;
 }
 
 .st-key-setup_plan .ls-plan-price {
-  font-size: 1.8rem;
+  font-size: 1.7rem;
   font-weight: 700;
   color: #FFFFFF;
   margin: 0;
 }
 
 .st-key-setup_plan .ls-plan-price small {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
   color: #A9BAC7;
 }
@@ -368,31 +655,42 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
-  margin-top: 0.9rem;
-  padding-top: 0.85rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
   border-top: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .st-key-setup_plan .ls-limit b {
   display: block;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #FFFFFF;
 }
 
 .st-key-setup_plan .ls-limit span {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: #A9BAC7;
 }
 
 .st-key-setup_plan .ls-plan-dates {
   display: flex;
   justify-content: space-between;
-  margin-top: 0.9rem;
-  padding-top: 0.85rem;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
   border-top: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: #A9BAC7;
+}
+
+.st-key-setup_plan .ls-plan-dates > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.st-key-setup_plan .ls-plan-dates .material-symbols-rounded {
+  font-size: 16px;
 }
 
 .st-key-setup_plan .ls-plan-dates b {
@@ -406,28 +704,42 @@
    ---------------------------------------------------------- */
 
 .st-key-setup_wizard .ls-note {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
   margin-bottom: 1rem;
-  padding: 0.65rem 0.9rem;
-  background: var(--ap-film);
-  border: 1px solid var(--ap-mist);
+  padding: 0.7rem 0.9rem;
+  background: var(--ap-teal-soft);
+  border: 1px solid #CFE7EB;
   border-left: 3px solid var(--ap-teal);
-  border-radius: 8px;
-  font-size: 0.86rem;
-  line-height: 1.45;
-  color: var(--ap-slate);
+  border-radius: var(--ap-radius-sm);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ap-ink);
+}
+
+.st-key-setup_wizard .ls-note-icon {
+  color: var(--ap-teal);
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.st-key-setup_wizard .ls-note-text {
+  color: var(--ap-ink);
 }
 
 .st-key-setup_wizard [data-testid="stAlert"] {
-  border-radius: 8px;
+  border-radius: var(--ap-radius-sm);
 }
 
 
 /* ----------------------------------------------------------
-   Form fields — same treatment as application.css
+   Form fields
    ---------------------------------------------------------- */
 
 .st-key-setup_wizard label p {
-  font-size: 0.85rem;
+  font-size: 0.83rem;
   font-weight: 600;
   color: var(--ap-ink);
 }
@@ -438,9 +750,10 @@
 .st-key-setup_wizard div[data-baseweb="input"],
 .st-key-setup_wizard div[data-baseweb="textarea"],
 .st-key-setup_wizard div[data-baseweb="select"] > div {
-  background: var(--ap-film);
+  background: var(--ap-white);
   border: 1px solid var(--ap-mist);
-  border-radius: 8px;
+  border-radius: var(--ap-radius-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .st-key-setup_wizard input,
@@ -449,6 +762,7 @@
   background: transparent;
   color: var(--ap-ink);
   font-family: var(--ap-font-body);
+  font-size: 0.9rem;
 }
 
 .st-key-setup_wizard [data-testid="stTextInputRootElement"]:focus-within,
@@ -456,13 +770,67 @@
 .st-key-setup_wizard [data-testid="stSelectbox"] [role="group"]:focus-within,
 .st-key-setup_wizard div[data-baseweb="select"] > div:focus-within {
   border-color: var(--ap-teal);
-  box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.18);
+  box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.14);
 }
 
+
+/* ----------------------------------------------------------
+   File uploader — make the "Browse files" button
+   look like a real, well-placed button
+   ---------------------------------------------------------- */
+
 .st-key-setup_wizard [data-testid="stFileUploaderDropzone"] {
-  background: var(--ap-white);
+  background: var(--ap-film);
   border: 1px dashed var(--ap-mist);
-  border-radius: 8px;
+  border-radius: var(--ap-radius-sm);
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* The inner button inside the dropzone */
+.st-key-setup_wizard [data-testid="stFileUploaderDropzone"] button {
+  background: var(--ap-teal) !important;
+  color: #FFFFFF !important;
+  border: 1px solid var(--ap-teal) !important;
+  border-radius: var(--ap-radius-sm) !important;
+  font-weight: 600 !important;
+  font-size: 0.82rem !important;
+  padding: 0.4rem 0.9rem !important;
+  min-height: 32px !important;
+  box-shadow: 0 1px 2px rgba(18, 40, 58, 0.06) !important;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.st-key-setup_wizard [data-testid="stFileUploaderDropzone"] button:hover {
+  background: var(--ap-teal-dark) !important;
+  border-color: var(--ap-teal-dark) !important;
+}
+
+.st-key-setup_wizard [data-testid="stFileUploaderDropzone"] button p,
+.st-key-setup_wizard [data-testid="stFileUploaderDropzone"] button span {
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  font-size: 0.82rem !important;
+}
+
+/* The small instructions on the right of the dropzone */
+.st-key-setup_wizard [data-testid="stFileUploaderDropzoneInstructions"] {
+  color: var(--ap-slate);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+/* The filename chips after upload */
+.st-key-setup_wizard [data-testid="stFileUploaderFileName"] {
+  color: var(--ap-ink);
+  font-size: 0.82rem;
+}
+
+.st-key-setup_wizard [data-testid="stFileUploaderDeleteBtn"] {
+  color: var(--ap-slate);
 }
 
 
@@ -471,8 +839,9 @@
    ---------------------------------------------------------- */
 
 .st-key-setup_wizard [data-testid^="stBaseButton"] {
-  border-radius: 8px;
+  border-radius: var(--ap-radius-sm);
   transition: background 0.15s ease, border-color 0.15s ease;
+  font-weight: 600;
 }
 
 .st-key-setup_wizard [data-testid^="stBaseButton-primary"] {
@@ -509,13 +878,126 @@
 }
 
 .st-key-setup_wizard [data-testid^="stBaseButton"]:focus-visible {
-  outline: 3px solid rgba(15, 124, 136, 0.4);
+  outline: 3px solid rgba(15, 124, 136, 0.35);
   outline-offset: 2px;
 }
 
 
 /* ----------------------------------------------------------
-   Small screens
+   Address map preview
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard .ls-map-card {
+  margin: 0 0 0.6rem;
+  padding: 0.7rem 0.95rem 0.75rem;
+  background: var(--ap-white);
+  border: 1px solid var(--ap-mist);
+  border-left: 3px solid var(--ap-teal);
+  border-radius: var(--ap-radius-sm);
+  height: 100%;
+}
+
+.st-key-setup_wizard .ls-map-card--ok {
+  border-left-color: var(--ap-green);
+  background: var(--ap-green-soft);
+}
+
+.st-key-setup_wizard .ls-map-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ap-ink);
+  letter-spacing: 0.01em;
+}
+
+.st-key-setup_wizard .ls-map-header .material-symbols-rounded {
+  font-size: 16px;
+  color: var(--ap-teal);
+}
+
+.st-key-setup_wizard .ls-map-card--ok .ls-map-header .material-symbols-rounded {
+  color: var(--ap-green);
+}
+
+.st-key-setup_wizard .ls-map-caption {
+  margin: 0;
+  font-size: 0.81rem;
+  line-height: 1.45;
+  color: var(--ap-slate);
+}
+
+.st-key-setup_wizard [data-testid="stIFrame"] {
+  border-radius: var(--ap-radius-sm);
+  overflow: hidden;
+  margin-top: 0.35rem;
+}
+
+.st-key-setup_wizard iframe[title*="streamlit_folium"] {
+  border-radius: var(--ap-radius-sm);
+}
+
+
+/* ----------------------------------------------------------
+   Confirm / Fix row
+   ---------------------------------------------------------- */
+
+.st-key-setup_wizard .ls-confirm-prompt {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.5rem 0 0.65rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ap-ink);
+}
+
+.st-key-setup_wizard .ls-confirm-prompt .material-symbols-rounded {
+  font-size: 18px;
+  color: var(--ap-teal);
+}
+
+[class*="st-key-setup_fix_"] button {
+  background: var(--ap-white) !important;
+  border: 1px solid var(--ap-mist) !important;
+  color: var(--ap-slate) !important;
+  font-weight: 600;
+}
+
+[class*="st-key-setup_fix_"] button:hover {
+  border-color: var(--ap-teal) !important;
+  color: var(--ap-teal) !important;
+}
+
+[class*="st-key-setup_confirm_done_"] button {
+  background: var(--ap-green-soft) !important;
+  border: 1px solid var(--ap-green) !important;
+  opacity: 1 !important;
+  cursor: default !important;
+}
+
+[class*="st-key-setup_confirm_done_"] button p {
+  color: var(--ap-green) !important;
+  font-weight: 700 !important;
+}
+
+[class*="st-key-setup_relocate_"] button {
+  background: var(--ap-white) !important;
+  border: 1px solid var(--ap-mist) !important;
+  color: var(--ap-teal) !important;
+  font-weight: 600;
+}
+
+[class*="st-key-setup_relocate_"] button:hover {
+  background: var(--ap-teal-soft) !important;
+  border-color: var(--ap-teal) !important;
+}
+
+
+/* ----------------------------------------------------------
+   Responsive
    ---------------------------------------------------------- */
 
 @media (max-width: 640px) {
@@ -524,9 +1006,24 @@
     display: none;
   }
 
-  .st-key-setup_wizard .ls-upload-card {
-    flex-direction: column;
-    align-items: flex-start;
+  .st-key-setup_wizard .ls-page-title h1 {
+    font-size: 1.4rem;
+  }
+
+  .st-key-setup_wizard .ls-step-header {
+    gap: 0.6rem;
+  }
+
+  .st-key-setup_logo_preview_current,
+  .st-key-setup_logo_preview_pending,
+  .st-key-setup_profile_preview_current,
+  .st-key-setup_profile_preview_pending {
+    width: 100px;
+    height: 100px;
+  }
+
+  .st-key-setup_wizard .ls-preview-initials {
+    font-size: 1.9rem;
   }
 }
 

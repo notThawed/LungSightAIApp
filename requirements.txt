@@ -9,3 +9,5 @@ python-dotenv
 streamlit-drawable-canvas
 torch
 torchvision
+folium
+streamlit-folium

@@ -322,57 +322,22 @@ if hospital_id:
         # --------------------------------------------------
 
         st.markdown(
-            """
-            <div style="
-                max-width: 720px;
-                margin: 120px auto 0 auto;
-                text-align: center;
-            ">
-
-                <div style="
-                    font-size: 48px;
-                    margin-bottom: 16px;
-                ">
-                    ⚠️
-                </div>
-
-                <h1>
-                    Hospital Access Temporarily Unavailable
-                </h1>
-
-                <p style="
-                    font-size: 17px;
-                    line-height: 1.6;
-                    color: #666;
-                ">
-                    The hospital associated with your
-                    LungSight account is currently
-                    deactivated in the system.
-                </p>
-
-                <p style="
-                    font-size: 16px;
-                    line-height: 1.6;
-                    color: #666;
-                ">
-                    You cannot access the LungSight
-                    workspace while your hospital account
-                    is inactive.
-                </p>
-
-                <p style="
-                    font-size: 15px;
-                    line-height: 1.6;
-                    color: #777;
-                    margin-top: 24px;
-                ">
-                    Please contact your hospital administrator
-                    or the LungSight System Administrator
-                    for assistance.
-                </p>
-
-            </div>
-            """,
+            "<div style='max-width: 720px; margin: 120px auto 0 auto; text-align: center;'>"
+            "<div style='font-size: 48px; margin-bottom: 16px;'>⚠️</div>"
+            "<h1>Hospital Access Temporarily Unavailable</h1>"
+            "<p style='font-size: 17px; line-height: 1.6; color: #666;'>"
+            "The hospital associated with your LungSight account "
+            "is currently deactivated in the system."
+            "</p>"
+            "<p style='font-size: 16px; line-height: 1.6; color: #666;'>"
+            "You cannot access the LungSight workspace while your "
+            "hospital account is inactive."
+            "</p>"
+            "<p style='font-size: 15px; line-height: 1.6; color: #777; margin-top: 24px;'>"
+            "Please contact your hospital administrator or the "
+            "LungSight System Administrator for assistance."
+            "</p>"
+            "</div>",
             unsafe_allow_html=True,
         )
 
@@ -381,8 +346,7 @@ if hospital_id:
         # --------------------------------------------------
 
         st.markdown(
-            "<div style='text-align: center; margin-top: 30px;'>"
-            "</div>",
+            "<div style='text-align: center; margin-top: 30px;'></div>",
             unsafe_allow_html=True,
         )
 

@@ -3,7 +3,7 @@ from components.navbar import show_top_navbar
 
 from pages.system_administrator import manage_user, manage_patients, manage_examinations
 
-from pages.hospital_administrator import dashboard, subscription_gate, subscription_usage
+from pages.hospital_administrator import dashboard, subscription_gate, subscription_usage, hospital_info
 from pages import profile
 
 
@@ -20,6 +20,9 @@ def show_hospital_admin_layout():
 
     if page == "Dashboard":
         dashboard.show()
+
+    if page == "My Hospital":
+        hospital_info.show()
 
     if page == "Manage Users":
         manage_user.show()

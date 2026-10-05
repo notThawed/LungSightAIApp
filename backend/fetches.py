@@ -2060,3 +2060,116 @@ def get_completed_patient_records(
         )
 
         return []
+
+# ==========================================
+# HOSPITAL LOCATIONS
+# ==========================================
+
+def get_hospital_locations(hospital_id=None):
+    """
+    Return hospitals that have coordinates.
+
+    If hospital_id is given, returns a single-item list
+    containing just that hospital.
+
+    If hospital_id is None, returns every hospital with
+    latitude and longitude set (used by the system admin).
+
+    Hospitals without coordinates are excluded — they
+    simply don't appear on the map.
+    """
+
+    query = (
+        admin_supabase
+        .table("hospitals")
+        .select("""
+            hospital_id,
+            hospital_name,
+            hospital_code,
+            address,
+            contact_number,
+            email,
+            website,
+            hospital_type,
+            hospital_logo_url,
+            latitude,
+            longitude,
+            is_active,
+            created_at
+        """)
+        .not_.is_("latitude", "null")
+        .not_.is_("longitude", "null")
+        .order("hospital_name", desc=False)
+    )
+
+    if hospital_id:
+        query = query.eq("hospital_id", hospital_id)
+
+    response = query.execute()
+
+    return response.data or []
+
+
+def get_hospital_without_coordinates():
+    """
+    Return hospitals that still lack coordinates.
+
+    Useful for showing an admin which hospitals
+    need geocoding.
+    """
+
+    response = (
+        admin_supabase
+        .table("hospitals")
+        .select("""
+            hospital_id,
+            hospital_name,
+            hospital_code,
+            address,
+            is_active
+        """)
+        .or_("latitude.is.null,longitude.is.null")
+        .order("hospital_name", desc=False)
+        .execute()
+    )
+
+    return response.data or []
+
+
+# ==========================================
+# HOSPITAL PATIENT LOCATIONS
+# (placeholder — will be enabled once the
+# patients table has lat/lon columns)
+# ==========================================
+
+def get_hospital_patient_locations(hospital_id):
+    """
+    Return patients with coordinates for a hospital.
+
+    Currently returns an empty list because the
+    patients table does not yet have latitude /
+    longitude columns.
+
+    Once those columns are added, replace the body
+    with the actual query (kept in the comment below).
+
+    Expected future query:
+        response = (
+            admin_supabase
+            .table("patients")
+            .select(
+                "patient_id, patient_code, first_name, "
+                "last_name, address, latitude, longitude"
+            )
+            .eq("hospital_id", hospital_id)
+            .not_.is_("latitude", "null")
+            .not_.is_("longitude", "null")
+            .execute()
+        )
+        return response.data or []
+    """
+
+    if not hospital_id:
+        return []
+
+    return []

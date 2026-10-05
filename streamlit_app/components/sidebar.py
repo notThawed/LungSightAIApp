@@ -253,6 +253,11 @@ HOSPITAL_ADMIN_NAV = [
                 "Home dashboard",
                 "dashboard",
             ),
+            (
+                "My Hospital",
+                "My Hospital info",
+                "dashboard",
+            ),
         ],
     },
 
