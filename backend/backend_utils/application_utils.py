@@ -163,7 +163,8 @@ def get_hospital_application(application_id):
     except Exception:
 
         return None
-    
+
+
 # ============================================================
 # APPROVE HOSPITAL APPLICATION
 # ============================================================
@@ -414,6 +415,62 @@ def approve_hospital_application(application_id):
             }
 
         # ----------------------------------------------------
+        # 8b. Backfill application payment → hospital
+        # ----------------------------------------------------
+        #
+        # The applicant's original payment was recorded
+        # against application_id only. Now that the hospital
+        # and subscription exist, link them so payment
+        # history shows up on the hospital's settings page.
+        #
+        # This runs AFTER subscription creation but BEFORE
+        # the admin account is created, so the payment row
+        # gets both hospital_id and hospital_subscription_id
+        # in one update.
+
+        try:
+
+            new_subscription = subscription_result.get(
+                "subscription"
+            ) or {}
+
+            new_subscription_id = new_subscription.get(
+                "hospital_subscription_id"
+            )
+
+            payment_update = {
+                "hospital_id": hospital_id,
+                "updated_at": datetime.now(
+                    timezone.utc
+                ).isoformat(),
+            }
+
+            if new_subscription_id:
+                payment_update[
+                    "hospital_subscription_id"
+                ] = new_subscription_id
+
+            (
+                admin_supabase
+                .table("payments")
+                .update(payment_update)
+                .eq("application_id", application_id)
+                .is_("hospital_id", "null")
+                .execute()
+            )
+
+        except Exception as exc:
+
+            # Do NOT block the approval if backfill fails.
+            # The application is already approved and the
+            # hospital/subscription exist. A one-time SQL
+            # backfill can fix any missed rows later.
+            print(
+                f"Payment backfill failed for "
+                f"application {application_id}: {exc}"
+            )
+
+        # ----------------------------------------------------
         # 9. Create Hospital Administrator
         # ----------------------------------------------------
         #
@@ -605,5 +662,3 @@ def delete_hospital_application(application_id):
             "success": False,
             "message": str(e),
         }
-
-

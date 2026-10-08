@@ -85,6 +85,7 @@ from backend.backend_utils.hospital_utils import (
 
 from backend.backend_utils.subscription_utils import (
     get_subscription_context,
+    apply_scheduled_changes,
 )
 
 from pages.hospital_administrator import (
@@ -275,6 +276,70 @@ apply_theme()
 role = user.get("role")
 
 
+# --------------------------------------------------
+# Hospital ID
+# --------------------------------------------------
+
+hospital_id = user.get(
+    "hospital_id"
+)
+
+
+# ==================================================
+# APPLY SCHEDULED SUBSCRIPTION CHANGES
+# ==================================================
+#
+# If the hospital has a scheduled downgrade or
+# cancellation whose end_date has passed, apply it now
+# BEFORE the gate runs, so the gate sees the fresh
+# state on this same page load.
+#
+# Runs on every authenticated page load. The work is a
+# single-row SELECT + conditional UPDATE, so overhead
+# is negligible.
+# ==================================================
+
+if hospital_id:
+
+    try:
+
+        _sched_result = apply_scheduled_changes(
+            hospital_id
+        )
+
+        if _sched_result.get("action") in (
+            "downgraded",
+            "cancelled",
+        ):
+
+            # Force the cached subscription context to be
+            # re-fetched on this same rerun, so the gate
+            # below sees the newly applied state.
+            st.session_state.pop(
+                "subscription_context",
+                None,
+            )
+
+            st.session_state.pop(
+                "grace_info",
+                None,
+            )
+
+            print(
+                f"[scheduled-changes] "
+                f"{_sched_result.get('action')}: "
+                f"{_sched_result.get('message')}"
+            )
+
+    except Exception as _exc:
+
+        # Never block the app if this fails — the gate
+        # will still run against whatever state we have.
+        print(
+            f"apply_scheduled_changes failed: {_exc}"
+        )
+
+
 # ==================================================
 # HOSPITAL ACTIVE STATUS GATE
 # ==================================================
@@ -289,11 +354,6 @@ role = user.get("role")
 # Superadmin accounts normally have no hospital_id,
 # so they skip this check.
 # ==================================================
-
-hospital_id = user.get(
-    "hospital_id"
-)
-
 
 if hospital_id:
 

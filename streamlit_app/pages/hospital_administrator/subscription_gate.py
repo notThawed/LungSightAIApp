@@ -56,6 +56,7 @@ def _render_renew_button(key_suffix="default"):
         type="primary",
         use_container_width=True,
         key=f"renew_button_{key_suffix}",
+        icon=":material/autorenew:",
     ):
 
         _start_renewal_flow()
@@ -87,16 +88,19 @@ def show_renewal_confirmation_screen(
     """
 
     st.markdown(
-        "<h2 style='text-align:center;'>Renew Subscription</h2>",
+        "<h2 style='text-align:center; margin-bottom:0.25rem;'>"
+        "Renew Subscription"
+        "</h2>",
         unsafe_allow_html=True,
     )
 
     if hospital_name:
 
         st.markdown(
-            f"<p style='text-align:center;'>"
-            f"<strong>{hospital_name}</strong>"
-            f"</p>",
+            "<p style='text-align:center; color:#5A6F7F; "
+            "margin:0 0 1rem;'>"
+            f"{hospital_name}"
+            "</p>",
             unsafe_allow_html=True,
         )
 
@@ -110,11 +114,11 @@ def show_renewal_confirmation_screen(
 
     with col1:
 
-        st.write(f"**Plan:** {plan_name or '-'}")
+        st.write(f"**Plan:** {plan_name or '—'}")
 
     with col2:
 
-        st.write(f"**Billing Cycle:** {billing_cycle or '-'}")
+        st.write(f"**Billing Cycle:** {billing_cycle or '—'}")
 
     if amount is not None:
 
@@ -150,6 +154,7 @@ def show_renewal_confirmation_screen(
             type="primary",
             use_container_width=True,
             key="renewal_proceed",
+            icon=":material/arrow_forward:",
         ):
 
             _create_and_show_checkout()
@@ -209,7 +214,9 @@ def show_checkout_link_screen():
     from backend.payments import get_renewal_status
 
     st.markdown(
-        "<h2 style='text-align:center;'>Complete Your Payment</h2>",
+        "<h2 style='text-align:center; margin-bottom:0.25rem;'>"
+        "Complete Your Payment"
+        "</h2>",
         unsafe_allow_html=True,
     )
 
@@ -223,7 +230,15 @@ def show_checkout_link_screen():
     if checkout_url:
 
         st.markdown(
-            f"[**Open PayMongo Checkout →**]({checkout_url})",
+            f"<div style='text-align:center; margin:1rem 0;'>"
+            f"<a href='{checkout_url}' target='_blank' "
+            f"style='display:inline-block; padding:0.6rem 1.2rem; "
+            f"background:#0F7C88; color:#FFFFFF; "
+            f"text-decoration:none; border-radius:8px; "
+            f"font-weight:600;'>"
+            "Open PayMongo Checkout"
+            "</a>"
+            "</div>",
             unsafe_allow_html=True,
         )
 
@@ -256,6 +271,7 @@ def show_checkout_link_screen():
             type="primary",
             use_container_width=True,
             key="renewal_refresh",
+            icon=":material/refresh:",
         ):
 
             payment_id = st.session_state.get(SESSION_RENEWAL_PAYMENT)
@@ -292,7 +308,19 @@ def show_renewal_success_screen():
     """
 
     st.markdown(
-        "<h2 style='text-align:center;'>Subscription Renewed</h2>",
+        "<div style='text-align:center; margin-bottom:0.5rem;'>"
+        "<span class='material-symbols-rounded' "
+        "style='font-size:56px; color:#2E8B6A;'>"
+        "check_circle"
+        "</span>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<h2 style='text-align:center; margin-bottom:0.25rem;'>"
+        "Subscription Renewed"
+        "</h2>",
         unsafe_allow_html=True,
     )
 
@@ -317,6 +345,7 @@ def show_renewal_success_screen():
             type="primary",
             use_container_width=True,
             key="renewal_continue",
+            icon=":material/arrow_forward:",
         ):
 
             _reset_renewal_session()
@@ -381,66 +410,86 @@ def show_expired_screen(
     # --------------------------------------------------------
 
     st.markdown(
-        """
-        <div style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 3rem 1rem;
-        ">
-            <div style="font-size: 3.5rem; line-height: 1;">🔒</div>
-        </div>
-        """,
+        "<style>"
+        "@import url('https://fonts.googleapis.com/css2"
+        "?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD"
+        "@20..48,100..700,0..1,-50..200');"
+        ".material-symbols-rounded {"
+        "  font-family: 'Material Symbols Rounded';"
+        "  font-weight: 400;"
+        "  font-style: normal;"
+        "  font-size: 24px;"
+        "  line-height: 1;"
+        "  letter-spacing: normal;"
+        "  text-transform: none;"
+        "  display: inline-flex;"
+        "  align-items: center;"
+        "  justify-content: center;"
+        "  white-space: nowrap;"
+        "  direction: ltr;"
+        "  font-feature-settings: 'liga';"
+        "  -webkit-font-smoothing: antialiased;"
+        "  vertical-align: middle;"
+        "}"
+        "</style>"
+        "<div style='text-align:center; padding:2.5rem 1rem 0.5rem;'>"
+        "<span class='material-symbols-rounded' "
+        "style='font-size:64px; color:#B45309;'>lock</span>"
+        "</div>",
         unsafe_allow_html=True,
     )
 
+
     st.markdown(
-        "<h2 style='text-align:center;'>Subscription Expired</h2>",
+        "<h2 style='text-align:center; margin-bottom:0.25rem;'>"
+        "Subscription Expired"
+        "</h2>",
         unsafe_allow_html=True,
     )
 
     if hospital_name:
 
         st.markdown(
-            f"<p style='text-align:center;'>"
-            f"<strong>{hospital_name}</strong>'s LungSight "
-            f"subscription has expired."
-            f"</p>",
+            "<p style='text-align:center; color:#5A6F7F;'>"
+            f"{hospital_name}'s LungSight subscription has expired."
+            "</p>",
             unsafe_allow_html=True,
         )
 
     else:
 
         st.markdown(
-            "<p style='text-align:center;'>"
+            "<p style='text-align:center; color:#5A6F7F;'>"
             "Your hospital's LungSight subscription has expired."
             "</p>",
             unsafe_allow_html=True,
         )
 
+    # --------------------------------------------------------
+    # Detail pills (plan + expiry date)
+    # --------------------------------------------------------
+
     details = []
 
     if plan_name:
-
         details.append(f"Plan: {plan_name}")
 
     if end_date:
-
         details.append(f"Expired on: {end_date}")
 
     if details:
 
         st.markdown(
-            "<p style='text-align:center; color: #666;'>"
-            + " &nbsp;•&nbsp; ".join(details)
+            "<p style='text-align:center; color:#5A6F7F; "
+            "margin-top:0.5rem;'>"
+            + " &nbsp;&bull;&nbsp; ".join(details)
             + "</p>",
             unsafe_allow_html=True,
         )
 
     st.markdown(
-        "<p style='text-align:center; color: #666;'>"
+        "<p style='text-align:center; color:#5A6F7F; "
+        "line-height:1.55;'>"
         "Access is suspended until the subscription is renewed.<br>"
         "Your data is safe and will be restored immediately "
         "upon renewal."
@@ -469,6 +518,7 @@ def show_expired_screen(
             "Log out",
             use_container_width=True,
             key="expired_logout",
+            icon=":material/logout:",
         ):
 
             st.session_state.logged_in = False
@@ -529,10 +579,23 @@ def show_grace_banner(
 
     day_word = "day" if days_left == 1 else "days"
 
-    st.warning(
-        f"⚠️ Your subscription expired on **{end_date}**. "
-        f"You have **{days_left} {day_word}** left in the "
-        f"grace period. Renew now to avoid losing access."
+    st.markdown(
+        "<div style='display:flex; gap:0.6rem; align-items:flex-start; "
+        "padding:0.75rem 1rem; background:#FEF3C7; "
+        "border:1px solid #FCD34D; border-radius:10px; "
+        "margin-bottom:1rem;'>"
+        "<span class='material-symbols-rounded' "
+        "style='color:#B45309; font-size:20px;'>"
+        "warning"
+        "</span>"
+        "<div style='font-size:0.88rem; color:#78350F; "
+        "line-height:1.5;'>"
+        f"Your subscription expired on <b>{end_date}</b>. "
+        f"You have <b>{days_left} {day_word}</b> left in the "
+        "grace period. Renew now to avoid losing access."
+        "</div>"
+        "</div>",
+        unsafe_allow_html=True,
     )
 
     col1, col2 = st.columns([3, 1])
@@ -600,9 +663,24 @@ def show_pre_expiry_banner(
 
     day_word = "day" if days_left == 1 else "days"
 
-    st.info(
-        f"🔔 Your subscription expires in **{days_left} {day_word}** "
-        f"(on **{end_date}**). Renew now to avoid interruption."
+    st.markdown(
+        "<div style='display:flex; gap:0.6rem; align-items:flex-start; "
+        "padding:0.75rem 1rem; background:#E8F4F6; "
+        "border:1px solid #CFE7EB; border-radius:10px; "
+        "margin-bottom:1rem;'>"
+        "<span class='material-symbols-rounded' "
+        "style='color:#0F7C88; font-size:20px;'>"
+        "notifications"
+        "</span>"
+        "<div style='font-size:0.88rem; color:#12283A; "
+        "line-height:1.5;'>"
+        f"Your subscription expires in "
+        f"<b>{days_left} {day_word}</b> "
+        f"(on <b>{end_date}</b>). "
+        "Renew now to avoid interruption."
+        "</div>"
+        "</div>",
+        unsafe_allow_html=True,
     )
 
     col1, col2 = st.columns([3, 1])

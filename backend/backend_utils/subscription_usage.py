@@ -137,7 +137,7 @@ def get_hospital_subscription(
                 created_at,
                 updated_at,
 
-                subscription_plans (
+                subscription_plans!hospital_subscriptions_plan_fk (
                     plan_id,
                     plan_name,
                     description,
