@@ -9,8 +9,7 @@ from dotenv import load_dotenv
 # LOAD ENVIRONMENT
 # ============================================================
 
-load_dotenv(Path(__file__).parent / ".env")
-
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
