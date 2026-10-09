@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, timezone
 from html import escape
-from pathlib import Path
 
 import streamlit as st
 
@@ -13,11 +12,8 @@ from backend.backend_utils.application_utils import (
 )
 from backend.backend_utils.subscription_utils import get_active_subscription_plans
 
+from shared.assets import load_css
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-APPLICATION_CSS_PATH = (
-    PROJECT_ROOT / "shared" / "theme" / "css_content" / "application.css"
-)
 
 # The Philippines has no daylight saving, so a fixed UTC+8 offset is enough
 PH_TIME = timezone(timedelta(hours=8))
@@ -68,12 +64,6 @@ METHOD_LABELS = {
 # ============================================================
 # SMALL HELPERS
 # ============================================================
-
-def load_css():
-    if APPLICATION_CSS_PATH.exists():
-        css = APPLICATION_CSS_PATH.read_text(encoding="utf-8")
-        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
-
 
 def safe(value):
     """Escape text before putting it inside HTML. Empty values show a dash."""
@@ -681,7 +671,7 @@ def show_application_list(applications, mode, caption, empty_text):
 
 def show():
 
-    load_css()
+    load_css("manage_application.css")
     show_flash_message()
 
     # Drafts are pre-payment and not yet submitted, so they are left out

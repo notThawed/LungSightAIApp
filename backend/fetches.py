@@ -596,10 +596,7 @@ def generate_patient_id():
 # EXAMINATIONS
 # ==========================================
 
-def get_examinations_by_patient(
-    patient_id,
-):
-
+def get_examinations_by_patient(patient_id):
     if not patient_id:
         return []
 
@@ -622,6 +619,7 @@ def get_examinations_by_patient(
             time_of_discharge,
             follow_up_date,
             follow_up_notes,
+            follow_up_sequence,
             status,
             created_by,
             reviewed_by,
@@ -629,18 +627,13 @@ def get_examinations_by_patient(
             created_at,
             updated_at
         """)
-        .eq(
-            "patient_id",
-            patient_id,
-        )
-        .order(
-            "examination_date",
-            desc=True,
-        )
+        .eq("patient_id", patient_id)
+        .order("examination_date", desc=True)
         .execute()
     )
 
     return response.data or []
+
 
 
 # ==========================================
@@ -1223,6 +1216,7 @@ def get_pending_examinations(
             patient_id,
             examination_type,
             examination_date,
+            follow_up_sequence,
             status,
             created_by,
             created_at,
@@ -1287,6 +1281,7 @@ def get_pending_xray_examinations(
             patient_id,
             examination_type,
             examination_date,
+            follow_up_sequence,
             status,
             created_by,
             created_at,
@@ -1939,3 +1934,242 @@ def get_pending_xray_requests(
         )
 
         return []
+
+
+def get_completed_patient_records(
+    hospital_id=None,
+):
+    """
+    Get unique patients who have at least one
+    completed examination.
+
+    A patient appears only once even when the
+    patient has multiple completed examinations.
+
+    The returned patient dictionaries contain
+    basic patient information only. Detailed
+    examination history is loaded separately
+    using get_examinations_by_patient().
+    """
+
+    try:
+
+        query = (
+            admin_supabase
+            .table("examinations")
+            .select("""
+                examination_id,
+                patient_id,
+                status,
+
+                patients!inner (
+                    patient_id,
+                    patient_code,
+                    first_name,
+                    middle_name,
+                    last_name,
+                    suffix,
+                    date_of_birth,
+                    sex,
+                    contact_number,
+                    address,
+                    hospital_id,
+
+                    hospitals (
+                        hospital_id,
+                        hospital_name,
+                        hospital_code
+                    )
+                )
+            """)
+            .eq(
+                "status",
+                "Completed",
+            )
+            .order(
+                "created_at",
+                desc=True,
+            )
+        )
+
+        if hospital_id:
+
+            query = query.eq(
+                "patients.hospital_id",
+                hospital_id,
+            )
+
+        response = query.execute()
+
+        rows = response.data or []
+
+        unique_patients = {}
+        latest_examination = {}
+
+        for row in rows:
+
+            patient = (
+                row.get("patients")
+                or {}
+            )
+
+            if isinstance(
+                patient,
+                list,
+            ):
+
+                patient = (
+                    patient[0]
+                    if patient
+                    else None
+                )
+
+            if not patient:
+                continue
+
+            patient_id = patient.get(
+                "patient_id"
+            )
+
+            if not patient_id:
+                continue
+
+            # --------------------------------------
+            # KEEP ONLY ONE PATIENT ENTRY
+            # --------------------------------------
+
+            if patient_id not in unique_patients:
+
+                unique_patients[
+                    patient_id
+                ] = patient
+
+                latest_examination[
+                    patient_id
+                ] = row
+
+        return list(
+            unique_patients.values()
+        )
+
+    except Exception as exc:
+
+        print(
+            "Failed to fetch completed "
+            f"patient records: {exc}"
+        )
+
+        return []
+
+# ==========================================
+# HOSPITAL LOCATIONS
+# ==========================================
+
+def get_hospital_locations(hospital_id=None):
+    """
+    Return hospitals that have coordinates.
+
+    If hospital_id is given, returns a single-item list
+    containing just that hospital.
+
+    If hospital_id is None, returns every hospital with
+    latitude and longitude set (used by the system admin).
+
+    Hospitals without coordinates are excluded — they
+    simply don't appear on the map.
+    """
+
+    query = (
+        admin_supabase
+        .table("hospitals")
+        .select("""
+            hospital_id,
+            hospital_name,
+            hospital_code,
+            address,
+            contact_number,
+            email,
+            website,
+            hospital_type,
+            hospital_logo_url,
+            latitude,
+            longitude,
+            is_active,
+            created_at
+        """)
+        .not_.is_("latitude", "null")
+        .not_.is_("longitude", "null")
+        .order("hospital_name", desc=False)
+    )
+
+    if hospital_id:
+        query = query.eq("hospital_id", hospital_id)
+
+    response = query.execute()
+
+    return response.data or []
+
+
+def get_hospital_without_coordinates():
+    """
+    Return hospitals that still lack coordinates.
+
+    Useful for showing an admin which hospitals
+    need geocoding.
+    """
+
+    response = (
+        admin_supabase
+        .table("hospitals")
+        .select("""
+            hospital_id,
+            hospital_name,
+            hospital_code,
+            address,
+            is_active
+        """)
+        .or_("latitude.is.null,longitude.is.null")
+        .order("hospital_name", desc=False)
+        .execute()
+    )
+
+    return response.data or []
+
+
+# ==========================================
+# HOSPITAL PATIENT LOCATIONS
+# (placeholder — will be enabled once the
+# patients table has lat/lon columns)
+# ==========================================
+
+def get_hospital_patient_locations(hospital_id):
+    """
+    Return patients with coordinates for a hospital.
+
+    Currently returns an empty list because the
+    patients table does not yet have latitude /
+    longitude columns.
+
+    Once those columns are added, replace the body
+    with the actual query (kept in the comment below).
+
+    Expected future query:
+        response = (
+            admin_supabase
+            .table("patients")
+            .select(
+                "patient_id, patient_code, first_name, "
+                "last_name, address, latitude, longitude"
+            )
+            .eq("hospital_id", hospital_id)
+            .not_.is_("latitude", "null")
+            .not_.is_("longitude", "null")
+            .execute()
+        )
+        return response.data or []
+    """
+
+    if not hospital_id:
+        return []
+
+    return []

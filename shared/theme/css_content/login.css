@@ -1,319 +1,824 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
 
-/* ==========================================================
-   LungSight login page
-   Change the colors here and the whole page follows.
-   ========================================================== */
+
+/* ============================================================
+   LUNGSIGHT LOGIN PAGE
+   ============================================================ */
 
 :root {
-  --film:      #F2F6F7;   /* page background, like a lightbox */
-  --white:     #FFFFFF;
-  --ink:       #12283A;   /* main text */
-  --slate:     #5A6F7F;   /* secondary text */
-  --mist:      #DDE8EB;   /* borders */
-  --teal:      #0F7C88;   /* main accent */
-  --teal-dark: #0B626C;   /* accent on hover */
+    --film: #F2F6F7;
+    --white: #FFFFFF;
+    --ink: #12283A;
+    --slate: #5A6F7F;
+    --mist: #DDE8EB;
 
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --teal: #0F7C88;
+    --teal-dark: #0B626C;
+
+    --navy: #0A2436;
+    --ap-ink: #102D40;
+
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 
-/* ----------------------------------------------------------
-   Page
-   ---------------------------------------------------------- */
+/* ============================================================
+   PAGE
+   ============================================================ */
 
 .stApp {
-  background: var(--film);
-  color: var(--ink);
-  font-family: var(--font-body);
+    background: var(--film);
+    color: var(--ink);
+    font-family: var(--font-body);
 }
 
 #MainMenu,
 footer,
 [data-testid="stHeader"] {
-  display: none;
+    display: none;
 }
 
 .block-container {
-  max-width: 1080px;
-  padding-top: 3.5rem;
-  padding-bottom: 4rem;
+    max-width: 1080px;
+    padding-top: 2rem;
+    padding-bottom: 4rem;
 }
 
 
-/* ----------------------------------------------------------
-   Sign-in card (left)
-   ---------------------------------------------------------- */
+/* ============================================================
+   HERO
+   ============================================================ */
+
+.ls-hero {
+    position: relative;
+
+    width: 100%;
+    height: 320px;
+
+    border-radius: 18px;
+    overflow: hidden;
+
+    background-color: var(--navy);
+    background-image: linear-gradient(135deg, #0A2436 0%, #0F4C5C 100%);
+    background-size: cover;
+    background-position: center 42%;
+
+    box-shadow: 0 18px 45px rgba(18, 40, 58, 0.16);
+}
+
+.ls-hero-overlay {
+    position: absolute;
+    inset: 0;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(5, 27, 42, 0.84) 0%,
+            rgba(5, 27, 42, 0.60) 40%,
+            rgba(5, 27, 42, 0.10) 78%,
+            rgba(5, 27, 42, 0.02) 100%
+        );
+}
+
+.ls-hero-content {
+    position: absolute;
+    left: 3rem;
+    bottom: 2.6rem;
+
+    max-width: 500px;
+
+    z-index: 2;
+}
+
+.ls-hero-kicker {
+    margin: 0 0 0.7rem;
+
+    color: rgba(255, 255, 255, 0.92);
+
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+}
+
+.ls-hero-title {
+    margin: 0;
+
+    color: #FFFFFF;
+
+    font-family: var(--font-display);
+    font-size: 3.1rem;
+    font-weight: 600;
+    line-height: 1.05;
+}
+
+.ls-hero-text {
+    margin: 0.85rem 0 0;
+
+    max-width: 420px;
+
+    color: rgba(255, 255, 255, 0.9);
+
+    font-size: 1rem;
+    line-height: 1.55;
+}
+
+
+/* ============================================================
+   SIGN-IN ROW
+   ============================================================ */
+
+.st-key-login_shell {
+    margin-top: 2.6rem;
+}
 
 .st-key-login_card {
-  background: var(--white);
-  border: 1px solid var(--mist);
-  border-radius: 14px;
-  padding: 2.5rem 2.25rem;
-  box-shadow: 0 12px 32px -14px rgba(18, 40, 58, 0.18);
+    min-height: 440px;
+    justify-content: center;
+
+    background: var(--white);
+
+    border: 1px solid var(--mist);
+    border-radius: 16px;
+
+    padding: 2.3rem 2.2rem;
+
+    box-shadow: 0 14px 35px rgba(18, 40, 58, 0.10);
+}
+
+.st-key-login_card .ls-login-heading {
+    margin-bottom: 0.4rem;
 }
 
 .st-key-login_card .ls-login-title {
-  font-family: var(--font-display);
-  font-size: 2.2rem;
-  font-weight: 600;
-  line-height: 1.15;
-  color: var(--ink);
-  margin: 0 0 0.4rem;
+    margin: 0;
+
+    color: var(--ink);
+
+    font-family: var(--font-display);
+    font-size: 2.1rem;
+    font-weight: 600;
+    line-height: 1.1;
 }
 
 .st-key-login_card .ls-login-subtitle {
-  color: var(--slate);
-  font-size: 0.98rem;
-  margin: 0 0 1.75rem;
+    margin: 0.4rem 0 0;
+
+    color: var(--slate);
+
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
-/* remove Streamlit's default form border */
+
+/* ============================================================
+   FORM
+   ============================================================ */
+
 .st-key-login_card [data-testid="stForm"] {
-  border: none;
-  padding: 0;
+    border: none;
+    padding: 0;
 }
 
 .st-key-login_card label p {
-  font-weight: 600;
-  font-size: 0.88rem;
-  color: var(--ink);
+    color: var(--ink);
+
+    font-size: 0.84rem;
+    font-weight: 700;
 }
 
-/* text boxes */
 .st-key-login_card [data-testid="stTextInputRootElement"],
 .st-key-login_card div[data-baseweb="input"] {
-  background: var(--film);
-  border: 1px solid var(--mist);
-  border-radius: 8px;
+    background: var(--film);
+
+    border: 1px solid var(--mist);
+    border-radius: 9px;
 }
 
 .st-key-login_card div[data-baseweb="base-input"] {
-  background: transparent;
+    background: transparent;
 }
 
 .st-key-login_card input {
-  background: transparent;
-  color: var(--ink);
-  font-family: var(--font-body);
+    background: transparent;
+
+    color: var(--ink);
+
+    font-family: var(--font-body);
 }
 
 .st-key-login_card [data-testid="stTextInputRootElement"]:focus-within,
 .st-key-login_card div[data-baseweb="input"]:focus-within {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.18);
+    border-color: var(--teal);
+
+    box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.16);
 }
 
-/* sign-in button */
+
+/* ============================================================
+   SIGN IN BUTTON
+   ============================================================ */
+
 .st-key-login_card [data-testid="stFormSubmitButton"] button {
-  width: 100%;
-  margin-top: 0.5rem;
-  padding: 0.7rem 1rem;
-  background: var(--teal);
-  border: none;
-  border-radius: 8px;
-  transition: background 0.15s ease;
+    width: 100%;
+
+    margin-top: 0.4rem;
+    padding: 0.75rem 1rem;
+
+    background: var(--teal);
+
+    border: none;
+    border-radius: 9px;
+
+    transition:
+        background 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 .st-key-login_card [data-testid="stFormSubmitButton"] button p {
-  color: #FFFFFF;
-  font-weight: 600;
+    color: #FFFFFF;
+    font-weight: 700;
 }
 
 .st-key-login_card [data-testid="stFormSubmitButton"] button:hover {
-  background: var(--teal-dark);
+    background: var(--teal-dark);
+
+    box-shadow: 0 7px 16px rgba(15, 124, 136, 0.22);
 }
 
 .st-key-login_card [data-testid="stFormSubmitButton"] button:focus-visible {
-  outline: 3px solid rgba(15, 124, 136, 0.4);
-  outline-offset: 2px;
+    outline: 3px solid rgba(15, 124, 136, 0.35);
+    outline-offset: 2px;
+}
+
+.st-key-login_card .ls-login-help {
+    margin: 0.3rem 0 0;
+
+    color: var(--slate);
+
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.ls-secure-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    margin-top: 1.4rem;
+    padding-top: 1rem;
+
+    border-top: 1px solid var(--mist);
+
+    color: var(--slate);
+}
+
+.ls-secure-note svg {
+    width: 16px;
+    height: 16px;
+
+    flex-shrink: 0;
+
+    color: var(--teal);
+}
+
+.ls-secure-note span {
+    font-size: 0.8rem;
 }
 
 
-/* ----------------------------------------------------------
-   Logo panel (right)
-   Corner marks are borrowed from radiograph film.
-   ---------------------------------------------------------- */
+/* ============================================================
+   LOGO PANEL
+   ============================================================ */
 
 .st-key-logo_panel {
-  position: relative;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 3rem 1.5rem;
-  border: 1px solid var(--mist);
-  border-radius: 14px;
-  background: radial-gradient(circle at 50% 40%, #FFFFFF 0%, #E9F1F3 60%, #DCE8EB 100%);
+    position: relative;
+
+    min-height: 440px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+
+    padding: 2.5rem 1.5rem;
+
+    border: 1px solid var(--mist);
+    border-radius: 16px;
+
+    background:
+        radial-gradient(
+            circle at 50% 40%,
+            #FFFFFF 0%,
+            #EDF4F5 58%,
+            #DDE9EC 100%
+        );
+
+    box-shadow: 0 14px 35px rgba(18, 40, 58, 0.08);
 }
 
+/* small corner marks, like the frame of an X-ray film */
 .st-key-logo_panel::before,
 .st-key-logo_panel::after {
-  content: "";
-  position: absolute;
-  width: 26px;
-  height: 26px;
-  border: 0 solid var(--teal);
+    content: "";
+
+    position: absolute;
+
+    width: 27px;
+    height: 27px;
+
+    border: 0 solid var(--teal);
 }
 
 .st-key-logo_panel::before {
-  top: 14px;
-  left: 14px;
-  border-top-width: 2px;
-  border-left-width: 2px;
+    top: 16px;
+    left: 16px;
+
+    border-top-width: 2px;
+    border-left-width: 2px;
 }
 
 .st-key-logo_panel::after {
-  bottom: 14px;
-  right: 14px;
-  border-bottom-width: 2px;
-  border-right-width: 2px;
-}
+    right: 16px;
+    bottom: 16px;
 
-.st-key-logo_panel .ls-logo-tagline {
-  max-width: 28ch;
-  margin: 0 auto;
-  color: var(--slate);
-  font-size: 1rem;
-  line-height: 1.5;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
 }
 
 
-/* ----------------------------------------------------------
-   Subscription plans
-   ---------------------------------------------------------- */
+/* ============================================================
+   CLINICAL DESCRIPTION (below the sign-in row)
+   ============================================================ */
 
-.st-key-plans_section {
-  margin-top: 3.5rem;
+.ls-clinical-description {
+    margin-top: 1.4rem;
+
+    padding: 0.3rem 0.2rem 0;
 }
 
-.st-key-plans_section .ls-plans-title {
-  font-family: var(--font-display);
-  font-size: 1.9rem;
-  font-weight: 600;
-  text-align: center;
-  color: var(--ink);
-  margin: 0 0 0.4rem;
+.ls-clinical-kicker {
+    margin: 0 0 0.45rem;
+
+    color: var(--teal);
+
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
 }
 
-.st-key-plans_section .ls-plans-subtitle {
-  text-align: center;
-  color: var(--slate);
-  max-width: 52ch;
-  margin: 0 auto 1.5rem;
+.ls-clinical-text {
+    margin: 0;
+
+    color: var(--ink);
+
+    font-size: 0.98rem;
+    line-height: 1.5;
 }
+
+.ls-clinical-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 2rem;
+
+    margin-top: 1rem;
+}
+
+.ls-clinical-feature {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.ls-clinical-feature span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 30px;
+    height: 30px;
+
+    flex-shrink: 0;
+
+    border-radius: 8px;
+
+    background: #E6F2F3;
+    color: var(--teal);
+}
+
+.ls-clinical-feature svg {
+    width: 16px;
+    height: 16px;
+}
+
+.ls-clinical-feature p {
+    margin: 0;
+
+    color: var(--slate);
+
+    font-size: 0.86rem;
+}
+
+
+/* ============================================================
+   DIVIDERS
+   ============================================================ */
+
+.ls-section-divider {
+    width: 100%;
+    height: 1px;
+
+    margin: 4rem 0 3.4rem;
+
+    background: var(--mist);
+}
+
+.ls-section-divider-tight {
+    margin: 3.4rem 0 1.8rem;
+}
+
+/* ============================================================
+   SUBSCRIPTION SECTION
+   ============================================================ */
+
+.st-key-subscriptions_section {
+    width: 100% !important;
+    max-width: none !important;
+
+    margin: 0 auto !important;
+    padding: 0 !important;
+}
+
+
+/* ============================================================
+   SUBSCRIPTION HEADER
+   ============================================================ */
+
+.ls-subscriptions-header {
+    width: 100% !important;
+    max-width: none !important;
+
+    margin: 0 auto 2.5rem !important;
+    padding: 0 !important;
+
+    text-align: center !important;
+}
+
+
+/* ------------------------------------------------------------
+   SUBSCRIPTIONS KICKER
+   ------------------------------------------------------------ */
+
+.ls-subscriptions-kicker {
+    display: block !important;
+
+    width: 100% !important;
+
+    margin: 0 0 0.7rem !important;
+    padding: 0 !important;
+
+    color: var(--teal) !important;
+
+    font-family: var(--font-body) !important;
+    font-size: 1.25rem !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+
+    letter-spacing: 0.30em !important;
+
+    text-align: center !important;
+}
+
+
+/* ------------------------------------------------------------
+   MAIN TITLE
+   ------------------------------------------------------------ */
+
+.ls-subscriptions-title {
+    display: block !important;
+
+    width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    color: var(--ink) !important;
+
+    font-family: var(--font-display) !important;
+    font-size: 2.15rem !important;
+    font-weight: 600 !important;
+    line-height: 1.15 !important;
+
+    text-align: center !important;
+}
+
+
+/* ------------------------------------------------------------
+   SUBTITLE
+   ------------------------------------------------------------ */
+
+.ls-subscriptions-subtitle {
+    display: block !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    margin: 0.75rem 0 0 !important;
+    padding: 0 !important;
+
+    color: var(--slate) !important;
+
+    font-family: var(--font-body) !important;
+    font-size: 1rem !important;
+    line-height: 1.55 !important;
+
+    text-align: center !important;
+}
+
+
+/* ============================================================
+   SUBSCRIPTION CARDS
+   ============================================================ */
 
 [class*="st-key-plan_card_"] {
-  background: var(--white);
-  border: 1px solid var(--mist);
-  border-radius: 14px;
-  padding: 1.75rem 1.5rem;
+    min-height: 450px;
+
+    display: flex;
+    flex-direction: column;
+
+    background: var(--ap-ink);
+
+    border: 1px solid #183F55;
+    border-radius: 16px;
+
+    padding: 1.7rem 1.45rem;
+
+    box-shadow: 0 12px 25px rgba(16, 45, 64, 0.14);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+[class*="st-key-plan_card_"]:hover {
+    transform: translateY(-4px);
+
+    border-color: #3B667B;
+
+    box-shadow: 0 20px 40px rgba(16, 45, 64, 0.22);
+}
+
+[class*="st-key-plan_card_"] .ls-plan-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 38px;
+    height: 38px;
+
+    margin-bottom: 1.2rem;
+
+    border-radius: 9px;
+
+    background: #1D4156;
+    border: 1px solid #35596B;
+
+    color: #8EEBFF;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-icon svg {
+    width: 20px;
+    height: 20px;
 }
 
 [class*="st-key-plan_card_"] .ls-plan-name {
-  font-family: var(--font-display);
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: var(--ink);
-  margin: 0;
+    margin: 0;
+
+    color: #FFFFFF;
+
+    font-family: var(--font-display);
+    font-size: 1.45rem;
+    font-weight: 600;
 }
 
 [class*="st-key-plan_card_"] .ls-plan-desc {
-  color: var(--slate);
-  font-size: 0.92rem;
-  min-height: 3rem;          /* keeps cards the same height */
-  margin: 0.25rem 0 0.75rem;
+    min-height: 3.1rem;
+
+    margin: 0.45rem 0 1.5rem;
+
+    color: #D7E5EA;
+
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.ls-plan-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+
+    margin-top: auto;
 }
 
 [class*="st-key-plan_card_"] .ls-plan-price {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--ink);
-  margin: 0;
+    margin: 0;
+
+    color: #FFFFFF;
+
+    font-size: 1.75rem;
+    font-weight: 700;
 }
 
-[class*="st-key-plan_card_"] .ls-plan-price small {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--slate);
+.ls-plan-price-row span {
+    color: #BFD3DB;
+    font-size: 0.76rem;
 }
 
 [class*="st-key-plan_card_"] .ls-plan-yearly {
-  color: var(--slate);
-  font-size: 0.9rem;
-  margin: 0.1rem 0 1rem;
+    margin: 0.35rem 0 1.3rem;
+
+    color: #AFC6D0;
+
+    font-size: 0.75rem;
 }
 
-/* limits shown as label / value rows */
 [class*="st-key-plan_card_"] .ls-plan-features {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 0.5rem;
-  border-top: 1px solid var(--mist);
+    width: 100%;
+
+    margin: 0 0 1.2rem;
+
+    border-top: 1px solid #315365;
 }
 
-[class*="st-key-plan_card_"] .ls-plan-features li {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid var(--mist);
-  font-size: 0.92rem;
-  color: var(--slate);
+[class*="st-key-plan_card_"] .ls-plan-feature {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    min-height: 45px;
+
+    border-bottom: 1px solid #315365;
 }
 
-[class*="st-key-plan_card_"] .ls-plan-features b {
-  color: var(--ink);
-  font-weight: 600;
+[class*="st-key-plan_card_"] .ls-plan-feature span {
+    color: #C7D9E0;
+    font-size: 0.8rem;
 }
 
-/* "Select plan" is outlined so the Sign in button stays the main action */
+[class*="st-key-plan_card_"] .ls-plan-feature b {
+    color: #FFFFFF;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
 [class*="st-key-plan_card_"] button {
-  width: 100%;
-  background: transparent;
-  border: 1.5px solid var(--teal);
-  border-radius: 8px;
-  transition: background 0.15s ease;
+    width: 100%;
+
+    background: transparent;
+
+    border: 1px solid #8FAFBE;
+    border-radius: 8px;
+
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
 }
 
 [class*="st-key-plan_card_"] button p {
-  color: var(--teal);
-  font-weight: 600;
+    color: #FFFFFF;
+    font-weight: 700;
 }
 
 [class*="st-key-plan_card_"] button:hover {
-  background: var(--teal);
+    background: #FFFFFF;
+    border-color: #FFFFFF;
 }
 
 [class*="st-key-plan_card_"] button:hover p {
-  color: #FFFFFF;
+    color: var(--ap-ink);
 }
 
 [class*="st-key-plan_card_"] button:focus-visible {
-  outline: 3px solid rgba(15, 124, 136, 0.4);
-  outline-offset: 2px;
+    outline: 3px solid rgba(142, 235, 255, 0.5);
+    outline-offset: 2px;
 }
 
 
-/* ----------------------------------------------------------
-   Small screens
-   ---------------------------------------------------------- */
+/* ============================================================
+   ABOUT US FOOTER
+   ============================================================ */
+
+.st-key-about_footer button {
+    background: transparent;
+
+    border: 1px solid var(--teal);
+    border-radius: 9px;
+
+    transition: background 0.15s ease;
+}
+
+.st-key-about_footer button p {
+    color: var(--teal);
+    font-weight: 700;
+}
+
+.st-key-about_footer button:hover {
+    background: var(--teal);
+}
+
+.st-key-about_footer button:hover p {
+    color: #FFFFFF;
+}
+
+.st-key-about_footer button:focus-visible {
+    outline: 3px solid rgba(15, 124, 136, 0.35);
+    outline-offset: 2px;
+}
+
+.ls-footer-text {
+    margin: 0.8rem 0 0;
+
+    text-align: center;
+
+    color: var(--slate);
+
+    font-size: 0.78rem;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 800px) {
+
+    .block-container {
+        padding-top: 1.5rem;
+    }
+
+    .ls-hero {
+        height: 250px;
+    }
+
+    .ls-hero-content {
+        left: 1.5rem;
+        bottom: 1.5rem;
+    }
+
+    .ls-hero-title {
+        font-size: 2.1rem;
+    }
+
+    .st-key-login_shell {
+        margin-top: 2rem;
+    }
+
+    .st-key-login_card,
+    .st-key-logo_panel {
+        min-height: 0;
+    }
+
+    .st-key-logo_panel {
+        min-height: 260px;
+    }
+
+    .ls-subscriptions-title {
+        font-size: 1.75rem;
+    }
+
+}
 
 @media (max-width: 640px) {
-  .block-container {
-    padding-top: 2rem;
-  }
 
-  .st-key-login_card {
-    padding: 1.75rem 1.25rem;
-  }
+    .ls-hero {
+        height: 220px;
+    }
 
-  .st-key-logo_panel {
-    padding: 2rem 1rem;
-  }
+    .ls-hero-title {
+        font-size: 1.8rem;
+    }
+
+    .ls-hero-text {
+        font-size: 0.85rem;
+    }
+
+    .st-key-login_card {
+        padding: 1.7rem 1.25rem;
+    }
+
 }
 
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
-  }
+
+    * {
+        transition: none !important;
+    }
+
 }

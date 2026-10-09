@@ -3,6 +3,32 @@ from pathlib import Path
 
 import streamlit as st
 
+def hide_streamlit_sidebar():
+    st.markdown(
+        """
+        <style>
+
+        /* Hide the entire Streamlit sidebar */
+        [data-testid="stSidebar"] {
+            display: none !important;
+        }
+
+        /* Hide the sidebar expand/collapse button */
+        [data-testid="stSidebarCollapsedControl"] {
+            display: none !important;
+        }
+
+        /* Remove the space reserved for the sidebar */
+        section[data-testid="stSidebar"] {
+            width: 0 !important;
+            min-width: 0 !important;
+        }
+
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 # ==================================================
 # PROJECT ROOT
@@ -59,6 +85,7 @@ from backend.backend_utils.hospital_utils import (
 
 from backend.backend_utils.subscription_utils import (
     get_subscription_context,
+    apply_scheduled_changes,
 )
 
 from pages.hospital_administrator import (
@@ -88,7 +115,42 @@ st.set_page_config(
 # login flow moves the token into query parameters.
 # ==================================================
 
-if st.query_params.get("access_token"):
+access_token = st.query_params.get(
+    "access_token"
+)
+
+refresh_token = st.query_params.get(
+    "refresh_token"
+)
+
+invite_type = st.query_params.get(
+    "type"
+)
+
+if access_token and refresh_token:
+
+    st.session_state["invite_access_token"] = (
+        access_token
+    )
+
+    st.session_state["invite_refresh_token"] = (
+        refresh_token
+    )
+
+    st.session_state["invite_type"] = (
+        invite_type
+    )
+
+
+if (
+    st.session_state.get(
+        "invite_access_token"
+    )
+    and
+    st.session_state.get(
+        "invite_refresh_token"
+    )
+):
 
     from screens.set_password import show as show_set_password
 
@@ -169,6 +231,8 @@ if not st.session_state.logged_in:
         None,
     )
 
+    hide_streamlit_sidebar()
+
     show_login()
 
     st.stop()
@@ -212,6 +276,70 @@ apply_theme()
 role = user.get("role")
 
 
+# --------------------------------------------------
+# Hospital ID
+# --------------------------------------------------
+
+hospital_id = user.get(
+    "hospital_id"
+)
+
+
+# ==================================================
+# APPLY SCHEDULED SUBSCRIPTION CHANGES
+# ==================================================
+#
+# If the hospital has a scheduled downgrade or
+# cancellation whose end_date has passed, apply it now
+# BEFORE the gate runs, so the gate sees the fresh
+# state on this same page load.
+#
+# Runs on every authenticated page load. The work is a
+# single-row SELECT + conditional UPDATE, so overhead
+# is negligible.
+# ==================================================
+
+if hospital_id:
+
+    try:
+
+        _sched_result = apply_scheduled_changes(
+            hospital_id
+        )
+
+        if _sched_result.get("action") in (
+            "downgraded",
+            "cancelled",
+        ):
+
+            # Force the cached subscription context to be
+            # re-fetched on this same rerun, so the gate
+            # below sees the newly applied state.
+            st.session_state.pop(
+                "subscription_context",
+                None,
+            )
+
+            st.session_state.pop(
+                "grace_info",
+                None,
+            )
+
+            print(
+                f"[scheduled-changes] "
+                f"{_sched_result.get('action')}: "
+                f"{_sched_result.get('message')}"
+            )
+
+    except Exception as _exc:
+
+        # Never block the app if this fails — the gate
+        # will still run against whatever state we have.
+        print(
+            f"apply_scheduled_changes failed: {_exc}"
+        )
+
+
 # ==================================================
 # HOSPITAL ACTIVE STATUS GATE
 # ==================================================
@@ -226,11 +354,6 @@ role = user.get("role")
 # Superadmin accounts normally have no hospital_id,
 # so they skip this check.
 # ==================================================
-
-hospital_id = user.get(
-    "hospital_id"
-)
-
 
 if hospital_id:
 
@@ -259,57 +382,22 @@ if hospital_id:
         # --------------------------------------------------
 
         st.markdown(
-            """
-            <div style="
-                max-width: 720px;
-                margin: 120px auto 0 auto;
-                text-align: center;
-            ">
-
-                <div style="
-                    font-size: 48px;
-                    margin-bottom: 16px;
-                ">
-                    ⚠️
-                </div>
-
-                <h1>
-                    Hospital Access Temporarily Unavailable
-                </h1>
-
-                <p style="
-                    font-size: 17px;
-                    line-height: 1.6;
-                    color: #666;
-                ">
-                    The hospital associated with your
-                    LungSight account is currently
-                    deactivated in the system.
-                </p>
-
-                <p style="
-                    font-size: 16px;
-                    line-height: 1.6;
-                    color: #666;
-                ">
-                    You cannot access the LungSight
-                    workspace while your hospital account
-                    is inactive.
-                </p>
-
-                <p style="
-                    font-size: 15px;
-                    line-height: 1.6;
-                    color: #777;
-                    margin-top: 24px;
-                ">
-                    Please contact your hospital administrator
-                    or the LungSight System Administrator
-                    for assistance.
-                </p>
-
-            </div>
-            """,
+            "<div style='max-width: 720px; margin: 120px auto 0 auto; text-align: center;'>"
+            "<div style='font-size: 48px; margin-bottom: 16px;'>⚠️</div>"
+            "<h1>Hospital Access Temporarily Unavailable</h1>"
+            "<p style='font-size: 17px; line-height: 1.6; color: #666;'>"
+            "The hospital associated with your LungSight account "
+            "is currently deactivated in the system."
+            "</p>"
+            "<p style='font-size: 16px; line-height: 1.6; color: #666;'>"
+            "You cannot access the LungSight workspace while your "
+            "hospital account is inactive."
+            "</p>"
+            "<p style='font-size: 15px; line-height: 1.6; color: #777; margin-top: 24px;'>"
+            "Please contact your hospital administrator or the "
+            "LungSight System Administrator for assistance."
+            "</p>"
+            "</div>",
             unsafe_allow_html=True,
         )
 
@@ -318,8 +406,7 @@ if hospital_id:
         # --------------------------------------------------
 
         st.markdown(
-            "<div style='text-align: center; margin-top: 30px;'>"
-            "</div>",
+            "<div style='text-align: center; margin-top: 30px;'></div>",
             unsafe_allow_html=True,
         )
 

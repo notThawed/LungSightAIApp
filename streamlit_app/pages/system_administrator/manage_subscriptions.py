@@ -11,7 +11,6 @@ from backend.backend_utils.subscription_utils import (
 )
 
 from streamlit_app.components.ui import (
-    load_css,
     page_header,
     empty_state,
     section_title,
@@ -25,6 +24,8 @@ from streamlit_app.components.ui import (
     remember,
     show_flash_message,
 )
+
+from shared.assets import load_css
 
 
 # ============================================================

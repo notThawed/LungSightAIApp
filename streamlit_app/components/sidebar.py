@@ -105,6 +105,11 @@ PHYSICIAN_NAV = [
                 "Patient records",
                 "folder_shared",
             ),
+            (
+                "Follow-Ups",
+                "Follow-ups",
+                "assignment",
+            ),
         ],
     },
 ]
@@ -210,7 +215,7 @@ STAFF_NAV = [
         "items": [
             (
                 "Register Patient",
-                "Register new patient",
+                "Admit Patient",
                 "person_add",
             ),
             (
@@ -248,6 +253,11 @@ HOSPITAL_ADMIN_NAV = [
                 "Home dashboard",
                 "dashboard",
             ),
+            (
+                "My Hospital",
+                "My Hospital info",
+                "dashboard",
+            ),
         ],
     },
 
@@ -268,6 +278,22 @@ HOSPITAL_ADMIN_NAV = [
                 "Manage Examinations",
                 "Manage Examinations",
                 "assignment",
+            ),
+        ],
+    },
+
+    {
+        "section": "Subscription Management",
+        "items": [
+            (
+                "Subscription Usage",
+                "Subscription Usage",
+                "data_usage",
+            ),
+            (
+                "Subscription Settings",
+                "Subscription Settings",
+                "payments",
             ),
         ],
     },

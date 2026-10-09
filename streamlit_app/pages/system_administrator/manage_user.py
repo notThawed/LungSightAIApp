@@ -19,7 +19,6 @@ from backend.crud import (
 )
 
 from streamlit_app.components.ui import (
-    load_css,
     page_header,
     metric_card,
     empty_state,
@@ -36,6 +35,13 @@ from streamlit_app.components.ui import (
     confirm_buttons,
     remember,
     show_flash_message,
+)
+
+from shared.assets import load_css
+
+
+from backend.backend_utils.subscription_usage import (
+    can_create_user,
 )
 
 
@@ -327,6 +333,18 @@ def render_user_form(user=None):
         done_message, fail_message = "User updated.", "Failed to update user."
 
     else:
+
+        subscription_check = can_create_user(hospital_id)
+
+        if not subscription_check.get("allowed"):
+            errors.error(
+                subscription_check.get(
+                    "message",
+                    "User limit reached",
+                )
+            )
+            return
+
         with st.spinner("Creating user..."):
             result = create_user(
                 email=email.strip(),

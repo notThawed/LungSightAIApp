@@ -1,0 +1,775 @@
+/* =========================================================
+   LUNGSIGHT — RADTECH
+   Analyze X-Ray
+   shared/theme/css_content/radtech_css/analyze.css
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0');
+
+:root {
+    --rx-primary: #176b87;
+    --rx-primary-dark: #0f526a;
+    --rx-primary-soft: #eaf6fa;
+
+    --rx-accent: #2b8ca8;
+    --rx-success: #16845b;
+    --rx-success-soft: #eaf8f1;
+
+    --rx-warning: #b7791f;
+    --rx-warning-soft: #fff7e8;
+
+    --rx-danger: #c0392b;
+    --rx-danger-soft: #fff0ee;
+
+    --rx-text: #172b35;
+    --rx-text-soft: #52636c;
+    --rx-muted: #7a8990;
+
+    --rx-border: #dce6ea;
+    --rx-border-light: #e9eff2;
+
+    --rx-card: #ffffff;
+
+    --rx-radius-md: 14px;
+    --rx-radius-lg: 20px;
+
+    --rx-shadow-sm: 0 2px 8px rgba(23, 55, 66, 0.05);
+    --rx-shadow-md: 0 8px 24px rgba(23, 55, 66, 0.08);
+}
+
+/* ---------------------------------------------------------
+   MATERIAL SYMBOLS
+   --------------------------------------------------------- */
+
+.material-symbols-rounded,
+.material-symbols-outlined {
+    font-family: "Material Symbols Rounded" !important;
+    font-weight: normal;
+    font-style: normal;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
+
+/* =========================================================
+   GUARD — no patient selected
+   ========================================================= */
+
+.rx-guard {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 12px;
+
+    padding: 64px 24px;
+
+    margin: 28px auto;
+
+    max-width: 540px;
+
+    background: linear-gradient(
+        135deg,
+        #f8fbfc 0%,
+        #ffffff 100%
+    );
+
+    border: 1px dashed #bcd8e2;
+
+    border-radius: var(--rx-radius-lg);
+
+    box-shadow: var(--rx-shadow-sm);
+
+    text-align: center;
+}
+
+.rx-guard-icon {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 64px;
+    height: 64px;
+
+    border-radius: 50%;
+
+    background: #eef7fa;
+
+    color: var(--rx-primary);
+
+    font-family: "Material Symbols Rounded";
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+
+    font-size: 30px;
+
+    line-height: 1;
+}
+
+.rx-guard-title {
+    margin: 4px 0 0;
+
+    color: var(--rx-text);
+
+    font-size: 1.1rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.01em;
+}
+
+.rx-guard-text {
+    margin: 0;
+
+    max-width: 380px;
+
+    color: var(--rx-text-soft);
+
+    font-size: 0.86rem;
+
+    line-height: 1.6;
+}
+
+/* ---------------------------------------------------------
+   CONTEXT CARD (queue mode only)
+   --------------------------------------------------------- */
+
+.rx-context {
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 16px 20px;
+
+    margin-bottom: 10px;
+
+    background: linear-gradient(
+        135deg,
+        #f8fbfc 0%,
+        #ffffff 100%
+    );
+
+    border: 1px solid var(--rx-border);
+
+    border-left: 4px solid var(--rx-primary);
+
+    border-radius: var(--rx-radius-md);
+
+    box-shadow: var(--rx-shadow-sm);
+}
+
+.rx-context-left {
+    flex: 1 1 auto;
+
+    min-width: 0;
+}
+
+.rx-context-right {
+    flex: 0 0 auto;
+
+    text-align: right;
+}
+
+.rx-context-name {
+    margin: 0;
+
+    color: var(--rx-text);
+
+    font-size: 1.05rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.01em;
+}
+
+.rx-context-code {
+    margin: 2px 0 0;
+
+    color: var(--rx-muted);
+
+    font-size: 0.76rem;
+
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.rx-context-meta {
+    margin: 0;
+
+    color: var(--rx-primary);
+
+    font-size: 0.8rem;
+
+    font-weight: 700;
+}
+
+/* ---------------------------------------------------------
+   PANEL SHELLS
+   --------------------------------------------------------- */
+
+div[class*="st-key-rx_panel_input"],
+div[class*="st-key-rx_panel_output"] {
+    position: relative;
+
+    padding: 20px 22px;
+
+    background: var(--rx-card);
+
+    border: 1px solid var(--rx-border);
+
+    border-radius: var(--rx-radius-lg);
+
+    box-shadow: var(--rx-shadow-sm);
+
+    min-height: 380px;
+}
+
+.rx-panel-title {
+    margin: 0 0 14px;
+
+    color: var(--rx-text);
+
+    font-size: 1rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.01em;
+}
+
+/* ---------------------------------------------------------
+   FILE UPLOADER — the REAL upload widget, restyled
+   Clicking the dropzone opens the file picker; visually it
+   looks like our custom upload card.
+   --------------------------------------------------------- */
+
+div[class*="st-key-rx_panel_input"] [data-testid="stFileUploader"] {
+    margin: 0;
+
+    width: 100%;
+}
+
+div[class*="st-key-rx_panel_input"] [data-testid="stFileUploader"] > label {
+    display: none;
+}
+
+div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"] {
+    position: relative;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 8px;
+
+    padding: 52px 20px;
+
+    background: #f7fbfc;
+
+    border: 2px dashed #bcd8e2;
+
+    border-radius: var(--rx-radius-md);
+
+    cursor: pointer;
+
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"]:hover {
+    border-color: var(--rx-primary);
+
+    background: #eef7fa;
+}
+
+/* Hide Streamlit's default chrome */
+
+div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzoneInstructions"] {
+    display: none !important;
+}
+
+div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"] button {
+    display: none !important;
+}
+
+div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"] small {
+    display: none !important;
+}
+
+/* Injected upload icon */
+
+div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"]::before {
+    content: "upload";
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 56px;
+    height: 56px;
+
+    border-radius: 50%;
+
+    background: #ffffff;
+
+    color: var(--rx-primary);
+
+    font-family: "Material Symbols Rounded";
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+
+    font-size: 28px;
+
+    line-height: 1;
+
+    box-shadow: 0 2px 6px rgba(23, 55, 66, 0.08);
+}
+
+/* Injected headline */
+
+div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"]::after {
+    content: "Click to upload X-ray image";
+
+    display: block;
+
+    text-align: center;
+
+    color: var(--rx-text);
+
+    font-size: 0.92rem;
+
+    font-weight: 750;
+}
+
+/* Subtitle below the dropzone (only when no file is selected) */
+
+.rx-dropzone-sub {
+    margin: 8px 0 0;
+
+    color: var(--rx-muted);
+
+    font-size: 0.76rem;
+
+    text-align: center;
+}
+
+/* ---------------------------------------------------------
+   PREVIEW CONTAINERS
+   --------------------------------------------------------- */
+
+div[class*="st-key-rx_preview"],
+div[class*="st-key-rx_preview_result"] {
+    padding: 12px;
+
+    background: #f7fbfc;
+
+    border: 1px solid var(--rx-border-light);
+
+    border-radius: var(--rx-radius-md);
+
+    overflow: hidden;
+}
+
+div[class*="st-key-rx_preview"] img,
+div[class*="st-key-rx_preview_result"] img {
+    border-radius: 8px;
+
+    display: block;
+
+    max-width: 100%;
+}
+
+/* ---------------------------------------------------------
+   EMPTY RESULTS
+   --------------------------------------------------------- */
+
+.rx-empty {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 10px;
+
+    padding: 52px 20px;
+
+    min-height: 320px;
+
+    text-align: center;
+}
+
+.rx-empty-icon {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 56px;
+    height: 56px;
+
+    border-radius: 50%;
+
+    background: #eef2f5;
+
+    color: var(--rx-muted);
+
+    font-family: "Material Symbols Rounded";
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+
+    font-size: 26px;
+
+    line-height: 1;
+}
+
+.rx-empty-title {
+    margin: 4px 0 0;
+
+    color: var(--rx-text);
+
+    font-size: 1rem;
+
+    font-weight: 750;
+}
+
+.rx-empty-text {
+    margin: 0;
+
+    max-width: 320px;
+
+    color: var(--rx-muted);
+
+    font-size: 0.8rem;
+
+    line-height: 1.55;
+}
+
+/* ---------------------------------------------------------
+   PROGRESS CHECKLIST
+   Plain HTML — no Streamlit keyed container involved.
+   --------------------------------------------------------- */
+
+.rx-progress-card {
+    padding: 18px 20px;
+
+    margin-top: 14px;
+
+    background: var(--rx-card);
+
+    border: 1px solid var(--rx-border);
+
+    border-radius: var(--rx-radius-md);
+
+    box-shadow: var(--rx-shadow-sm);
+}
+
+.rx-progress-title {
+    margin: 0 0 12px;
+
+    color: var(--rx-text);
+
+    font-size: 0.95rem;
+
+    font-weight: 800;
+}
+
+.rx-step {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 6px 0;
+
+    font-size: 0.82rem;
+}
+
+.rx-step-icon {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 20px;
+    height: 20px;
+
+    border-radius: 50%;
+
+    font-size: 0.72rem;
+
+    font-weight: 800;
+
+    flex: 0 0 auto;
+}
+
+.rx-step-done {
+    color: var(--rx-success);
+
+    font-weight: 700;
+}
+
+.rx-step-done .rx-step-icon {
+    background: var(--rx-success-soft);
+
+    color: var(--rx-success);
+}
+
+.rx-step-active {
+    color: var(--rx-primary);
+
+    font-weight: 750;
+}
+
+.rx-step-active .rx-step-icon {
+    background: var(--rx-primary-soft);
+
+    color: var(--rx-primary);
+
+    animation: rxSpin 1.2s linear infinite;
+}
+
+@keyframes rxSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.rx-step-pending {
+    color: var(--rx-muted);
+
+    font-weight: 500;
+}
+
+.rx-step-pending .rx-step-icon {
+    background: #eef2f5;
+
+    color: var(--rx-muted);
+}
+
+/* ---------------------------------------------------------
+   RESULT CAPTION
+   --------------------------------------------------------- */
+
+.rx-result-caption {
+    margin: 10px 0 18px;
+
+    color: var(--rx-muted);
+
+    font-size: 0.72rem;
+
+    text-align: center;
+
+    line-height: 1.5;
+}
+
+/* ---------------------------------------------------------
+   DIAGNOSIS SUMMARY
+   --------------------------------------------------------- */
+
+.rx-summary-title {
+    margin: 8px 0 12px;
+
+    color: var(--rx-text);
+
+    font-size: 1rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.01em;
+}
+
+.rx-summary-row {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 14px;
+
+    padding: 12px 16px;
+
+    margin-bottom: 8px;
+
+    background: #f8fafb;
+
+    border: 1px solid var(--rx-border-light);
+
+    border-radius: 10px;
+}
+
+.rx-summary-row span {
+    color: var(--rx-muted);
+
+    font-size: 0.8rem;
+
+    font-weight: 650;
+}
+
+.rx-summary-row b {
+    color: var(--rx-primary);
+
+    font-size: 1.05rem;
+
+    font-weight: 850;
+
+    letter-spacing: -0.01em;
+}
+
+/* ---------------------------------------------------------
+   FINDINGS BOX
+   --------------------------------------------------------- */
+
+.rx-findings {
+    margin-top: 14px;
+
+    padding: 14px 16px;
+
+    border-radius: 11px;
+}
+
+.rx-findings-positive {
+    background: var(--rx-danger-soft);
+
+    border: 1px solid rgba(192, 57, 43, 0.2);
+}
+
+.rx-findings-positive .rx-findings-title {
+    color: var(--rx-danger);
+}
+
+.rx-findings-negative {
+    background: var(--rx-success-soft);
+
+    border: 1px solid rgba(22, 132, 91, 0.2);
+}
+
+.rx-findings-negative .rx-findings-title {
+    color: var(--rx-success);
+}
+
+.rx-findings-title {
+    margin: 0 0 6px;
+
+    font-size: 0.8rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.02em;
+}
+
+.rx-findings-text {
+    margin: 0;
+
+    color: var(--rx-text-soft);
+
+    font-size: 0.78rem;
+
+    line-height: 1.6;
+}
+
+/* ---------------------------------------------------------
+   BUTTONS — gradient primary inside panels + guard
+   --------------------------------------------------------- */
+
+div[class*="st-key-rx_panel_input"] button[kind="primary"],
+div[class*="st-key-rx_panel_output"] button[kind="primary"] {
+    border-radius: 10px !important;
+
+    font-weight: 700 !important;
+
+    background: linear-gradient(
+        135deg,
+        var(--rx-primary),
+        var(--rx-accent)
+    ) !important;
+
+    border: none !important;
+
+    color: #ffffff !important;
+}
+
+div[class*="st-key-rx_panel_input"] button[kind="primary"]:hover,
+div[class*="st-key-rx_panel_output"] button[kind="primary"]:hover {
+    background: linear-gradient(
+        135deg,
+        var(--rx-primary-dark),
+        var(--rx-primary)
+    ) !important;
+
+    box-shadow: 0 6px 16px rgba(23, 107, 135, 0.22);
+}
+
+/* Center the guard's primary CTA */
+
+section.main button[kind="primary"][key*="rx_guard_back"] {
+    max-width: 260px;
+
+    margin: 0 auto;
+
+    display: block;
+}
+
+/* ---------------------------------------------------------
+   RESPONSIVE
+   --------------------------------------------------------- */
+
+@media (max-width: 900px) {
+
+    .rx-guard {
+        padding: 48px 20px;
+
+        margin: 20px auto;
+    }
+
+    .rx-context {
+        flex-direction: column;
+
+        gap: 8px;
+    }
+
+    .rx-context-right {
+        text-align: left;
+    }
+
+    div[class*="st-key-rx_panel_input"],
+    div[class*="st-key-rx_panel_output"] {
+        min-height: auto;
+
+        margin-bottom: 16px;
+    }
+
+    .rx-summary-row {
+        padding: 10px 13px;
+    }
+}
+
+/* ---------------------------------------------------------
+   REDUCED MOTION
+   --------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}

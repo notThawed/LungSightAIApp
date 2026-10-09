@@ -14,7 +14,6 @@ from backend.crud import (
 )
 
 from streamlit_app.components.ui import (
-    load_css,
     page_header,
     empty_state,
     note,
@@ -30,6 +29,13 @@ from streamlit_app.components.ui import (
     remember,
     refresh_data,
     show_flash_message,
+)
+
+from shared.assets import load_css
+
+
+from backend.backend_utils.subscription_usage import (
+    can_register_patient,
 )
 
 
@@ -828,6 +834,17 @@ def render_patient_form(
 
                 return
 
+            subscription_check = can_register_patient(hospital_id)
+
+            if not subscription_check.get("allowed"):
+                errors.error(
+                    subscription_check.get(
+                        "message",
+                        "Patient limit Reached.",
+                    )
+                )
+                return
+
             create_patient(
                 created_by=current_user.get(
                     "user_id"
@@ -857,6 +874,7 @@ def render_patient_form(
     width="medium",
 )
 def show_add_patient_form():
+
 
     with st.container(
         key="sa_dialog"

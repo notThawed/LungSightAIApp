@@ -16,6 +16,8 @@ from backend.fetches import (
     generate_employee_id,
 )
 
+import time
+
 
 # ============================================================
 # CONFIGURATION
@@ -23,7 +25,7 @@ from backend.fetches import (
 
 REDIRECT_URL = os.getenv(
     "INVITE_REDIRECT_URL",
-    "http://localhost:8501/app/static/redirect.html",
+    "https://notthawed.github.io/LungSightAuthRedirect/",
 )
 
 
@@ -1029,42 +1031,98 @@ def is_hospital_setup_completed(
 def is_hospital_active(hospital_id):
     """
     Check whether a hospital is currently active.
+
+    Retries on transient network errors (WinError 10035,
+    session timeouts). Returns True on persistent failure
+    IF we were able to read the hospital before — i.e.
+    we only fail closed on the FIRST check.
     """
 
     if not hospital_id:
         return True
 
+    # ------------------------------------------------
+    # Cache the last known active state for this session.
+    # If our network call fails, we trust the cache
+    # rather than kicking the user out.
+    # ------------------------------------------------
+
     try:
+        import streamlit as st
+        cache_key = f"_hospital_active_cache_{hospital_id}"
+        cached = st.session_state.get(cache_key)
+    except Exception:
+        cached = None
 
-        response = (
-            admin_supabase
-            .table("hospitals")
-            .select("is_active")
-            .eq(
-                "hospital_id",
-                hospital_id
+    max_retries = 3
+    last_error = None
+
+    for attempt in range(max_retries):
+
+        try:
+
+            response = (
+                admin_supabase
+                .table("hospitals")
+                .select("is_active")
+                .eq("hospital_id", hospital_id)
+                .limit(1)
+                .execute()
             )
-            .limit(1)
-            .execute()
-        )
 
-        rows = response.data or []
+            rows = response.data or []
 
-        if not rows:
-            return False
+            if not rows:
+                # Hospital genuinely doesn't exist → fail closed
+                if cached is not None:
+                    try:
+                        st.session_state[cache_key] = False
+                    except Exception:
+                        pass
+                return False
 
-        return bool(
-            rows[0].get("is_active", False)
-        )
+            active = bool(rows[0].get("is_active", False))
 
-    except Exception as e:
+            # Update cache with fresh truth
+            try:
+                st.session_state[cache_key] = active
+            except Exception:
+                pass
 
+            return active
+
+        except Exception as e:
+
+            last_error = e
+            print(
+                f"HOSPITAL STATUS CHECK ERROR "
+                f"(attempt {attempt + 1}): {e!r}"
+            )
+
+            if attempt < max_retries - 1:
+                time.sleep(0.8)
+                continue
+
+    # ------------------------------------------------
+    # All retries failed
+    #
+    # If we cached a previous result, trust it.
+    # Otherwise, fail open — a network blip should
+    # NOT kick the user out. The subscription gate
+    # and other checks still apply.
+    # ------------------------------------------------
+
+    if cached is not None:
         print(
-            "HOSPITAL STATUS CHECK ERROR:",
-            repr(e)
+            f"HOSPITAL STATUS CHECK: using cached "
+            f"result ({cached}) after network failure."
         )
+        return cached
 
-        # Fail closed.
-        # If we cannot verify the hospital,
-        # do not allow access.
-        return False
+    print(
+        f"HOSPITAL STATUS CHECK: no cache, "
+        f"failing OPEN (assuming active). "
+        f"Last error: {last_error!r}"
+    )
+
+    return True

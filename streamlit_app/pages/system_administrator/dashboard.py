@@ -4,11 +4,13 @@ from datetime import date
 import streamlit as st
 
 from streamlit_app.components.ui import (
-    load_css,
     page_header,
     metric_card,
     section_title,
 )
+
+from shared.assets import load_css
+
 
 
 # ============================================================
