@@ -3,14 +3,9 @@
 """
 Hospital Admin — Subscription Settings.
 
-Read-only view of the current plan, all available plans,
-and recent payment history.
-
-Interactive actions:
-  - Cancel subscription
-  - Reactivate subscription
-  - Change plan — downgrade (schedule for next cycle)
-  - Change plan — upgrade (prorated charge via PayMongo)
+Shows the current plan, available plans, and payment history.
+Supports Cancel, Reactivate, and unified Change Plan
+(upgrade via PayMongo, downgrade scheduled for next cycle).
 """
 
 import streamlit as st
@@ -57,10 +52,24 @@ from shared.assets import load_css
 
 
 # ============================================================
-# SESSION FLAGS
+# CONSTANTS
 # ============================================================
 
 SESSION_UPGRADE_FLOW = "ss_upgrade_flow"
+
+
+def _svg(paths):
+    return (
+        "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' "
+        "stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' "
+        f"aria-hidden='true'>{paths}</svg>"
+    )
+
+
+ICON_LAYERS = _svg(
+    "<path d='m12 2 10 5-10 5L2 7z'/>"
+    "<path d='m2 17 10 5 10-5M2 12l10 5 10-5'/>"
+)
 
 
 # ============================================================
@@ -104,7 +113,7 @@ def format_date(value):
 
 
 def plan_price_for(plan, billing_cycle):
-    """Return (amount, period_word) for a plan in a given cycle."""
+    """Return (amount, period_word) for a plan in the current cycle."""
     if billing_cycle == "Yearly":
         return plan.get("price_yearly"), "year"
     return plan.get("price_monthly"), "month"
@@ -182,19 +191,14 @@ def load_payment_history(hospital_id, limit=5):
 # ============================================================
 
 def refresh_after_mutation():
-    """
-    Called after any write to the subscription.
-
-    Clears the subscription context so app.py re-fetches,
-    and re-runs so the page reflects new data.
-    """
+    """Clear the cached subscription context and rerun."""
     st.session_state.pop("subscription_context", None)
     st.session_state.pop("grace_info", None)
     st.rerun()
 
 
 # ============================================================
-# PAGE ENTRY
+# PAGE
 # ============================================================
 
 def show():
@@ -203,77 +207,64 @@ def show():
 
     hospital_id = current_hospital_id()
 
-    # ------------------------------------------------------
-    # Upgrade sub-flow interceptor
-    # ------------------------------------------------------
-    #
-    # If a PayMongo checkout was created for an upgrade, we
-    # take over the page until the user completes or cancels.
-
+    # PayMongo sub-flow interceptor
     if st.session_state.get(SESSION_RENEWAL_SUCCESS):
-        with st.container(key="ss_page"):
-            if st.session_state.get(SESSION_UPGRADE_FLOW):
-                show_upgrade_success_screen()
-            else:
-                show_renewal_success_screen()
+        _, center, _ = st.columns([1, 6, 1])
+        with center:
+            with st.container(key="ss_page"):
+                if st.session_state.get(SESSION_UPGRADE_FLOW):
+                    show_upgrade_success_screen()
+                else:
+                    show_renewal_success_screen()
         return
 
     if st.session_state.get(SESSION_RENEWAL_PAYMENT):
-        with st.container(key="ss_page"):
-            show_checkout_link_screen()
+        _, center, _ = st.columns([1, 6, 1])
+        with center:
+            with st.container(key="ss_page"):
+                show_checkout_link_screen()
         return
 
-    with st.container(key="ss_page"):
+    _, center, _ = st.columns([1, 6, 1])
 
-        page_header(
-            "Subscription Settings",
-            "Manage your hospital's LungSight plan and billing.",
-        )
+    with center:
+        with st.container(key="ss_page"):
 
-        if not hospital_id:
-            st.error(
-                "Your account is not assigned to a hospital. "
-                "Please contact your Superadmin."
+            page_header(
+                "Subscription Settings",
+                "Manage your hospital's LungSight plan and billing.",
             )
-            return
 
-        # ----------------------------------------------------
-        # Load all data
-        # ----------------------------------------------------
+            if not hospital_id:
+                st.error(
+                    "Your account is not assigned to a hospital. "
+                    "Please contact your Superadmin."
+                )
+                return
 
-        subscription = load_current_subscription(hospital_id)
+            subscription = load_current_subscription(hospital_id)
 
-        if not subscription:
-            st.warning(
-                "No subscription was found for your hospital. "
-                "Please contact support."
+            if not subscription:
+                st.warning(
+                    "No subscription was found for your hospital. "
+                    "Please contact support."
+                )
+                return
+
+            current_plan_id = subscription.get("plan_id")
+            current_plan = load_current_plan(current_plan_id)
+            all_plans = load_all_active_plans()
+            payments = load_payment_history(hospital_id)
+
+            render_current_plan_card(subscription, current_plan)
+            render_scheduled_changes(subscription)
+            render_all_plans(
+                all_plans,
+                current_plan_id,
+                current_plan,
+                subscription,
             )
-            return
-
-        current_plan_id = subscription.get("plan_id")
-        current_plan = load_current_plan(current_plan_id)
-        all_plans = load_all_active_plans()
-        payments = load_payment_history(hospital_id)
-
-        # ----------------------------------------------------
-        # Render sections
-        # ----------------------------------------------------
-
-        render_current_plan_card(
-            subscription,
-            current_plan,
-        )
-
-        render_scheduled_changes(subscription)
-
-        render_all_plans(
-            all_plans,
-            current_plan_id,
-            current_plan,
-            subscription,
-        )
-
-        render_payment_history(payments)
+            render_payment_history(payments)
 
 
 # ============================================================
@@ -320,39 +311,58 @@ def render_current_plan_card(subscription, plan):
         status_label = status
         status_tone = "slate"
 
-    st.markdown(
-        "<div class='ss-current-card'>"
-        "<div class='ss-current-head'>"
-        "<div>"
-        "<p class='ss-current-eyebrow'>Current plan</p>"
-        f"<p class='ss-current-name'>{safe(plan.get('plan_name'))}</p>"
-        "</div>"
-        f"<span class='ss-pill ss-pill-{status_tone}'>{safe(status_label)}</span>"
-        "</div>"
-        f"<p class='ss-current-price'>{peso(price)}"
-        f"<small> / {safe(period)}</small></p>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    # Navy hero card
+    # Left : plan name + price
+    # Right: status pill (top) and Cancel button (below), right-aligned
+    with st.container(key="ss_current_card"):
 
+        left_col, right_col = st.columns(
+            [4, 1.6],
+            vertical_alignment="top",
+        )
+
+        with left_col:
+
+            st.markdown(
+                "<p class='ss-current-eyebrow'>Current plan</p>"
+                f"<p class='ss-current-name'>{safe(plan.get('plan_name'))}</p>"
+                f"<p class='ss-current-price'>{peso(price)}"
+                f"<small> / {safe(period)}</small></p>",
+                unsafe_allow_html=True,
+            )
+
+        with right_col:
+
+            # Status pill on top
+            st.markdown(
+                "<div class='ss-current-pill-wrap'>"
+                f"<span class='ss-pill ss-pill-{status_tone}'>"
+                f"{safe(status_label)}"
+                "</span>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+            # Cancel / Reactivate below the pill, right-aligned
+            render_current_plan_actions(subscription, cancelled)
+
+    # Limits
     st.markdown(
         "<div class='ss-limits'>"
         "<div class='ss-limit'>"
-        f"<b>{limit_text(plan.get('max_users'))}</b>"
-        "<span>Users</span>"
+        f"<b>{limit_text(plan.get('max_users'))}</b><span>Users</span>"
         "</div>"
         "<div class='ss-limit'>"
-        f"<b>{limit_text(plan.get('max_patients'))}</b>"
-        "<span>Patients</span>"
+        f"<b>{limit_text(plan.get('max_patients'))}</b><span>Patients</span>"
         "</div>"
         "<div class='ss-limit'>"
-        f"<b>{limit_text(plan.get('max_xrays_per_month'))}</b>"
-        "<span>X-rays / month</span>"
+        f"<b>{limit_text(plan.get('max_xrays_per_month'))}</b><span>X-rays / month</span>"
         "</div>"
         "</div>",
         unsafe_allow_html=True,
     )
 
+    # Dates
     st.markdown(
         "<div class='ss-dates'>"
         "<div>"
@@ -367,39 +377,32 @@ def render_current_plan_card(subscription, plan):
         unsafe_allow_html=True,
     )
 
-    render_current_plan_actions(subscription, cancelled)
-
 
 def render_current_plan_actions(subscription, cancelled):
+    """Cancel / Reactivate button — right-aligned, below the status pill."""
 
     subscription_id = subscription.get("hospital_subscription_id")
 
     if not subscription_id:
         return
 
-    col_left, col_right, _ = st.columns([1, 1, 3])
-
     if cancelled:
-        with col_left:
-            if st.button(
-                "Reactivate Subscription",
-                key="ss_reactivate_btn",
-                icon=":material/restart_alt:",
-                type="primary",
-                width="stretch",
-            ):
-                open_reactivate_dialog(subscription)
-
-        return
-
-    with col_left:
         if st.button(
-            "Cancel Subscription",
-            key="ss_cancel_btn",
-            icon=":material/cancel:",
+            "Reactivate",
+            key="ss_reactivate_btn",
+            icon=":material/restart_alt:",
             width="stretch",
         ):
-            open_cancel_dialog(subscription)
+            open_reactivate_dialog(subscription)
+        return
+
+    if st.button(
+        "Cancel Subscription",
+        key="ss_cancel_btn",
+        icon=":material/cancel:",
+        width="stretch",
+    ):
+        open_cancel_dialog(subscription)
 
 
 # ============================================================
@@ -527,9 +530,7 @@ def open_reactivate_dialog(subscription):
             result = reactivate_subscription(subscription_id)
 
             if result.get("success"):
-                st.session_state["ss_flash"] = (
-                    "Subscription reactivated."
-                )
+                st.session_state["ss_flash"] = "Subscription reactivated."
                 refresh_after_mutation()
             else:
                 st.error(
@@ -539,14 +540,10 @@ def open_reactivate_dialog(subscription):
 
 
 # ============================================================
-# SCHEDULED CHANGES
+# SCHEDULED CHANGES BANNER
 # ============================================================
 
 def render_scheduled_changes(subscription):
-    """
-    If a downgrade or cancellation is scheduled,
-    show a small info card with an Undo action.
-    """
 
     pending_plan_id = subscription.get("pending_plan_id")
     cancel_at_end = bool(subscription.get("cancel_at_period_end"))
@@ -559,25 +556,13 @@ def render_scheduled_changes(subscription):
 
     with st.container(key="ss_scheduled"):
 
-        # -------------------------------------------------
-        # Cancellation scheduled
-        # -------------------------------------------------
-
         if cancel_at_end:
-            info_col, action_col = st.columns([4, 1])
-
-            with info_col:
-                st.info(
-                    f"Your subscription is scheduled to be cancelled "
-                    f"on **{end_date}**. You can continue using LungSight "
-                    f"until then."
-                )
-
+            st.info(
+                f"Your subscription is scheduled to be cancelled "
+                f"on **{end_date}**. You can continue using LungSight "
+                f"until then."
+            )
             return
-
-        # -------------------------------------------------
-        # Downgrade scheduled
-        # -------------------------------------------------
 
         pending_plan = load_current_plan(pending_plan_id)
         pending_name = (
@@ -616,19 +601,10 @@ def render_scheduled_changes(subscription):
 
 
 # ============================================================
-# ALL PLANS GRID
+# PLANS GRID
 # ============================================================
 
-def render_all_plans(
-    plans,
-    current_plan_id,
-    current_plan,
-    subscription,
-):
-    """
-    Grid of every active plan. Current plan is marked.
-    Non-current plans get an action button.
-    """
+def render_all_plans(plans, current_plan_id, current_plan, subscription):
 
     section_title(
         "Available plans",
@@ -650,21 +626,15 @@ def render_all_plans(
         cols_per_row = 3
 
         for row_start in range(0, len(plans), cols_per_row):
-
             row_plans = plans[row_start: row_start + cols_per_row]
-            columns = st.columns(cols_per_row)
+            columns = st.columns(cols_per_row, gap="medium")
 
             for col, plan in zip(columns, row_plans):
-
                 with col:
                     render_plan_card(
                         plan=plan,
-                        is_current=(
-                            plan.get("plan_id") == current_plan_id
-                        ),
-                        is_scheduled=(
-                            plan.get("plan_id") == pending_plan_id
-                        ),
+                        is_current=(plan.get("plan_id") == current_plan_id),
+                        is_scheduled=(plan.get("plan_id") == pending_plan_id),
                         current_price=current_price,
                         billing_cycle=billing_cycle,
                         subscription=subscription,
@@ -679,73 +649,67 @@ def render_plan_card(
     billing_cycle,
     subscription,
 ):
-    """
-    One plan card in the grid, with an optional action button.
-    """
+    """Render a single plan card (login-page style)."""
 
     plan_name = plan.get("plan_name") or "Unnamed Plan"
-    description = plan.get("description") or ""
+    description = plan.get("description") or "LungSight subscription plan."
     plan_id = plan.get("plan_id")
 
-    price_monthly = plan.get("price_monthly")
-    price_yearly = plan.get("price_yearly")
+    price_monthly = peso(plan.get("price_monthly"))
+    price_yearly = peso(plan.get("price_yearly"))
 
-    max_users = plan.get("max_users")
-    max_patients = plan.get("max_patients")
-    max_xrays = plan.get("max_xrays_per_month")
+    max_users = limit_text(plan.get("max_users"))
+    max_patients = limit_text(plan.get("max_patients"))
+    max_xrays = limit_text(plan.get("max_xrays_per_month"))
 
     if is_current:
         badge_html = (
             "<span class='ss-plan-badge ss-plan-badge-current'>"
-            "Current plan"
-            "</span>"
+            "Current plan</span>"
         )
-        card_class = "ss-plan-card ss-plan-card--current"
-
     elif is_scheduled:
         badge_html = (
             "<span class='ss-plan-badge ss-plan-badge-scheduled'>"
-            "Scheduled"
-            "</span>"
+            "Scheduled</span>"
         )
-        card_class = "ss-plan-card ss-plan-card--scheduled"
-
     else:
         badge_html = ""
-        card_class = "ss-plan-card"
 
-    st.markdown(
-        f"<div class='{card_class}'>"
-        f"<div class='ss-plan-head'>"
-        f"<p class='ss-plan-name'>{safe(plan_name)}</p>"
-        f"{badge_html}"
-        "</div>"
-        + (
-            f"<p class='ss-plan-desc'>{safe(description)}</p>"
-            if description
-            else ""
-        )
-        + f"<p class='ss-plan-price'>{peso(price_monthly)}"
-        f"<small> / month</small></p>"
-        f"<p class='ss-plan-price-alt'>{peso(price_yearly)}"
-        f"<small> / year</small></p>"
-        "<div class='ss-plan-limits'>"
-        f"<div><b>{limit_text(max_users)}</b><span>Users</span></div>"
-        f"<div><b>{limit_text(max_patients)}</b><span>Patients</span></div>"
-        f"<div><b>{limit_text(max_xrays)}</b><span>X-rays / mo</span></div>"
-        "</div>"
+    features = "".join([
+        f"<div class='ss-plan-feature'><span>Users</span><b>{max_users}</b></div>",
+        f"<div class='ss-plan-feature'><span>Patients</span><b>{max_patients}</b></div>",
+        f"<div class='ss-plan-feature'><span>X-rays / month</span><b>{max_xrays}</b></div>",
+    ])
+
+    card_html = "".join([
+        f"<div class='ss-plan-icon'>{ICON_LAYERS}</div>",
+        "<div class='ss-plan-head'>",
+        f"<p class='ss-plan-name'>{safe(plan_name)}</p>",
+        badge_html,
         "</div>",
-        unsafe_allow_html=True,
-    )
+        f"<p class='ss-plan-desc'>{safe(description)}</p>",
+        "<div class='ss-plan-price-row'>",
+        f"<p class='ss-plan-price'>{price_monthly}</p>",
+        "<span>/ month</span>",
+        "</div>",
+        f"<p class='ss-plan-yearly'>or {price_yearly} per year</p>",
+        "<div class='ss-plan-features'>",
+        features,
+        "</div>",
+    ])
 
-    render_plan_action_button(
-        plan=plan,
-        is_current=is_current,
-        is_scheduled=is_scheduled,
-        current_price=current_price,
-        billing_cycle=billing_cycle,
-        subscription=subscription,
-    )
+    with st.container(key=f"ss_plan_card_{plan_id}"):
+
+        st.markdown(card_html, unsafe_allow_html=True)
+
+        render_plan_action_button(
+            plan=plan,
+            is_current=is_current,
+            is_scheduled=is_scheduled,
+            current_price=current_price,
+            billing_cycle=billing_cycle,
+            subscription=subscription,
+        )
 
 
 def render_plan_action_button(
@@ -756,18 +720,20 @@ def render_plan_action_button(
     billing_cycle,
     subscription,
 ):
-    """
-    Decide which action button (if any) to show under a plan card.
-    """
+    """Unified Change Plan button — decides upgrade vs downgrade in the dialog."""
 
     plan_id = plan.get("plan_id")
-    plan_name = plan.get("plan_name") or f"Plan #{plan_id}"
 
-    # Current plan → no button
     if is_current:
+        st.button(
+            "Current plan",
+            key=f"ss_plan_btn_{plan_id}",
+            icon=":material/check_circle:",
+            width="stretch",
+            disabled=True,
+        )
         return
 
-    # Already scheduled → show as disabled "Scheduled"
     if is_scheduled:
         st.button(
             "Scheduled",
@@ -778,63 +744,78 @@ def render_plan_action_button(
         )
         return
 
-    # Compare prices in the SAME billing cycle
     new_price, _ = plan_price_for(plan, billing_cycle)
     new_price = float(new_price or 0)
 
-    # --------------------------------------------------------
-    # Downgrade → schedule for next cycle
-    # --------------------------------------------------------
-
-    if new_price < current_price:
-
-        if st.button(
-            f"Switch to {plan_name}",
-            key=f"ss_plan_btn_{plan_id}",
-            icon=":material/south:",
-            width="stretch",
-        ):
-            open_downgrade_dialog(
-                subscription=subscription,
-                target_plan=plan,
-            )
-
-        return
-
-    # --------------------------------------------------------
-    # Same price → no button
-    # --------------------------------------------------------
-
     if new_price == current_price:
+        st.button(
+            "Change Plan",
+            key=f"ss_plan_btn_{plan_id}",
+            icon=":material/swap_horiz:",
+            width="stretch",
+            disabled=True,
+        )
         return
-
-    # --------------------------------------------------------
-    # Upgrade → prorated charge via PayMongo
-    # --------------------------------------------------------
 
     if st.button(
-        f"Upgrade to {plan_name}",
+        "Change Plan",
         key=f"ss_plan_btn_{plan_id}",
-        icon=":material/north:",
+        icon=":material/swap_horiz:",
         width="stretch",
     ):
-        open_upgrade_dialog(
+        open_change_plan_dialog(
             subscription=subscription,
             target_plan=plan,
+            current_price=current_price,
         )
 
 
 # ============================================================
-# DOWNGRADE DIALOG
+# UNIFIED CHANGE PLAN DIALOG
 # ============================================================
 
-@st.dialog("Schedule Plan Change", width="small")
-def open_downgrade_dialog(subscription, target_plan):
+@st.dialog("Change Plan", width="small")
+def open_change_plan_dialog(subscription, target_plan, current_price):
+    """Opens one dialog that adapts based on target plan price."""
 
     subscription_id = subscription.get("hospital_subscription_id")
-    end_date = format_date(subscription.get("end_date"))
-
+    target_plan_id = target_plan.get("plan_id")
     target_name = target_plan.get("plan_name") or "the new plan"
+
+    if not subscription_id or not target_plan_id:
+        st.error("Missing plan or subscription information.")
+        return
+
+    billing_cycle = subscription.get("billing_cycle") or "Monthly"
+
+    new_price, _ = plan_price_for(target_plan, billing_cycle)
+    new_price = float(new_price or 0)
+
+    if new_price < current_price:
+        _render_downgrade_content(
+            subscription, target_plan, subscription_id, target_name,
+        )
+        return
+
+    if new_price > current_price:
+        _render_upgrade_content(
+            subscription, target_plan, subscription_id,
+            target_plan_id, target_name,
+        )
+        return
+
+    st.info("This plan has the same price as your current plan.")
+
+    if st.button("Close", key="ss_change_close", width="stretch"):
+        st.rerun()
+
+
+def _render_downgrade_content(
+    subscription, target_plan, subscription_id, target_name,
+):
+    """Downgrade branch — schedules the switch for end of cycle."""
+
+    end_date = format_date(subscription.get("end_date"))
 
     st.markdown(
         "<p style='font-size:0.9rem; line-height:1.55; "
@@ -873,7 +854,7 @@ def open_downgrade_dialog(subscription, target_plan):
     with abort_col:
         if st.button(
             "Keep current plan",
-            key="ss_downgrade_abort",
+            key="ss_change_abort",
             width="stretch",
         ):
             st.rerun()
@@ -881,7 +862,7 @@ def open_downgrade_dialog(subscription, target_plan):
     with confirm_col:
         if st.button(
             "Confirm change",
-            key="ss_downgrade_confirm",
+            key="ss_change_confirm_downgrade",
             type="primary",
             icon=":material/check:",
             width="stretch",
@@ -903,24 +884,11 @@ def open_downgrade_dialog(subscription, target_plan):
                 )
 
 
-# ============================================================
-# UPGRADE DIALOG
-# ============================================================
-
-@st.dialog("Upgrade Plan", width="small")
-def open_upgrade_dialog(subscription, target_plan):
-
-    subscription_id = subscription.get("hospital_subscription_id")
-    target_plan_id = target_plan.get("plan_id")
-    target_name = target_plan.get("plan_name") or "the new plan"
-
-    if not subscription_id or not target_plan_id:
-        st.error("Missing plan or subscription information.")
-        return
-
-    # --------------------------------------------------------
-    # Compute proration
-    # --------------------------------------------------------
+def _render_upgrade_content(
+    subscription, target_plan, subscription_id,
+    target_plan_id, target_name,
+):
+    """Upgrade branch — prorated charge via PayMongo."""
 
     with st.spinner("Calculating upgrade cost..."):
 
@@ -941,10 +909,6 @@ def open_upgrade_dialog(subscription, target_plan):
     cycle_days = proration.get("cycle_days", 0)
     old_name = proration.get("old_plan_name") or "your current plan"
 
-    # --------------------------------------------------------
-    # Message
-    # --------------------------------------------------------
-
     st.markdown(
         "<p style='font-size:0.9rem; line-height:1.55; "
         "color:#5A6F7F; margin-bottom:1rem;'>"
@@ -954,10 +918,6 @@ def open_upgrade_dialog(subscription, target_plan):
         "</p>",
         unsafe_allow_html=True,
     )
-
-    # --------------------------------------------------------
-    # Proration info card
-    # --------------------------------------------------------
 
     st.markdown(
         "<div class='ss-dialog-note ss-dialog-note-blue'>"
@@ -988,7 +948,7 @@ def open_upgrade_dialog(subscription, target_plan):
     with cancel_col:
         if st.button(
             "Cancel",
-            key="ss_upgrade_abort",
+            key="ss_change_abort",
             width="stretch",
         ):
             st.rerun()
@@ -996,24 +956,16 @@ def open_upgrade_dialog(subscription, target_plan):
     with confirm_col:
         if st.button(
             "Proceed to PayMongo",
-            key="ss_upgrade_confirm",
+            key="ss_change_confirm_upgrade",
             type="primary",
             icon=":material/arrow_forward:",
             width="stretch",
         ):
-            _start_upgrade_checkout(
-                subscription_id,
-                target_plan_id,
-            )
+            _start_upgrade_checkout(subscription_id, target_plan_id)
 
 
 def _start_upgrade_checkout(subscription_id, target_plan_id):
-    """
-    Called when the user confirms the upgrade dialog.
-
-    Creates the PayMongo session and stores the resulting
-    state so the interceptor in show() takes over the page.
-    """
+    """Create the PayMongo session and hand off to the checkout screen."""
 
     with st.spinner("Preparing checkout..."):
 
@@ -1028,12 +980,8 @@ def _start_upgrade_checkout(subscription_id, target_plan_id):
         )
         return
 
-    # Set the flags the gate's checkout screen watches for
     st.session_state[SESSION_RENEWAL_PAYMENT] = result["payment_id"]
     st.session_state[SESSION_RENEWAL_URL] = result["checkout_url"]
-
-    # Mark this as an upgrade flow so the success screen
-    # shows the right message
     st.session_state[SESSION_UPGRADE_FLOW] = True
 
     st.rerun()
@@ -1044,12 +992,6 @@ def _start_upgrade_checkout(subscription_id, target_plan_id):
 # ============================================================
 
 def show_upgrade_success_screen():
-    """
-    Shown after the upgrade payment is confirmed.
-
-    Mirrors show_renewal_success_screen() but with an
-    upgrade-specific message.
-    """
 
     st.markdown(
         "<div style='text-align:center; margin-bottom:0.5rem;'>"
@@ -1063,8 +1005,7 @@ def show_upgrade_success_screen():
 
     st.markdown(
         "<h2 style='text-align:center; margin-bottom:0.25rem;'>"
-        "Plan Upgraded"
-        "</h2>",
+        "Plan Upgraded</h2>",
         unsafe_allow_html=True,
     )
 
@@ -1092,10 +1033,8 @@ def show_upgrade_success_screen():
         ):
             _reset_renewal_session()
             st.session_state.pop(SESSION_UPGRADE_FLOW, None)
-
             st.session_state.pop("subscription_context", None)
             st.session_state.pop("grace_info", None)
-
             st.rerun()
 
 
@@ -1105,10 +1044,7 @@ def show_upgrade_success_screen():
 
 def render_payment_history(payments):
 
-    section_title(
-        "Recent payments",
-        "Your last five transactions.",
-    )
+    section_title("Recent payments", "Your last five transactions.")
 
     if not payments:
         empty_state("No payments yet.")
@@ -1118,22 +1054,19 @@ def render_payment_history(payments):
 
         st.markdown(
             "<div class='ss-payment-row ss-payment-header'>"
-            "<span>Date</span>"
-            "<span>Type</span>"
-            "<span>Amount</span>"
-            "<span>Status</span>"
+            "<span>Date</span><span>Type</span>"
+            "<span>Amount</span><span>Status</span>"
             "</div>",
             unsafe_allow_html=True,
         )
 
         for payment in payments:
 
-            when = (
+            when = str(
                 payment.get("paid_at")
                 or payment.get("created_at")
                 or "—"
-            )
-            when = str(when)[:10]
+            )[:10]
 
             ptype = payment.get("payment_type") or "—"
             amount = peso(payment.get("amount"))
@@ -1153,8 +1086,10 @@ def render_payment_history(payments):
                 f"<span>{safe(when)}</span>"
                 f"<span class='ss-payment-type'>{safe(ptype)}</span>"
                 f"<span class='ss-payment-amount'>{amount}</span>"
+                "<span class='ss-payment-status-cell'>"
                 f"<span class='ss-pill ss-pill-{tone}'>"
                 f"{safe(status)}</span>"
+                "</span>"
                 "</div>",
                 unsafe_allow_html=True,
             )
