@@ -1,12 +1,15 @@
 /* ==========================================================
    HOSPITAL ADMIN — SUBSCRIPTION SETTINGS
-   shared/theme/css_content/hospital_admin_css/subscription_settings.css
    ========================================================== */
 
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
-/* Define the glyph class globally so it works
-   inside dialogs (which render in a portal) */
+
+/* ----------------------------------------------------------
+   Glyph class (unscoped so dialogs see it)
+   ---------------------------------------------------------- */
+
 .material-symbols-rounded {
   font-family: 'Material Symbols Rounded';
   font-weight: 400;
@@ -25,6 +28,11 @@
   vertical-align: middle;
 }
 
+
+/* ----------------------------------------------------------
+   Tokens
+   ---------------------------------------------------------- */
+
 :root {
   --ss-film:       #F2F6F7;
   --ss-white:      #FFFFFF;
@@ -39,6 +47,10 @@
   --ss-amber-soft: #FEF3C7;
   --ss-red:        #B91C1C;
   --ss-red-soft:   #FEE2E2;
+
+  --ss-navy:       #102D40;
+  --ss-navy-2:     #183F55;
+  --ss-navy-3:     #1D4156;
 
   --ss-font-display: 'Fraunces', Georgia, serif;
   --ss-font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -56,66 +68,55 @@
 .st-key-ss_page {
   font-family: var(--ss-font-body);
   color: var(--ss-ink);
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 
 /* ----------------------------------------------------------
-   Pills
+   Pills  (fit their text)
    ---------------------------------------------------------- */
 
 .st-key-ss_page .ss-pill {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.65rem;
+  justify-content: center;
+  width: fit-content;
+  padding: 0.25rem 0.7rem;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
   line-height: 1;
+  white-space: nowrap;
 }
 
-.st-key-ss_page .ss-pill-green {
-  background: var(--ss-green-soft);
-  color: var(--ss-green);
-}
-
-.st-key-ss_page .ss-pill-amber {
-  background: var(--ss-amber-soft);
-  color: var(--ss-amber);
-}
-
-.st-key-ss_page .ss-pill-red {
-  background: var(--ss-red-soft);
-  color: var(--ss-red);
-}
-
-.st-key-ss_page .ss-pill-slate {
-  background: var(--ss-film);
-  color: var(--ss-slate);
-}
+.st-key-ss_page .ss-pill-green { background: var(--ss-green-soft); color: var(--ss-green); }
+.st-key-ss_page .ss-pill-amber { background: var(--ss-amber-soft); color: var(--ss-amber); }
+.st-key-ss_page .ss-pill-red   { background: var(--ss-red-soft);   color: var(--ss-red); }
+.st-key-ss_page .ss-pill-slate { background: var(--ss-film);       color: var(--ss-slate); }
 
 
-/* ----------------------------------------------------------
-   Current plan card (hero)
-   ---------------------------------------------------------- */
+/* ==========================================================
+   Current plan hero card
+   ========================================================== */
 
-.st-key-ss_page .ss-current-card {
-  padding: 1.4rem 1.6rem 1.25rem;
-  background: var(--ss-ink);
-  border: 1px solid var(--ss-ink);
+.st-key-ss_current_card {
+  padding: 1.4rem 1.6rem 1.4rem;
+  background: var(--ss-navy);
+  border: 1px solid var(--ss-navy);
   border-radius: var(--ss-radius-lg);
-  box-shadow: 0 16px 34px -18px rgba(18, 40, 58, 0.55);
+  box-shadow: 0 16px 34px -18px rgba(16, 45, 64, 0.55);
   margin-bottom: 1rem;
 }
 
-.st-key-ss_page .ss-current-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+.st-key-ss_current_card [data-testid="stHorizontalBlock"] {
   gap: 1rem;
+  align-items: flex-start;
 }
 
-.st-key-ss_page .ss-current-eyebrow {
+.st-key-ss_current_card .ss-current-eyebrow {
   margin: 0;
   font-size: 0.72rem;
   font-weight: 600;
@@ -124,22 +125,24 @@
   letter-spacing: 0.08em;
 }
 
-.st-key-ss_page .ss-current-name {
-  margin: 0.3rem 0 0.6rem;
+.st-key-ss_current_card .ss-current-name {
+  margin: 0.35rem 0 0.6rem;
   font-family: var(--ss-font-display);
-  font-size: 1.5rem;
+  font-size: 1.55rem;
   font-weight: 600;
   color: #FFFFFF;
+  line-height: 1.15;
 }
 
-.st-key-ss_page .ss-current-price {
+.st-key-ss_current_card .ss-current-price {
   margin: 0;
   font-size: 1.7rem;
   font-weight: 700;
   color: #FFFFFF;
+  line-height: 1.1;
 }
 
-.st-key-ss_page .ss-current-price small {
+.st-key-ss_current_card .ss-current-price small {
   font-size: 0.85rem;
   font-weight: 500;
   color: #A9BAC7;
@@ -147,7 +150,89 @@
 
 
 /* ----------------------------------------------------------
-   Limits row
+   Right column: status pill on top, Cancel below — right-aligned
+   ---------------------------------------------------------- */
+
+/* Pill wrapper — pushes the pill to the far right */
+.st-key-ss_current_card .ss-current-pill-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.6rem;
+}
+
+/* Button wrapper — right-align the button inside its column */
+.st-key-ss_current_card [data-testid="stButton"] {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.st-key-ss_current_card [data-testid="stButton"] > button {
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+
+/* ----------------------------------------------------------
+   Cancel / Reactivate button
+   ---------------------------------------------------------- */
+
+.st-key-ss_cancel_btn button {
+  background: var(--ss-red) !important;
+  border: 1px solid var(--ss-red) !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+  padding: 0.4rem 0.9rem !important;
+  border-radius: 8px !important;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.st-key-ss_cancel_btn button p {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+}
+
+.st-key-ss_cancel_btn button:hover {
+  background: #FFFFFF !important;
+  border-color: #FFFFFF !important;
+  color: var(--ss-red) !important;
+}
+
+.st-key-ss_cancel_btn button:hover p {
+  color: var(--ss-red) !important;
+}
+
+.st-key-ss_reactivate_btn button {
+  background: var(--ss-teal) !important;
+  border: 1px solid var(--ss-teal) !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+  padding: 0.4rem 0.9rem !important;
+  border-radius: 8px !important;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.st-key-ss_reactivate_btn button p {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+}
+
+.st-key-ss_reactivate_btn button:hover {
+  background: #FFFFFF !important;
+  border-color: #FFFFFF !important;
+  color: var(--ss-teal) !important;
+}
+
+.st-key-ss_reactivate_btn button:hover p {
+  color: var(--ss-teal) !important;
+}
+
+
+/* ----------------------------------------------------------
+   Limits + dates
    ---------------------------------------------------------- */
 
 .st-key-ss_page .ss-limits {
@@ -158,7 +243,7 @@
 }
 
 .st-key-ss_page .ss-limit {
-  padding: 0.75rem 0.9rem;
+  padding: 0.85rem 0.9rem;
   background: var(--ss-white);
   border: 1px solid var(--ss-mist);
   border-radius: var(--ss-radius-md);
@@ -167,7 +252,7 @@
 
 .st-key-ss_page .ss-limit b {
   display: block;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--ss-ink);
 }
@@ -178,11 +263,6 @@
   font-size: 0.72rem;
   color: var(--ss-slate);
 }
-
-
-/* ----------------------------------------------------------
-   Dates row
-   ---------------------------------------------------------- */
 
 .st-key-ss_page .ss-dates {
   display: grid;
@@ -212,166 +292,234 @@
 }
 
 
-/* ----------------------------------------------------------
-   Plans grid
-   ---------------------------------------------------------- */
+/* ==========================================================
+   Plan cards
+   ==========================================================
+   The hover effect uses a CENTERED shadow (0px Y offset,
+   large blur, no negative spread) so the glow surrounds
+   the entire card on all four sides.
+   ========================================================== */
 
-.st-key-ss_plans_grid {
-  margin-top: 0.5rem;
-}
-
-.st-key-ss_page .ss-plan-card {
-  padding: 1rem 1.1rem 1.1rem;
-  background: var(--ss-white);
-  border: 1px solid var(--ss-mist);
-  border-radius: var(--ss-radius-md);
-  height: 100%;
+[class*="st-key-ss_plan_card_"] {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  min-height: 440px;
+  padding: 1.35rem 1.25rem 1.25rem;
+  background: var(--ss-navy);
+  border: 1px solid var(--ss-navy-2);
+  border-radius: var(--ss-radius-lg);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.10);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  height: 100%;
 }
 
-.st-key-ss_page .ss-plan-card--current {
-  border-color: var(--ss-teal);
-  box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.12);
+/* Hover — centered glow that surrounds the whole card */
+[class*="st-key-ss_plan_card_"]:hover {
+  transform: translateY(-6px);
+  border-color: #4A7A92;
+  box-shadow:
+    0 0 0 1px rgba(74, 122, 146, 0.35),
+    0 16px 45px rgba(0, 0, 0, 0.55),
+    0 0 32px rgba(0, 0, 0, 0.35);
 }
 
-.st-key-ss_page .ss-plan-head {
+/* Current plan → teal ring */
+.st-key-ss_page [class*="st-key-ss_plan_card_"]:has(.ss-plan-badge-current) {
+  border-color: #2BB6C4;
+  box-shadow:
+    0 0 0 3px rgba(43, 182, 196, 0.18),
+    0 4px 12px rgba(16, 45, 64, 0.16);
+}
+
+.st-key-ss_page [class*="st-key-ss_plan_card_"]:has(.ss-plan-badge-current):hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 0 0 3px rgba(43, 182, 196, 0.28),
+    0 16px 45px rgba(0, 0, 0, 0.55),
+    0 0 32px rgba(0, 0, 0, 0.35);
+}
+
+/* Scheduled → amber ring */
+.st-key-ss_page [class*="st-key-ss_plan_card_"]:has(.ss-plan-badge-scheduled) {
+  border-color: #E7B96A;
+  box-shadow:
+    0 0 0 3px rgba(231, 185, 106, 0.18),
+    0 4px 12px rgba(16, 45, 64, 0.16);
+}
+
+/* Force inner wrappers to flex so the button pins to the bottom */
+[class*="st-key-ss_plan_card_"] > div {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+}
+
+
+/* Card contents */
+
+[class*="st-key-ss_plan_card_"] .ss-plan-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 1rem;
+  border-radius: 9px;
+  background: var(--ss-navy-3);
+  border: 1px solid #35596B;
+  color: #8EEBFF;
+}
+
+[class*="st-key-ss_plan_card_"] .ss-plan-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+[class*="st-key-ss_plan_card_"] .ss-plan-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.3rem;
 }
 
-.st-key-ss_page .ss-plan-name {
+[class*="st-key-ss_plan_card_"] .ss-plan-name {
   margin: 0;
+  color: #FFFFFF;
   font-family: var(--ss-font-display);
-  font-size: 1.05rem;
+  font-size: 1.3rem;
   font-weight: 600;
-  color: var(--ss-ink);
+  line-height: 1.15;
 }
 
-.st-key-ss_page .ss-plan-badge {
+[class*="st-key-ss_plan_card_"] .ss-plan-desc {
+  min-height: 2.8rem;
+  margin: 0.35rem 0 1.1rem;
+  color: #D7E5EA;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+[class*="st-key-ss_plan_card_"] .ss-plan-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.15rem 0.55rem;
+  padding: 0.18rem 0.55rem;
   border-radius: 999px;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.st-key-ss_page .ss-plan-badge-current {
-  background: var(--ss-teal-soft);
-  color: var(--ss-teal);
-}
-
-.st-key-ss_page .ss-plan-desc {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--ss-slate);
-  line-height: 1.45;
-}
-
-.st-key-ss_page .ss-plan-price {
-  margin: 0.35rem 0 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--ss-ink);
-}
-
-.st-key-ss_page .ss-plan-price small {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--ss-slate);
-}
-
-.st-key-ss_page .ss-plan-price-alt {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--ss-slate);
-}
-
-.st-key-ss_page .ss-plan-price-alt small {
-  font-size: 0.7rem;
-}
-
-.st-key-ss_page .ss-plan-limits {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.4rem;
-  margin-top: 0.6rem;
-  padding-top: 0.6rem;
-  border-top: 1px solid var(--ss-mist);
-}
-
-.st-key-ss_page .ss-plan-limits > div {
-  text-align: center;
-}
-
-.st-key-ss_page .ss-plan-limits b {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--ss-ink);
-}
-
-.st-key-ss_page .ss-plan-limits span {
-  display: block;
-  font-size: 0.65rem;
-  color: var(--ss-slate);
-}
-
-
-/* ----------------------------------------------------------
-   Payment history
-   ---------------------------------------------------------- */
-
-.st-key-ss_payments {
-  margin-top: 0.25rem;
-}
-
-.st-key-ss_page .ss-payment-row {
-  display: grid;
-  grid-template-columns: 1.2fr 1.2fr 1fr 1fr;
-  gap: 0.75rem;
-  align-items: center;
-  padding: 0.65rem 0.9rem;
-  border-bottom: 1px solid var(--ss-mist);
-  font-size: 0.85rem;
-  color: var(--ss-slate);
-}
-
-.st-key-ss_page .ss-payment-row:last-child {
-  border-bottom: none;
-}
-
-.st-key-ss_page .ss-payment-header {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--ss-slate);
-  background: var(--ss-film);
-  border-radius: var(--ss-radius-sm);
-  border-bottom: none;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.st-key-ss_page .ss-payment-type {
-  text-transform: capitalize;
-  color: var(--ss-ink);
-  font-weight: 600;
+[class*="st-key-ss_plan_card_"] .ss-plan-badge-current {
+  background: rgba(43, 182, 196, 0.20);
+  color: #8EEBFF;
+  border: 1px solid #3B667B;
 }
 
-.st-key-ss_page .ss-payment-amount {
+[class*="st-key-ss_plan_card_"] .ss-plan-badge-scheduled {
+  background: rgba(231, 185, 106, 0.20);
+  color: #F5D08A;
+  border: 1px solid #8A6A34;
+}
+
+[class*="st-key-ss_plan_card_"] .ss-plan-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin-top: auto;
+}
+
+[class*="st-key-ss_plan_card_"] .ss-plan-price {
+  margin: 0;
+  color: #FFFFFF;
+  font-size: 1.6rem;
   font-weight: 700;
-  color: var(--ss-ink);
+  line-height: 1;
 }
+
+[class*="st-key-ss_plan_card_"] .ss-plan-price-row span {
+  color: #BFD3DB;
+  font-size: 0.75rem;
+}
+
+[class*="st-key-ss_plan_card_"] .ss-plan-yearly {
+  margin: 0.3rem 0 1rem;
+  color: #AFC6D0;
+  font-size: 0.72rem;
+}
+
+[class*="st-key-ss_plan_card_"] .ss-plan-features {
+  width: 100%;
+  margin: 0 0 1rem;
+  border-top: 1px solid #315365;
+}
+
+[class*="st-key-ss_plan_card_"] .ss-plan-feature {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  border-bottom: 1px solid #315365;
+}
+
+[class*="st-key-ss_plan_card_"] .ss-plan-feature span {
+  color: #C7D9E0;
+  font-size: 0.76rem;
+}
+
+[class*="st-key-ss_plan_card_"] .ss-plan-feature b {
+  color: #FFFFFF;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+
+/* Button inside the card */
+
+[class*="st-key-ss_plan_card_"] [data-testid="stButton"] {
+  margin-top: auto;
+  width: 100%;
+}
+
+[class*="st-key-ss_plan_card_"] [data-testid^="stBaseButton"] {
+  width: 100%;
+  background: transparent !important;
+  border: 1px solid #8FAFBE !important;
+  border-radius: 8px !important;
+  padding: 0.55rem 1rem !important;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+[class*="st-key-ss_plan_card_"] [data-testid^="stBaseButton"] p {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+[class*="st-key-ss_plan_card_"] [data-testid^="stBaseButton"]:hover {
+  background: #FFFFFF !important;
+  border-color: #FFFFFF !important;
+}
+
+[class*="st-key-ss_plan_card_"] [data-testid^="stBaseButton"]:hover p {
+  color: var(--ss-navy) !important;
+}
+
+[class*="st-key-ss_plan_card_"] [data-testid^="stBaseButton"][disabled] {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: #3B667B !important;
+  opacity: 1 !important;
+}
+
+[class*="st-key-ss_plan_card_"] [data-testid^="stBaseButton"][disabled] p {
+  color: #C7D9E0 !important;
+  opacity: 0.85;
+}
+
 
 /* ----------------------------------------------------------
-   Dialog notes (Cancel / Reactivate confirms)
+   Dialog notes
    ---------------------------------------------------------- */
 
 .st-key-ss_page .ss-dialog-note {
@@ -410,39 +558,6 @@
   color: var(--ss-green);
 }
 
-/* ----------------------------------------------------------
-   Scheduled badge (Step 6)
-   ---------------------------------------------------------- */
-
-.st-key-ss_page .ss-plan-badge-scheduled {
-  background: var(--ss-amber-soft);
-  color: var(--ss-amber);
-}
-
-.st-key-ss_page .ss-plan-card--scheduled {
-  border-color: var(--ss-amber);
-  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.12);
-}
-
-/* ----------------------------------------------------------
-   Scheduled badge
-   ---------------------------------------------------------- */
-
-.st-key-ss_page .ss-plan-badge-scheduled {
-  background: var(--ss-amber-soft);
-  color: var(--ss-amber);
-}
-
-.st-key-ss_page .ss-plan-card--scheduled {
-  border-color: var(--ss-amber);
-  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.12);
-}
-
-
-/* ----------------------------------------------------------
-   Dialog notes — blue (for upgrade proration)
-   ---------------------------------------------------------- */
-
 .st-key-ss_page .ss-dialog-note-blue {
   background: var(--ss-teal-soft);
   border: 1px solid #A7D8DE;
@@ -455,10 +570,59 @@
 
 
 /* ----------------------------------------------------------
+   Payment history
+   ---------------------------------------------------------- */
+
+.st-key-ss_page .ss-payment-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr 1fr 0.9fr;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--ss-mist);
+  font-size: 0.85rem;
+  color: var(--ss-slate);
+}
+
+.st-key-ss_page .ss-payment-row:last-child { border-bottom: none; }
+
+.st-key-ss_page .ss-payment-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ss-slate);
+  background: var(--ss-film);
+  border-radius: var(--ss-radius-sm);
+  border-bottom: none;
+}
+
+.st-key-ss_page .ss-payment-type {
+  text-transform: capitalize;
+  color: var(--ss-ink);
+  font-weight: 600;
+}
+
+.st-key-ss_page .ss-payment-amount {
+  font-weight: 700;
+  color: var(--ss-ink);
+}
+
+.st-key-ss_page .ss-payment-status-cell {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+}
+
+
+/* ----------------------------------------------------------
    Responsive
    ---------------------------------------------------------- */
 
 @media (max-width: 900px) {
+  .st-key-ss_page { max-width: 100%; }
+
   .st-key-ss_page .ss-payment-row {
     grid-template-columns: 1fr 1fr;
     gap: 0.4rem;
@@ -466,15 +630,12 @@
 }
 
 @media (max-width: 640px) {
-  .st-key-ss_page .ss-limits {
-    grid-template-columns: 1fr;
-  }
-
+  .st-key-ss_page .ss-limits,
   .st-key-ss_page .ss-dates {
     grid-template-columns: 1fr;
   }
 
-  .st-key-ss_page .ss-current-name {
-    font-size: 1.25rem;
-  }
+  .st-key-ss_page .ss-current-name { font-size: 1.25rem; }
+
+  [class*="st-key-ss_plan_card_"] { min-height: 0; }
 }
