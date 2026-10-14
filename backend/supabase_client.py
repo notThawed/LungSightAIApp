@@ -64,6 +64,8 @@ def get_secret(name):
 
     return os.getenv(name)
 
+load_dotenv(Path(__file__).parent / ".env")
+
 
 SUPABASE_URL = get_secret(
     "SUPABASE_URL"
