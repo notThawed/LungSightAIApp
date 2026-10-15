@@ -1,3 +1,5 @@
+import streamlit as st
+
 from components.sidebar import show_physician_sidebar
 from components.navbar import show_top_navbar
 
@@ -7,6 +9,21 @@ from pages.hospital_administrator import subscription_gate
 def show_physician_layout():
 
     page = show_physician_sidebar()
+
+    last_page = st.session_state.get("_physician_last_page")
+
+    if last_page != page:
+        for key in (
+            "physician_selected_patient",
+            "physician_selected_category",
+            "physician_selected_examination",
+            "pr_external_record",
+            "pr_external_displayed",
+        ):
+            st.session_state.pop(key, None)
+
+    st.session_state["_physician_last_page"] = page
+
 
     page_info = {
         "Dashboard": "Track your patient workload, case highlights, and current diagnostic activity.",

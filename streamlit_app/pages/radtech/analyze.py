@@ -52,6 +52,10 @@ RADTECH_ROLES = [ROLE_RADTECH]
 AI_MODEL_VERSION = "pneumonia_resnet50_v1"
 CLASSIFICATION_MODEL_VERSION = "pneumonia_densenet121_v1"
 
+# Session keys for the modal analysis flow
+ANALYSIS_STATE_KEY = "rx_analysis_state"        # None | "running" | "complete"
+ANALYSIS_RESULT_KEY = "radtech_analysis_result" # final result dict
+
 
 # ============================================================
 # HELPERS
@@ -73,6 +77,16 @@ def current_user_id():
     return current_user().get("user_id")
 
 
+def current_user_name():
+    user = current_user()
+    return full_name(
+        user.get("first_name"),
+        user.get("middle_name"),
+        user.get("last_name"),
+        user.get("suffix"),
+    ) or "—"
+
+
 def patient_name(patient):
     return full_name(
         patient.get("first_name"),
@@ -89,7 +103,8 @@ def patient_code(patient):
 def clear_active_examination():
     st.session_state.pop("radtech_active_examination", None)
     st.session_state.pop("radtech_active_patient", None)
-    st.session_state.pop("radtech_analysis_result", None)
+    st.session_state.pop(ANALYSIS_RESULT_KEY, None)
+    st.session_state.pop(ANALYSIS_STATE_KEY, None)
 
 
 def go_back_to_queue():
@@ -98,13 +113,22 @@ def go_back_to_queue():
     st.rerun()
 
 
+def timestamp_now():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+
+
+def reset_analysis_state():
+    """Clear the analysis flow state."""
+    st.session_state[ANALYSIS_STATE_KEY] = None
+    st.session_state.pop(ANALYSIS_RESULT_KEY, None)
+
+
 # ============================================================
 # SUBSCRIPTION GUARD
 # ============================================================
 
 def check_subscription():
     hospital_id = current_hospital_id()
-
     check = can_analyze_xray(hospital_id)
 
     if not check.get("allowed"):
@@ -120,7 +144,7 @@ def check_subscription():
 
 
 # ============================================================
-# CONTEXT CARD (queue mode only)
+# CONTEXT CARD
 # ============================================================
 
 def render_context_card(patient, examination, request):
@@ -146,7 +170,7 @@ def render_context_card(patient, examination, request):
 
 
 # ============================================================
-# EMPTY RESULTS STATE (right panel)
+# EMPTY RIGHT PANEL
 # ============================================================
 
 def render_empty_results():
@@ -154,10 +178,11 @@ def render_empty_results():
     st.markdown(
         "<div class='rx-empty'>"
         "<div class='rx-empty-icon'>crop_free</div>"
-        "<p class='rx-empty-title'>Results Will Appear Here</p>"
+        "<p class='rx-empty-title'>Submission Summary</p>"
         "<p class='rx-empty-text'>"
-        "Upload an X-ray image and click \"Analyze\" to see "
-        "the AI detection results with heatmap visualization."
+        "Upload an X-ray image and click "
+        "\"Analyze Image\" to submit it for "
+        "physician review."
         "</p>"
         "</div>",
         unsafe_allow_html=True,
@@ -165,17 +190,16 @@ def render_empty_results():
 
 
 # ============================================================
-# PROGRESS HTML BUILDER
-# Pure HTML string — no keyed containers, no stacking issues
+# PROGRESS STEP HTML
 # ============================================================
 
-def _progress_html(current_step):
+def _progress_steps_html(current_step):
 
     steps = [
         "Image preprocessed",
         "Running AI detection model...",
-        "Generating heatmap",
-        "Preparing report",
+        "Running pneumonia classification...",
+        "Preparing summary",
     ]
 
     rows = []
@@ -201,173 +225,50 @@ def _progress_html(current_step):
 
     return (
         "<div class='rx-progress-card'>"
-        "<p class='rx-progress-title'>Analysis in Progress</p>"
         + "".join(rows)
         + "</div>"
     )
 
 
 # ============================================================
-# RESULT PANEL
+# MODAL — Analysis in progress
+# ============================================================
+#
+# Runs the whole analysis in a SINGLE script run, updating
+# a placeholder between steps. Only ONE st.rerun() at the
+# very end to transition to the "complete" state.
+#
+# This avoids the flicker caused by multiple mid-flow reruns.
 # ============================================================
 
-def render_result_panel(result, image_bytes):
+@st.dialog("Analyzing X-Ray", width="small")
+def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
 
-    st.markdown(
-        "<p class='rx-panel-title'>Analysis Result - Heatmap</p>",
-        unsafe_allow_html=True,
-    )
-
-    with st.container(key="rx_preview_result"):
-        st.image(image_bytes, width="stretch")
-
-    st.markdown(
-        "<p class='rx-result-caption'>"
-        "Red/yellow areas indicate regions of concern detected by AI"
-        "</p>",
-        unsafe_allow_html=True,
-    )
-
-    # ----------------------------------------------------
-    # DIAGNOSIS SUMMARY
-    # ----------------------------------------------------
-
-    st.markdown(
-        "<p class='rx-summary-title'>Diagnosis Summary</p>",
-        unsafe_allow_html=True,
-    )
-
-    label = result.get("label", "unknown")
-    confidence = result.get("confidence", 0.0)
-
-    is_positive = str(label).lower() == "positive"
-
-    risk_label = "High Risk" if is_positive else "Low Risk"
-    risk_tone = "red" if is_positive else "green"
-    confidence_pct = f"{confidence * 100:.1f}%"
-
-    # Risk row
-    st.markdown(
-        "<div class='rx-summary-row'>"
-        "<span>Risk Level</span>"
-        f"<div>{pill(risk_label, risk_tone)}</div>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
-
-    # Confidence row
-    st.markdown(
-        "<div class='rx-summary-row'>"
-        "<span>Confidence Score</span>"
-        f"<b>{confidence_pct}</b>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
-
-    # Pneumonia type classification
-    pneumonia_type = result.get("pneumonia_type")
-    classification_confidence = result.get(
-        "classification_confidence"
-    )
-
-    if pneumonia_type:
-        type_label = {
-            "bacterial_pneumonia": "Bacterial Pneumonia",
-            "viral_pneumonia": "Viral Pneumonia",
-        }.get(pneumonia_type, pneumonia_type.replace("_", " ").title())
-
-        st.markdown(
-            "<div class='rx-summary-row'>"
-            "<span>Pneumonia Classification</span>"
-            f"<b>{type_label}</b>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-        if classification_confidence is not None:
-            type_confidence_pct = (
-                f"{classification_confidence * 100:.1f}%"
-            )
-
-            st.markdown(
-                "<div class='rx-summary-row'>"
-                "<span>Classification Confidence</span>"
-                f"<b>{type_confidence_pct}</b>"
-                "</div>",
-                unsafe_allow_html=True,
-            )
-    elif str(result.get("label", "")).lower() == "negative":
-        st.markdown(
-            "<div class='rx-summary-row'>"
-            "<span>Pneumonia Classification</span>"
-            "<b>Not applicable — negative screening result</b>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-    # Findings box
-    if is_positive:
-
-        finding_text = (
-            "The AI model has detected patterns consistent "
-            "with <b>pneumonia</b>. Recommend clinical "
-            "correlation and follow-up with the treating "
-            "physician."
-        )
-
-        st.markdown(
-            "<div class='rx-findings rx-findings-positive'>"
-            "<p class='rx-findings-title'>AI Findings</p>"
-            f"<p class='rx-findings-text'>{finding_text}</p>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-    else:
-
-        finding_text = (
-            "The AI model has <b>not</b> detected patterns "
-            "consistent with pneumonia. Continue standard "
-            "clinical evaluation."
-        )
-
-        st.markdown(
-            "<div class='rx-findings rx-findings-negative'>"
-            "<p class='rx-findings-title'>AI Findings</p>"
-            f"<p class='rx-findings-text'>{finding_text}</p>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-
-# ============================================================
-# ANALYSIS RUNNER
-# ============================================================
-
-
-def run_analysis(uploaded_file, examination, patient, request):
-
-    progress_placeholder = st.empty()
+    status = st.empty()
     image_bytes = uploaded_file.getvalue()
 
-    # Step 0 — Image preprocessing status
-    progress_placeholder.markdown(
-        _progress_html(0),
+    # --------------------------------------------------------
+    # Step 0 — Preprocessing
+    # --------------------------------------------------------
+
+    status.markdown(
+        _progress_steps_html(0),
         unsafe_allow_html=True,
     )
-
     time.sleep(0.4)
 
-    # Step 1 — ResNet-50 pneumonia detection
-    progress_placeholder.markdown(
-        _progress_html(1),
+    # --------------------------------------------------------
+    # Step 1 — ResNet-50 detection
+    # --------------------------------------------------------
+
+    status.markdown(
+        _progress_steps_html(1),
         unsafe_allow_html=True,
     )
 
     try:
         result = predict(image_bytes)
 
-        # Normalize and validate the first model's label.
         label = str(result.get("label", "")).strip().lower()
 
         if label not in ("positive", "negative"):
@@ -380,25 +281,23 @@ def run_analysis(uploaded_file, examination, patient, request):
         result["classification_confidence"] = None
         result["classification_model_version"] = None
 
-        # Step 2 — Run DenseNet-121 only for positive cases.
-        if label == "positive":
-            progress_placeholder.markdown(
-                "<div class='rx-progress-card'>"
-                "<p class='rx-progress-title'>Analysis in Progress</p>"
-                "<div class='rx-step rx-step-done'>"
-                "<span class='rx-step-icon'>✓</span>"
-                "<span class='rx-step-label'>ResNet-50 detection complete</span>"
-                "</div>"
-                "<div class='rx-step rx-step-active'>"
-                "<span class='rx-step-icon'>⟳</span>"
-                "<span class='rx-step-label'>Running DenseNet-121 pneumonia classification...</span>"
-                "</div>"
-                "</div>",
-                unsafe_allow_html=True,
-            )
+    except Exception as error:
+        st.error(f"AI prediction failed: {error}")
+        return
 
+    # --------------------------------------------------------
+    # Step 2 — DenseNet-121 (only for positive cases)
+    # --------------------------------------------------------
+
+    if label == "positive":
+
+        status.markdown(
+            _progress_steps_html(2),
+            unsafe_allow_html=True,
+        )
+
+        try:
             type_result = predict_type(image_bytes)
-            print("DEBUG - Full DenseNet result:", type_result)
 
             type_label = str(
                 type_result.get("label", "")
@@ -413,7 +312,6 @@ def run_analysis(uploaded_file, examination, patient, request):
                 )
 
             result["pneumonia_type"] = type_label
-
             result["classification_confidence"] = float(
                 type_result["confidence"]
             )
@@ -421,43 +319,159 @@ def run_analysis(uploaded_file, examination, patient, request):
                 CLASSIFICATION_MODEL_VERSION
             )
 
-            print("DEBUG - Pneumonia type:", result["pneumonia_type"])
-            print(
-                "DEBUG - Classification confidence:",
-                result["classification_confidence"],
-            )
+        except Exception as error:
+            st.error(f"AI classification failed: {error}")
+            return
 
-    except Exception as error:
-        progress_placeholder.empty()
-        st.error(f"AI prediction failed: {error}")
-        return
+    # --------------------------------------------------------
+    # Step 3 — Preparing summary
+    # --------------------------------------------------------
 
-    # Step 3 — Prepare report
-    progress_placeholder.markdown(
-        _progress_html(3),
+    status.markdown(
+        _progress_steps_html(3),
         unsafe_allow_html=True,
     )
-
     time.sleep(0.4)
 
-    # Store both model outputs for the save step.
-    progress_placeholder.empty()
-    st.session_state["radtech_analysis_result"] = result
+    # --------------------------------------------------------
+    # Analysis done → switch to "complete" state
+    # --------------------------------------------------------
+
+    st.session_state[ANALYSIS_RESULT_KEY] = result
+    st.session_state[ANALYSIS_STATE_KEY] = "complete"
 
     st.rerun()
 
+
+# ============================================================
+# MODAL — Analysis complete
+# ============================================================
+
+@st.dialog("Analysis Complete", width="small")
+def show_analysis_complete_dialog():
+
+    st.markdown(
+        "<div class='rx-dialog-done'>"
+        "<span class='rx-dialog-check'>check_circle</span>"
+        "<p class='rx-dialog-done-title'>Analysis Successful</p>"
+        "<p class='rx-dialog-done-text'>"
+        "The X-ray has been processed and is ready "
+        "to be submitted for physician review."
+        "</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    if st.button(
+        "Continue to Summary",
+        key="rx_dialog_continue",
+        type="primary",
+        width="stretch",
+        icon=":material/arrow_forward:",
+    ):
+        st.session_state[ANALYSIS_STATE_KEY] = None
+        st.rerun()
+
+
+# ============================================================
+# SUBMISSION SUMMARY PANEL
+# ============================================================
+
+def render_submission_summary(request, patient, uploaded_file, result):
+
+    st.markdown(
+        "<p class='rx-panel-title'>Submission Summary</p>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<div class='rx-submission-banner'>"
+        "<span class='rx-submission-icon'>check_circle</span>"
+        "<div>"
+        "<p class='rx-submission-title'>Analysis Complete</p>"
+        "<p class='rx-submission-text'>"
+        "The X-ray has been processed and is ready "
+        "for physician review."
+        "</p>"
+        "</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<div class='rx-summary-card'>"
+
+        "<div class='rx-summary-row'>"
+        "<span>Request ID</span>"
+        f"<b>{request.get('request_id', '—')}</b>"
+        "</div>"
+
+        "<div class='rx-summary-row'>"
+        "<span>Patient</span>"
+        f"<b>{patient_name(patient)}</b>"
+        "</div>"
+
+        "<div class='rx-summary-row'>"
+        "<span>Patient Code</span>"
+        f"<b>{patient_code(patient)}</b>"
+        "</div>"
+
+        "<div class='rx-summary-row'>"
+        "<span>Body Part</span>"
+        f"<b>{request.get('body_part') or 'Chest'}</b>"
+        "</div>"
+
+        "<div class='rx-summary-row'>"
+        "<span>Priority</span>"
+        f"<b>{request.get('priority') or 'Routine'}</b>"
+        "</div>"
+
+        "<div class='rx-summary-row'>"
+        "<span>Image File</span>"
+        f"<b>{uploaded_file.name}</b>"
+        "</div>"
+
+        "<div class='rx-summary-row'>"
+        "<span>Image Quality</span>"
+        "<b>Passed</b>"
+        "</div>"
+
+        "<div class='rx-summary-row'>"
+        "<span>AI Processing</span>"
+        "<b>Complete</b>"
+        "</div>"
+
+        "<div class='rx-summary-row'>"
+        "<span>Submitted</span>"
+        f"<b>{timestamp_now()}</b>"
+        "</div>"
+
+        "<div class='rx-summary-row'>"
+        "<span>Submitted By</span>"
+        f"<b>{current_user_name()}</b>"
+        "</div>"
+
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<p class='rx-summary-note'>"
+        "The X-ray has been submitted to the physician's "
+        "queue for review and interpretation."
+        "</p>",
+        unsafe_allow_html=True,
+    )
 
 
 # ============================================================
 # SAVE WORKFLOW
 # ============================================================
 
-
 def save_analysis(uploaded_file, result, examination, request, patient):
 
     user_id = current_user_id()
 
-    # 1. Upload the X-ray image.
     upload_result = upload_xray_image(
         request_id=request["request_id"],
         file_bytes=uploaded_file.getvalue(),
@@ -471,7 +485,6 @@ def save_analysis(uploaded_file, result, examination, request, patient):
 
     image_id = upload_result["image_id"]
 
-    # 2. Mark the image quality check.
     quality_updated = update_xray_image_quality(
         image_id=image_id,
         quality_status="Passed",
@@ -482,7 +495,6 @@ def save_analysis(uploaded_file, result, examination, request, patient):
         st.error("Failed to save the X-ray quality-check status.")
         return False
 
-    # 3. Save both AI outputs in one database row.
     saved_result = save_ai_result(
         image_id=image_id,
         ai_findings=result["label"],
@@ -504,20 +516,17 @@ def save_analysis(uploaded_file, result, examination, request, patient):
         )
         return False
 
-    # 4. Mark the X-ray request completed.
     update_xray_request_status(
         request["request_id"],
         status="Completed",
     )
 
-    # 5. Move the examination to X-Ray Ready.
     update_examination(
         examination_id=examination["examination_id"],
         status="X-Ray Ready",
     )
 
     return True
-
 
 
 # ============================================================
@@ -535,10 +544,6 @@ def show():
         st.error("You don't have access to this page.")
         return
 
-    # ========================================================
-    # MODE DETECTION
-    # ========================================================
-
     active_exam = st.session_state.get("radtech_active_examination")
     active_patient = st.session_state.get("radtech_active_patient")
 
@@ -550,7 +555,7 @@ def show():
 
         page_header(
             "Analyze X-Ray",
-            "Upload a chest X-ray image for AI-powered pneumonia detection.",
+            "Upload a chest X-ray image and submit it for physician review.",
         )
 
         st.markdown(
@@ -571,44 +576,27 @@ def show():
             type="primary",
             width="stretch",
         ):
-
-            st.session_state.pop("radtech_analysis_result", None)
+            reset_analysis_state()
             st.session_state.pop("rx_upload", None)
-
             st.session_state.current_page = "X-ray Queus"
-
             st.rerun()
 
         return
 
     # ========================================================
-    # QUEUE MODE — patient is selected
-    # ========================================================
-
-    queue_mode = True
-
-    # ========================================================
-    # PAGE HEADER
+    # QUEUE MODE
     # ========================================================
 
     page_header(
         "Analyze X-Ray",
-        "Upload a chest X-ray image for AI-powered pneumonia detection.",
+        "Upload a chest X-ray image and submit it for physician review.",
     )
-
-    # ========================================================
-    # BACK TO QUEUE
-    # ========================================================
 
     if st.button(
         "← Back to X-Ray Queue",
         key="rx_back_to_queue",
     ):
         go_back_to_queue()
-
-    # ========================================================
-    # LOAD REQUEST
-    # ========================================================
 
     request = get_xray_request_by_examination(
         active_exam["examination_id"]
@@ -623,10 +611,6 @@ def show():
 
     render_context_card(active_patient, active_exam, request)
 
-    # ========================================================
-    # SUBSCRIPTION GUARD
-    # ========================================================
-
     if not check_subscription():
         return
 
@@ -636,9 +620,9 @@ def show():
 
     left, right = st.columns([1, 1], gap="large")
 
-    # ========================================================
-    # LEFT — UPLOAD
-    # ========================================================
+    # --------------------------------------------------------
+    # LEFT — Upload
+    # --------------------------------------------------------
 
     with left:
 
@@ -649,12 +633,6 @@ def show():
                 unsafe_allow_html=True,
             )
 
-            # ------------------------------------------------
-            # REAL FILE UPLOADER
-            # The dropzone itself becomes our custom UI via CSS.
-            # Clicking it opens the file picker as normal.
-            # ------------------------------------------------
-
             uploaded_file = st.file_uploader(
                 "Select X-ray image",
                 type=["png", "jpg", "jpeg"],
@@ -662,50 +640,57 @@ def show():
                 label_visibility="collapsed",
             )
 
-            # ------------------------------------------------
-            # SUBTITLE (only when no file is uploaded yet)
-            # ------------------------------------------------
-
             if uploaded_file is None:
-
                 st.markdown(
                     "<p class='rx-dropzone-sub'>"
-                    "Supports JPEG, PNG, DICOM formats"
+                    "Supports JPEG, PNG formats"
                     "</p>",
                     unsafe_allow_html=True,
                 )
-
-            # ------------------------------------------------
-            # PREVIEW
-            # ------------------------------------------------
-
             else:
-
                 with st.container(key="rx_preview"):
                     st.image(uploaded_file, width="stretch")
 
-    # ========================================================
-    # RIGHT — RESULTS
-    # ========================================================
+    # --------------------------------------------------------
+    # RIGHT — Submission Summary
+    # --------------------------------------------------------
 
     with right:
 
         with st.container(key="rx_panel_output"):
 
-            result = st.session_state.get("radtech_analysis_result")
+            result = st.session_state.get(ANALYSIS_RESULT_KEY)
 
             if result and uploaded_file:
-
-                render_result_panel(result, uploaded_file.getvalue())
-
+                render_submission_summary(
+                    request,
+                    active_patient,
+                    uploaded_file,
+                    result,
+                )
             else:
-
                 st.markdown(
                     "<p class='rx-panel-title'>&nbsp;</p>",
                     unsafe_allow_html=True,
                 )
-
                 render_empty_results()
+
+    # ========================================================
+    # DIALOG DISPATCHER
+    # ========================================================
+
+    analysis_state = st.session_state.get(ANALYSIS_STATE_KEY)
+
+    if analysis_state == "running" and uploaded_file:
+        show_analysis_progress_dialog(
+            uploaded_file,
+            active_exam,
+            active_patient,
+            request,
+        )
+
+    elif analysis_state == "complete":
+        show_analysis_complete_dialog()
 
     # ========================================================
     # ACTION BUTTONS
@@ -714,7 +699,7 @@ def show():
     if uploaded_file is None:
         return
 
-    result = st.session_state.get("radtech_analysis_result")
+    result = st.session_state.get(ANALYSIS_RESULT_KEY)
 
     # --------------------------------------------------------
     # IDLE — Analyze / Reset
@@ -727,7 +712,6 @@ def show():
             col1, col2 = st.columns([4, 1])
 
             with col1:
-
                 analyze_clicked = st.button(
                     "Analyze Image",
                     key="rx_run_analysis",
@@ -737,7 +721,6 @@ def show():
                 )
 
             with col2:
-
                 reset_clicked = st.button(
                     "Reset",
                     key="rx_reset",
@@ -745,20 +728,13 @@ def show():
                 )
 
         if reset_clicked:
-
+            reset_analysis_state()
             st.session_state.pop("rx_upload", None)
-            st.session_state.pop("radtech_analysis_result", None)
-
             st.rerun()
 
         if analyze_clicked:
-
-            run_analysis(
-                uploaded_file,
-                active_exam,
-                active_patient,
-                request,
-            )
+            st.session_state[ANALYSIS_STATE_KEY] = "running"
+            st.rerun()
 
         return
 
@@ -774,10 +750,8 @@ def show():
             icon=":material/restart_alt:",
             width="stretch",
         ):
-
+            reset_analysis_state()
             st.session_state.pop("rx_upload", None)
-            st.session_state.pop("radtech_analysis_result", None)
-
             st.rerun()
 
         st.divider()
@@ -789,7 +763,6 @@ def show():
             type="primary",
             width="stretch",
         ):
-
             ok = save_analysis(
                 uploaded_file,
                 result,
@@ -799,7 +772,5 @@ def show():
             )
 
             if ok:
-
                 st.success("X-Ray saved. Status: X-Ray Ready.")
-
                 go_back_to_queue()

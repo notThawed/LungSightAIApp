@@ -1,13 +1,26 @@
+# streamlit_app/pages/physician/physician_patient_records.py
+
+"""
+Physician — Patient Records (3-level navigation).
+
+Level 1: Patient Overview — 3 category cards
+Level 2: Category List — exams in one category
+Level 3: Examination Report — per-exam report
+
+Session keys:
+    physician_selected_patient      -> dict
+    physician_selected_category     -> "general" | "followup" | "external"
+    physician_selected_examination  -> dict
+"""
+
 import streamlit as st
 
-from datetime import datetime
+from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
-
 from backend.fetches import (
-    get_completed_patient_records,
+    get_completed_patients_with_latest_ai,
     get_examinations_by_patient,
-    get_examination_consents,
     get_examination_vitals,
     get_medical_records_by_patient,
     get_xray_request_by_examination,
@@ -19,7 +32,6 @@ from backend.fetches import (
     get_referral_by_examination,
 )
 
-
 from streamlit_app.components.ui import (
     page_header,
     empty_state,
@@ -28,84 +40,39 @@ from streamlit_app.components.ui import (
     full_name,
     format_date,
     pill,
-    table_header,
-    table_row,
-    name_cell,
-    text_cell,
-    pill_cell,
-    remember,
     show_flash_message,
 )
 
 from shared.assets import load_css
 
 
-
 # ============================================================
-# CONFIGURATION
+# CONFIG
 # ============================================================
 
 ROLE_SUPERADMIN = 1
 ROLE_RADIOLOGIST = 3
 ROLE_HOSPITAL_ADMIN = 6
 
-DOCTOR_ROLES = [
-    ROLE_RADIOLOGIST,
-]
+DOCTOR_ROLES = [ROLE_RADIOLOGIST]
+ADMIN_ROLES = [ROLE_SUPERADMIN, ROLE_HOSPITAL_ADMIN]
 
-ADMIN_ROLES = [
-    ROLE_SUPERADMIN,
-    ROLE_HOSPITAL_ADMIN,
-]
+MANILA_TZ = ZoneInfo("Asia/Manila")
 
-
-PATIENT_WIDTHS = [
-    1.4,
-    2.7,
-    1.5,
-    0.9,
-    1.7,
-    1.0,
-]
+CATEGORY_GENERAL = "general"
+CATEGORY_FOLLOWUP = "followup"
+CATEGORY_EXTERNAL = "external"
 
 
-PATIENT_HEADERS = [
-    "Patient ID",
-    "Patient",
-    "Date of birth",
-    "Sex",
-    "Contact",
-    "View",
-]
+# ============================================================
+# SESSION KEYS
+# ============================================================
 
-
-EXAMINATION_WIDTHS = [
-    1.8,
-    2.0,
-    1.8,
-    1.5,
-]
-
-
-EXAMINATION_HEADERS = [
-    "Completed",
-    "Examination",
-    "Diagnosis",
-    "Status",
-]
-
-
-STATUS_TONES = {
-    "Completed": "green",
-    "Pending": "amber",
-    "In Progress": "blue",
-    "Cancelled": "red",
-}
-
-
-MANILA_TZ = ZoneInfo(
-    "Asia/Manila"
-)
+KEY_PATIENT = "physician_selected_patient"
+KEY_CATEGORY = "physician_selected_category"
+KEY_EXAM = "physician_selected_examination"
+KEY_EXTERNAL = "pr_external_record"
+KEY_EXTERNAL_SHOWN = "pr_external_displayed"
 
 
 # ============================================================
@@ -113,33 +80,18 @@ MANILA_TZ = ZoneInfo(
 # ============================================================
 
 def current_user():
-
-    return (
-        st.session_state.get(
-            "user"
-        )
-        or {}
-    )
+    return st.session_state.get("user") or {}
 
 
 def current_role_id():
-
-    return current_user().get(
-        "role_id"
-    )
+    return current_user().get("role_id")
 
 
 def current_hospital_id():
-
-    return current_user().get(
-        "hospital_id"
-    )
+    return current_user().get("hospital_id")
 
 
-def patient_name(
-    patient,
-):
-
+def patient_name(patient):
     return full_name(
         patient.get("first_name"),
         patient.get("middle_name"),
@@ -148,1557 +100,1043 @@ def patient_name(
     )
 
 
-def patient_code(
-    patient,
-):
-
-    return (
-        patient.get("patient_code")
-        or patient.get("patient_id")
-    )
+def patient_code(patient):
+    return patient.get("patient_code") or patient.get("patient_id")
 
 
-def hospital_name(
-    patient,
-):
+def calculate_age(dob):
+    if not dob:
+        return "—"
+    try:
+        if isinstance(dob, str):
+            dob_parsed = date.fromisoformat(str(dob)[:10])
+        elif isinstance(dob, date):
+            dob_parsed = dob
+        else:
+            return "—"
 
-    hospitals = patient.get(
-        "hospitals"
-    )
+        today = date.today()
+        age = today.year - dob_parsed.year
 
-    if isinstance(
-        hospitals,
-        dict,
-    ):
+        if (today.month, today.day) < (dob_parsed.month, dob_parsed.day):
+            age -= 1
 
-        return (
-            hospitals.get(
-                "hospital_name"
-            )
-            or "—"
-        )
-
-    if isinstance(
-        hospitals,
-        list,
-    ) and hospitals:
-
-        return (
-            hospitals[0].get(
-                "hospital_name"
-            )
-            or "—"
-        )
-
-    return "—"
+        return age
+    except Exception:
+        return "—"
 
 
 # ============================================================
-# DATE / TIME HELPERS
+# DATE / TIME
 # ============================================================
 
-def parse_datetime(
-    value,
-):
-
+def parse_datetime(value):
     if not value:
-
         return None
 
-    if isinstance(
-        value,
-        datetime,
-    ):
-
+    if isinstance(value, datetime):
         parsed = value
-
     else:
-
         try:
-
             parsed = datetime.fromisoformat(
-                str(value).replace(
-                    "Z",
-                    "+00:00",
-                )
+                str(value).replace("Z", "+00:00")
             )
-
-        except (
-            ValueError,
-            TypeError,
-        ):
-
+        except (ValueError, TypeError):
             return None
 
     if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=MANILA_TZ)
 
-        parsed = parsed.replace(
-            tzinfo=MANILA_TZ
-        )
-
-    return parsed.astimezone(
-        MANILA_TZ
-    )
+    return parsed.astimezone(MANILA_TZ)
 
 
-def get_completion_datetime(
-    examination,
-):
-
-    return (
-        examination.get(
-            "time_of_discharge"
-        )
-        or examination.get(
-            "reviewed_at"
-        )
-    )
-
-
-def format_completion_datetime(
-    examination,
-):
-
-    completed_at = get_completion_datetime(
-        examination
-    )
-
-    parsed = parse_datetime(
-        completed_at
-    )
-
+def format_date_only(value):
+    parsed = parse_datetime(value)
     if not parsed:
-
-        return "—"
-
-    return parsed.strftime(
-        "%B %d, %Y • %I:%M %p"
-    )
+        return format_date(value) or "—"
+    return parsed.strftime("%B %d, %Y")
 
 
-def format_completion_date(
-    examination,
-):
-
-    completed_at = get_completion_datetime(
-        examination
-    )
-
-    parsed = parse_datetime(
-        completed_at
-    )
-
+def format_time_only(value):
+    parsed = parse_datetime(value)
     if not parsed:
-
         return "—"
-
-    return parsed.strftime(
-        "%B %d, %Y"
-    )
+    return parsed.strftime("%I:%M %p")
 
 
-def format_completion_time(
-    examination,
-):
+# ============================================================
+# RISK / CONFIDENCE
+# ============================================================
 
-    completed_at = get_completion_datetime(
-        examination
-    )
+def risk_from_ai_findings(ai_findings):
+    if not ai_findings:
+        return ("No AI Result", "slate")
 
-    parsed = parse_datetime(
-        completed_at
-    )
+    normalized = str(ai_findings).strip().lower()
 
-    if not parsed:
+    if normalized == "positive":
+        return ("High Risk", "red")
 
-        return "—"
+    if normalized == "negative":
+        return ("Low Risk", "green")
 
-    return parsed.strftime(
-        "%I:%M %p"
-    )
+    return (str(ai_findings).title(), "slate")
+
+
+def pneumonia_type_label(pneumonia_type):
+    """Return (label, tone) for the pneumonia type pill."""
+    if pneumonia_type == "bacterial_pneumonia":
+        return ("Bacterial Pneumonia", "red")
+    if pneumonia_type == "viral_pneumonia":
+        return ("Viral Pneumonia", "amber")
+    return ("Not applicable", "slate")
+
+
+def confidence_percent(value):
+    if value is None:
+        return None
+    try:
+        n = float(value)
+        if n <= 1:
+            n *= 100
+        return round(n, 1)
+    except (TypeError, ValueError):
+        return None
 
 
 # ============================================================
 # EXAMINATION TYPE HELPERS
 # ============================================================
 
-def is_follow_up_examination(examination):
-    """
-    Determines whether an examination is a follow-up.
-    Priority:
-      1. follow_up_sequence is not None  -> follow-up
-      2. examination_type contains "follow-up"/"follow up"
-    """
-
-    sequence = examination.get("follow_up_sequence")
-
+def is_follow_up_examination(exam):
+    sequence = exam.get("follow_up_sequence")
     if sequence is not None:
         try:
             if int(sequence) > 0:
                 return True
         except (TypeError, ValueError):
-            # sequence is present but not a usable int — still treat as follow-up
             return True
 
-    examination_type = examination.get("examination_type") or ""
-
+    exam_type = exam.get("examination_type") or ""
     normalized = (
-        str(examination_type)
+        str(exam_type)
         .strip()
         .lower()
         .replace("_", " ")
         .replace("-", " ")
     )
+    return "follow up" in normalized or "followup" in normalized
 
-    return (
-        "follow up" in normalized
-        or "followup" in normalized
+
+def split_examination_history(examinations):
+    general = []
+    follow_ups = []
+
+    for exam in examinations:
+        if is_follow_up_examination(exam):
+            follow_ups.append(exam)
+        else:
+            general.append(exam)
+
+    follow_ups.sort(
+        key=lambda e: (
+            e.get("follow_up_sequence") is None,
+            e.get("follow_up_sequence") or 999999,
+        )
     )
 
+    return general, follow_ups
 
-def get_follow_up_sequence(examination):
-    """
-    Safely returns the follow-up sequence number.
-    Falls back to deriving it from examination_type
-    (e.g. "Follow-Up Examination 003") when the
-    database column is missing.
-    """
 
-    value = examination.get("follow_up_sequence")
+def display_exam_type(exam):
+    if not is_follow_up_examination(exam):
+        return exam.get("examination_type") or "General Consultation"
 
-    if value is not None:
+    seq = exam.get("follow_up_sequence")
+    if seq is not None:
         try:
-            sequence = int(value)
-            if sequence > 0:
-                return sequence
+            return f"Follow-Up Examination {int(seq):03d}"
         except (TypeError, ValueError):
             pass
-
-    # Fallback: parse trailing digits from examination_type
-    examination_type = examination.get("examination_type") or ""
-
-    import re
-    match = re.search(r"(\d+)\s*$", str(examination_type))
-
-    if match:
-        try:
-            sequence = int(match.group(1))
-            if sequence > 0:
-                return sequence
-        except (TypeError, ValueError):
-            pass
-
-    return None
-
-
-
-def get_display_examination_type(
-    examination,
-):
-    """
-    Returns the examination type exactly as it
-    should appear in Patient Records.
-
-    Follow-up examinations are displayed using
-    their stored follow-up sequence:
-
-        Follow-Up Examination 001
-        Follow-Up Examination 002
-        Follow-Up Examination 003
-
-    General examinations retain their original
-    examination type.
-    """
-
-    examination_type = (
-        examination.get(
-            "examination_type"
-        )
-        or "General Consultation"
-    )
-
-    # --------------------------------------------------------
-    # GENERAL EXAMINATION
-    # --------------------------------------------------------
-
-    if not is_follow_up_examination(
-        examination
-    ):
-
-        return examination_type
-
-    # --------------------------------------------------------
-    # FOLLOW-UP EXAMINATION
-    # --------------------------------------------------------
-
-    sequence = get_follow_up_sequence(
-        examination
-    )
-
-    if sequence is not None:
-
-        return (
-            "Follow-Up Examination "
-            f"{sequence:03d}"
-        )
-
-    # --------------------------------------------------------
-    # FALLBACK FOR OLD RECORDS
-    # --------------------------------------------------------
 
     return "Follow-Up Examination"
 
 
-def sort_follow_up_examinations(
-    examinations,
-):
-    """
-    Sort follow-up examinations by their
-    follow-up sequence.
-
-    Example:
-
-        003
-        001
-        002
-
-    becomes:
-
-        001
-        002
-        003
-
-    Examinations without a sequence are placed
-    after numbered follow-ups.
-    """
-
-    def sort_key(
-        examination,
-    ):
-
-        sequence = get_follow_up_sequence(
-            examination
+def exam_has_xray(exam):
+    try:
+        req = get_xray_request_by_examination(
+            exam.get("examination_id")
         )
-
-        if sequence is None:
-
-            return (
-                1,
-                999999,
-            )
-
-        return (
-            0,
-            sequence,
-        )
-
-    return sorted(
-        examinations,
-        key=sort_key,
-    )
-
-
-def split_examination_history(
-    examinations,
-):
-
-    general_consults = []
-
-    follow_up_examinations = []
-
-    for examination in examinations:
-
-        if is_follow_up_examination(
-            examination
-        ):
-
-            follow_up_examinations.append(
-                examination
-            )
-
-        else:
-
-            general_consults.append(
-                examination
-            )
-
-    # --------------------------------------------------------
-    # SORT FOLLOW-UPS BY SEQUENCE
-    # --------------------------------------------------------
-
-    follow_up_examinations = (
-        sort_follow_up_examinations(
-            follow_up_examinations
-        )
-    )
-
-    return (
-        general_consults,
-        follow_up_examinations,
-    )
+        if not req:
+            return False
+        imgs = get_xray_images_by_request(req.get("request_id")) or []
+        return len(imgs) > 0
+    except Exception:
+        return False
 
 
 # ============================================================
-# STATE
+# NAVIGATION
 # ============================================================
 
-def open_patient_record(
-    patient,
-):
-
-    st.session_state[
-        "physician_selected_patient"
-    ] = patient
-
+def go_to_patient_overview(patient):
+    st.session_state[KEY_PATIENT] = patient
+    st.session_state.pop(KEY_CATEGORY, None)
+    st.session_state.pop(KEY_EXAM, None)
     st.rerun()
 
 
-def clear_selected_patient():
+def go_to_category(patient, category):
+    st.session_state[KEY_PATIENT] = patient
+    st.session_state[KEY_CATEGORY] = category
+    st.session_state.pop(KEY_EXAM, None)
+    st.rerun()
 
-    st.session_state.pop(
-        "physician_selected_patient",
-        None,
-    )
+
+def go_to_examination(exam):
+    st.session_state[KEY_EXAM] = exam
+    st.rerun()
 
 
-# ============================================================
-# PATIENT SUMMARY
-# ============================================================
+def back_to_records_list():
+    st.session_state.pop(KEY_PATIENT, None)
+    st.session_state.pop(KEY_CATEGORY, None)
+    st.session_state.pop(KEY_EXAM, None)
+    st.rerun()
 
-def patient_summary_rows(
-    patient,
-):
 
-    return [
+def back_to_patient_overview():
+    st.session_state.pop(KEY_CATEGORY, None)
+    st.session_state.pop(KEY_EXAM, None)
+    st.rerun()
 
-        (
-            "Patient",
-            patient_name(patient),
-        ),
 
-        (
-            "Patient ID",
-            patient_code(patient),
-        ),
-
-        (
-            "Date of birth",
-            format_date(
-                patient.get(
-                    "date_of_birth"
-                )
-            ),
-        ),
-
-        (
-            "Sex",
-            patient.get(
-                "sex"
-            )
-            or "—",
-        ),
-
-        (
-            "Contact",
-            patient.get(
-                "contact_number"
-            )
-            or "—",
-        ),
-
-        (
-            "Hospital",
-            hospital_name(
-                patient
-            ),
-        ),
-
-    ]
+def back_to_category():
+    st.session_state.pop(KEY_EXAM, None)
+    st.rerun()
 
 
 # ============================================================
-# LOAD PATIENTS
+# DATA LOADING
 # ============================================================
 
-def load_patients():
-
+def load_patient_rows():
+    role_id = current_role_id()
     hospital_id = current_hospital_id()
 
-    role_id = current_role_id()
-
     if role_id == ROLE_SUPERADMIN:
-
         filter_hospital = None
-
-    elif role_id in DOCTOR_ROLES:
-
+    elif role_id in DOCTOR_ROLES or role_id == ROLE_HOSPITAL_ADMIN:
         filter_hospital = hospital_id
-
-    elif role_id == ROLE_HOSPITAL_ADMIN:
-
-        filter_hospital = hospital_id
-
     else:
-
         return []
 
     try:
-
-        return (
-            get_completed_patient_records(
-                hospital_id=filter_hospital
-            )
-            or []
-        )
-
+        return get_completed_patients_with_latest_ai(
+            hospital_id=filter_hospital
+        ) or []
     except Exception as error:
-
-        st.error(
-            "Failed to load patient records: "
-            f"{error}"
-        )
-
+        st.error(f"Failed to load patient records: {error}")
         return []
 
 
 # ============================================================
-# FILTER PATIENTS
+# LEVEL 0 — PATIENT RECORDS LIST
 # ============================================================
 
-def filter_patients(
-    patients,
-):
+def render_patient_row(row):
+    patient = row["patient"]
+    patient_id = patient.get("patient_id")
 
-    search = st.text_input(
-        "Search patient",
-        placeholder=(
-            "Search by patient ID, name, "
-            "or contact number"
-        ),
-        key="physician_patient_records_search",
-    ).strip().lower()
+    risk_label, risk_tone = risk_from_ai_findings(row.get("ai_findings"))
 
-    if not search:
+    with st.container(key=f"pr_row_{patient_id}"):
 
-        return patients
+        cols = st.columns([1.4, 2.6, 0.9, 1.6, 1.6, 1.0])
 
-    filtered = []
-
-    for patient in patients:
-
-        values = [
-
-            patient_code(
-                patient
-            ),
-
-            patient_name(
-                patient
-            ),
-
-            patient.get(
-                "contact_number"
-            ),
-
-        ]
-
-        searchable = " ".join(
-            str(value or "")
-            for value in values
-        ).lower()
-
-        if search in searchable:
-
-            filtered.append(
-                patient
+        with cols[0]:
+            st.markdown(
+                f"<div class='pr-cell pr-cell-id'>"
+                f"{patient_code(patient)}</div>",
+                unsafe_allow_html=True,
             )
 
-    return filtered
-
-
-# ============================================================
-# PATIENT TABLE
-# ============================================================
-
-def render_patient_table(
-    patients,
-):
-
-    if not patients:
-
-        empty_state(
-            "No completed patient records found."
-        )
-
-        return
-
-    with st.container(
-        key="physician_patient_records_table"
-    ):
-
-        table_header(
-            PATIENT_HEADERS,
-            PATIENT_WIDTHS,
-            "physician_records",
-        )
-
-        for patient in patients:
-
-            patient_id = patient.get(
-                "patient_id"
+        with cols[1]:
+            st.markdown(
+                f"<div class='pr-cell pr-cell-name'>"
+                f"{patient_name(patient)}</div>",
+                unsafe_allow_html=True,
             )
 
-            with table_row(
-                f"patient_record_{patient_id}",
-                PATIENT_WIDTHS,
-            ) as columns:
-
-                text_cell(
-                    columns[0],
-                    patient_code(
-                        patient
-                    ),
-                )
-
-                name_cell(
-                    columns[1],
-                    patient_name(
-                        patient
-                    ),
-                )
-
-                text_cell(
-                    columns[2],
-                    format_date(
-                        patient.get(
-                            "date_of_birth"
-                        )
-                    ),
-                )
-
-                text_cell(
-                    columns[3],
-                    patient.get(
-                        "sex"
-                    ),
-                )
-
-                text_cell(
-                    columns[4],
-                    patient.get(
-                        "contact_number"
-                    )
-                    or "—",
-                )
-
-                if columns[5].button(
-                    "View",
-                    key=(
-                        "view_physician_patient_"
-                        f"{patient_id}"
-                    ),
-                    width="stretch",
-                    icon=":material/visibility:",
-                ):
-
-                    open_patient_record(
-                        patient
-                    )
-
-
-# ============================================================
-# EXAMINATION DETAILS
-# ============================================================
-
-def render_examination(
-    examination,
-    index,
-):
-
-    examination_id = examination.get(
-        "examination_id"
-    )
-
-    examination_date = (
-        examination.get(
-            "examination_date"
-        )
-        or examination.get(
-            "created_at"
-        )
-    )
-
-    status = (
-        examination.get(
-            "status"
-        )
-        or "—"
-    )
-
-    completed_datetime = (
-        format_completion_datetime(
-            examination
-        )
-    )
-
-    # --------------------------------------------------------
-    # DISPLAY EXAMINATION TYPE
-    # --------------------------------------------------------
-
-    examination_type = (
-        get_display_examination_type(
-            examination
-        )
-    )
-
-    with st.expander(
-        (
-            f"{examination_type} • "
-            f"{status} • "
-            f"{completed_datetime}"
-        ),
-        expanded=(
-            index == 1
-        ),
-    ):
-
-        # ----------------------------------------------------
-        # BASIC EXAMINATION INFORMATION
-        # ----------------------------------------------------
-
-        section_title(
-            "Examination information"
-        )
-
-        show_rows([
-
-            (
-                "Examination type",
-                examination_type,
-            ),
-
-            (
-                "Status",
-                status,
-            ),
-
-            (
-                "Completed date",
-                format_completion_date(
-                    examination
-                ),
-            ),
-
-            (
-                "Completed time",
-                format_completion_time(
-                    examination
-                ),
-            ),
-
-            (
-                "Examination date",
-                format_date(
-                    examination_date
-                ),
-            ),
-
-            (
-                "Chief complaint",
-                examination.get(
-                    "chief_complaint"
-                )
-                or "—",
-            ),
-
-            (
-                "History of present illness",
-                examination.get(
-                    "history_of_present_illness"
-                )
-                or "—",
-            ),
-
-            (
-                "Physical examination",
-                examination.get(
-                    "physical_examination"
-                )
-                or "—",
-            ),
-
-            (
-                "Diagnosis",
-                examination.get(
-                    "diagnosis"
-                )
-                or "—",
-            ),
-
-            (
-                "Plans / Orders",
-                examination.get(
-                    "plans_orders"
-                )
-                or "—",
-            ),
-
-            (
-                "Disposition",
-                examination.get(
-                    "disposition"
-                )
-                or "—",
-            ),
-
-            (
-                "Disposition notes",
-                examination.get(
-                    "disposition_notes"
-                )
-                or "—",
-            ),
-
-            (
-                "Follow-up date",
-                format_date(
-                    examination.get(
-                        "follow_up_date"
-                    )
-                ),
-            ),
-
-            (
-                "Follow-up notes",
-                examination.get(
-                    "follow_up_notes"
-                )
-                or "—",
-            ),
-
-        ])
-
-        # ----------------------------------------------------
-        # VITALS
-        # ----------------------------------------------------
-
-        section_title(
-            "Vitals"
-        )
-
-        vitals = (
-            get_examination_vitals(
-                examination_id
-            )
-            or []
-        )
-
-        if not vitals:
-
-            st.caption(
-                "No vitals recorded."
+        with cols[2]:
+            st.markdown(
+                f"<div class='pr-cell'>"
+                f"{calculate_age(patient.get('date_of_birth'))}</div>",
+                unsafe_allow_html=True,
             )
 
+        with cols[3]:
+            st.markdown(
+                f"<div class='pr-cell'>"
+                f"{format_date_only(row.get('examination_date'))}</div>",
+                unsafe_allow_html=True,
+            )
+
+        with cols[4]:
+            pill(risk_label, risk_tone)
+
+        with cols[5]:
+            if st.button(
+                "View",
+                key=f"view_pr_{patient_id}",
+                icon=":material/visibility:",
+                width="stretch",
+            ):
+                go_to_patient_overview(patient)
+
+
+def render_patient_list(rows):
+
+    with st.container(key="physician_patient_records_page"):
+
+        page_header(
+            "Patient Records",
+            "View completed patient X-ray analyses and clinical history.",
+        )
+
+        search = st.text_input(
+            "Search patient",
+            placeholder="Search by patient ID, name, or contact number",
+            key="physician_patient_records_search",
+            label_visibility="collapsed",
+        ).strip().lower()
+
+        if search:
+            filtered = [
+                r for r in rows
+                if search in " ".join([
+                    str(patient_code(r["patient"]) or ""),
+                    str(patient_name(r["patient"]) or ""),
+                    str(r["patient"].get("contact_number") or ""),
+                ]).lower()
+            ]
         else:
+            filtered = rows
 
-            latest_vitals = vitals[0]
+        st.divider()
 
-            show_rows([
+        if not filtered:
+            empty_state("No completed patient records found.")
+            return
 
-                (
-                    "Blood pressure",
-                    (
-                        f"{latest_vitals.get('bp_systolic') or '—'}"
-                        "/"
-                        f"{latest_vitals.get('bp_diastolic') or '—'}"
-                        " mmHg"
-                    ),
-                ),
-
-                (
-                    "Temperature",
-                    (
-                        f"{latest_vitals.get('temperature') or '—'}"
-                        " °C"
-                    ),
-                ),
-
-                (
-                    "Pulse rate",
-                    (
-                        f"{latest_vitals.get('pulse_rate') or '—'}"
-                        " bpm"
-                    ),
-                ),
-
-                (
-                    "Respiratory rate",
-                    (
-                        f"{latest_vitals.get('respiratory_rate') or '—'}"
-                        " /min"
-                    ),
-                ),
-
-                (
-                    "SpO₂",
-                    (
-                        f"{latest_vitals.get('spo2') or '—'}"
-                        " %"
-                    ),
-                ),
-
-                (
-                    "Heart rate",
-                    (
-                        f"{latest_vitals.get('heart_rate') or '—'}"
-                        " bpm"
-                    ),
-                ),
-
-                (
-                    "Weight",
-                    (
-                        f"{latest_vitals.get('weight_kg') or '—'}"
-                        " kg"
-                    ),
-                ),
-
-                (
-                    "Height",
-                    (
-                        f"{latest_vitals.get('height_cm') or '—'}"
-                        " cm"
-                    ),
-                ),
-
-                (
-                    "BMI",
-                    latest_vitals.get(
-                        "bmi"
-                    )
-                    or "—",
-                ),
-
-            ])
-
-        # ----------------------------------------------------
-        # X-RAY
-        # ----------------------------------------------------
-
-        section_title(
-            "Chest X-Ray"
-        )
-
-        request = (
-            get_xray_request_by_examination(
-                examination_id
-            )
-        )
-
-        if not request:
-
-            st.caption(
-                "No X-Ray request found for this examination."
-            )
-
-        else:
-
-            show_rows([
-
-                (
-                    "Body part",
-                    request.get(
-                        "body_part"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Priority",
-                    request.get(
-                        "priority"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Clinical indication",
-                    request.get(
-                        "clinical_indication"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "X-Ray status",
-                    request.get(
-                        "status"
-                    )
-                    or "—",
-                ),
-
-            ])
-
-            images = (
-                get_xray_images_by_request(
-                    request.get(
-                        "request_id"
-                    )
-                )
-                or []
-            )
-
-            if images:
-
-                st.markdown(
-                    "**X-Ray image**"
-                )
-
-                image = images[0]
-
-                image_url = (
-                    get_xray_image_url(
-                        image.get(
-                            "image_path"
-                        )
-                    )
-                )
-
-                if image_url:
-
-                    st.image(
-                        image_url,
-                        width="stretch",
+        with st.container(key="pr_table_header"):
+            cols = st.columns([1.4, 2.6, 0.9, 1.6, 1.6, 1.0])
+            for col, label in zip(cols, [
+                "Patient ID",
+                "Patient Name",
+                "Age",
+                "Date",
+                "Risk Level",
+                "Action",
+            ]):
+                with col:
+                    st.markdown(
+                        f"<div class='pr-header-cell'>{label}</div>",
+                        unsafe_allow_html=True,
                     )
 
-                else:
+        for row in filtered:
+            render_patient_row(row)
 
-                    st.warning(
-                        "Unable to generate the X-Ray image URL."
-                    )
-
-                # --------------------------------------------
-                # AI RESULT
-                # --------------------------------------------
-
-                ai_result = (
-                    get_xray_ai_result(
-                        image.get(
-                            "image_id"
-                        )
-                    )
-                )
-
-                if ai_result:
-
-                    section_title(
-                        "AI result"
-                    )
-
-                    show_rows([
-
-                        (
-                            "Finding",
-                            ai_result.get(
-                                "ai_findings"
-                            )
-                            or "—",
-                        ),
-
-                        (
-                            "Confidence",
-                            (
-                                f"{ai_result.get('ai_confidence')}"
-                                if ai_result.get(
-                                    "ai_confidence"
-                                )
-                                is not None
-                                else "—"
-                            ),
-                        ),
-
-                        (
-                            "Model version",
-                            ai_result.get(
-                                "ai_model_version"
-                            )
-                            or "—",
-                        ),
-
-                    ])
-
-            # ------------------------------------------------
-            # PHYSICIAN X-RAY REVIEW
-            # ------------------------------------------------
-
-            review = (
-                get_xray_review(
-                    request.get(
-                        "request_id"
-                    )
-                )
-            )
-
-            if review:
-
-                section_title(
-                    "Physician X-Ray review"
-                )
-
-                show_rows([
-
-                    (
-                        "Findings",
-                        review.get(
-                            "findings"
-                        )
-                        or "—",
-                    ),
-
-                    (
-                        "Impression",
-                        review.get(
-                            "impression"
-                        )
-                        or "—",
-                    ),
-
-                ])
-
-        # ----------------------------------------------------
-        # MEDICATIONS
-        # ----------------------------------------------------
-
-        section_title(
-            "Medications"
-        )
-
-        medications = (
-            get_medications_by_examination(
-                examination_id
-            )
-            or []
-        )
-
-        if not medications:
-
-            st.caption(
-                "No medications recorded."
-            )
-
-        else:
-
-            for medication in medications:
-
-                st.markdown(
-                    f"**{medication.get('drug_name') or 'Medication'}**"
-                )
-
-                st.caption(
-                    " • ".join([
-                        str(
-                            medication.get(
-                                "dose"
-                            )
-                            or "No dose"
-                        ),
-                        str(
-                            medication.get(
-                                "frequency"
-                            )
-                            or "No frequency"
-                        ),
-                        str(
-                            medication.get(
-                                "duration"
-                            )
-                            or "No duration"
-                        ),
-                    ])
-                )
-
-                if medication.get(
-                    "notes"
-                ):
-
-                    st.caption(
-                        medication.get(
-                            "notes"
-                        )
-                    )
-
-        # ----------------------------------------------------
-        # REFERRAL
-        # ----------------------------------------------------
-
-        referral = (
-            get_referral_by_examination(
-                examination_id
-            )
-        )
-
-        if referral:
-
-            section_title(
-                "Referral"
-            )
-
-            show_rows([
-
-                (
-                    "Referred to",
-                    referral.get(
-                        "referred_to"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Reason",
-                    referral.get(
-                        "reason"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Urgency",
-                    referral.get(
-                        "urgency"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Notes",
-                    referral.get(
-                        "notes"
-                    )
-                    or "—",
-                ),
-
-            ])
-
-        # ----------------------------------------------------
-        # CONSENT
-        # ----------------------------------------------------
-
-        consents = (
-            get_examination_consents(
-                examination_id
-            )
-            or []
-        )
-
-        if consents:
-
-            section_title(
-                "Consent"
-            )
-
-            consent = consents[0]
-
-            show_rows([
-
-                (
-                    "Consent type",
-                    consent.get(
-                        "consent_type"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Given",
-                    (
-                        "Yes"
-                        if consent.get(
-                            "given"
-                        )
-                        else "No"
-                    ),
-                ),
-
-                (
-                    "Signed by",
-                    consent.get(
-                        "signed_by_name"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Signed by type",
-                    consent.get(
-                        "signed_by_type"
-                    )
-                    or "—",
-                ),
-
-            ])
+        st.caption(f"Showing {len(filtered)} of {len(rows)} records")
 
 
 # ============================================================
-# EXAMINATION HISTORY SECTION
+# LEVEL 1 — PATIENT OVERVIEW
 # ============================================================
 
-def render_examination_history_section(
-    title,
-    examinations,
-    empty_message,
-):
+def count_category_items(patient):
+    patient_id = patient.get("patient_id")
 
-    section_title(
-        title
-    )
+    exams = get_examinations_by_patient(patient_id) or []
+    completed = [e for e in exams if e.get("status") == "Completed"]
 
-    if not examinations:
+    general, follow_ups = split_examination_history(completed)
+    records = get_medical_records_by_patient(patient_id) or []
 
-        st.caption(
-            empty_message
+    return {
+        CATEGORY_GENERAL: len(general),
+        CATEGORY_FOLLOWUP: len(follow_ups),
+        CATEGORY_EXTERNAL: len(records),
+    }
+
+
+def render_category_card(patient, category, title, icon, count):
+
+    with st.container(key=f"pr_cat_{category}"):
+
+        st.markdown(
+            "<div class='pr-cat-card'>"
+            f"<span class='pr-cat-icon material-symbols-rounded'>{icon}</span>"
+            f"<p class='pr-cat-title'>{title}</p>"
+            f"<p class='pr-cat-count'>{count} "
+            f"record{'s' if count != 1 else ''}</p>"
+            "</div>",
+            unsafe_allow_html=True,
         )
 
-        return
-
-    for index, examination in enumerate(
-        examinations,
-        start=1,
-    ):
-
-        render_examination(
-            examination,
-            index,
-        )
-
-
-# ============================================================
-# EXTERNAL MEDICAL RECORDS
-# ============================================================
-
-def render_external_records(
-    patient,
-):
-
-    section_title(
-        "External Medical Records"
-    )
-
-    records = (
-        get_medical_records_by_patient(
-            patient.get(
-                "patient_id"
-            )
-        )
-        or []
-    )
-
-    if not records:
-
-        st.caption(
-            "No external medical records found."
-        )
-
-        return
-
-    for record in records:
-
-        with st.expander(
-            (
-                f"{record.get('record_type') or 'Medical Record'}"
-                " • "
-                f"{format_date(record.get('record_date'))}"
-            ),
-            expanded=False,
+        if st.button(
+            "View",
+            key=f"pr_cat_view_{category}",
+            icon=":material/arrow_forward:",
+            type="primary",
+            width="stretch",
         ):
-
-            show_rows([
-
-                (
-                    "Facility",
-                    record.get(
-                        "facility_name"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Department",
-                    record.get(
-                        "department"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Attending physician",
-                    record.get(
-                        "attending_physician"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Chief complaint",
-                    record.get(
-                        "chief_complaint"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Clinical history",
-                    record.get(
-                        "clinical_history"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Diagnosis",
-                    record.get(
-                        "diagnosis"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Procedure",
-                    record.get(
-                        "procedure_name"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Findings",
-                    record.get(
-                        "findings"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Impression",
-                    record.get(
-                        "impression"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Treatment",
-                    record.get(
-                        "treatment"
-                    )
-                    or "—",
-                ),
-
-                (
-                    "Follow-up",
-                    record.get(
-                        "follow_up"
-                    )
-                    or "—",
-                ),
-
-            ])
+            go_to_category(patient, category)
 
 
-# ============================================================
-# PATIENT RECORD VIEW
-# ============================================================
-
-def render_patient_record(
-    patient,
-):
-
-    patient_id = patient.get(
-        "patient_id"
-    )
+def render_patient_overview(patient):
 
     if st.button(
         "Back to Patient Records",
+        key="pr_back_to_list",
         icon=":material/arrow_back:",
-        key="back_to_physician_patient_records",
     ):
+        back_to_records_list()
 
-        clear_selected_patient()
+    st.markdown(
+        "<div class='pr-report-header'>"
+        "<p class='pr-report-title'>Patient Overview</p>"
+        f"<p class='pr-report-sub'>Patient ID: {patient_code(patient)}</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
+    st.markdown(
+        "<div class='pr-hero-card'>"
+        "<p class='pr-hero-eyebrow'>Patient Information</p>"
+        f"<p class='pr-hero-name'>{patient_name(patient)}</p>"
+        "<div class='pr-hero-row'>"
+        f"<span>Patient ID</span><b>{patient_code(patient)}</b>"
+        "</div>"
+        "<div class='pr-hero-row'>"
+        "<span>Age / Gender</span>"
+        f"<b>{calculate_age(patient.get('date_of_birth'))} / "
+        f"{patient.get('sex') or '—'}</b>"
+        "</div>"
+        "<div class='pr-hero-row'>"
+        "<span>Contact</span>"
+        f"<b>{patient.get('contact_number') or '—'}</b>"
+        "</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<p class='pr-section-label'>Select a category to review</p>",
+        unsafe_allow_html=True,
+    )
+
+    counts = count_category_items(patient)
+
+    col1, col2, col3 = st.columns(3, gap="medium")
+
+    with col1:
+        render_category_card(
+            patient,
+            CATEGORY_GENERAL,
+            "General Consults",
+            "clinical_notes",
+            counts[CATEGORY_GENERAL],
+        )
+
+    with col2:
+        render_category_card(
+            patient,
+            CATEGORY_FOLLOWUP,
+            "Follow-Up Examinations",
+            "event_repeat",
+            counts[CATEGORY_FOLLOWUP],
+        )
+
+    with col3:
+        render_category_card(
+            patient,
+            CATEGORY_EXTERNAL,
+            "External Records",
+            "folder_shared",
+            counts[CATEGORY_EXTERNAL],
+        )
+
+
+# ============================================================
+# LEVEL 2 — CATEGORY LIST
+# ============================================================
+
+def render_exam_list_card(exam):
+
+    exam_id = exam.get("examination_id")
+    exam_date = exam.get("examination_date") or exam.get("created_at")
+
+    has_xray = exam_has_xray(exam)
+
+    if has_xray:
+        xray_icon = "check_circle"
+        xray_text = "Available"
+        xray_class = "pr-xray-available"
+    else:
+        xray_icon = "warning"
+        xray_text = "No X-Ray"
+        xray_class = "pr-xray-missing"
+
+    chief = (exam.get("chief_complaint") or "—").strip()
+    if len(chief) > 80:
+        chief = chief[:80] + "…"
+
+    diagnosis = (exam.get("diagnosis") or "—").strip()
+    if len(diagnosis) > 80:
+        diagnosis = diagnosis[:80] + "…"
+
+    with st.container(key=f"pr_exam_card_{exam_id}"):
+
+        st.markdown(
+            "<div class='pr-exam-card'>"
+            "<div class='pr-exam-head'>"
+            f"<p class='pr-exam-title'>{display_exam_type(exam)}</p>"
+            f"<span class='pr-exam-date'>"
+            f"{format_date_only(exam_date)} · "
+            f"{format_time_only(exam_date)}</span>"
+            "</div>"
+            "<div class='pr-exam-row'>"
+            f"<span>Chief Complaint</span><b>{chief}</b>"
+            "</div>"
+            "<div class='pr-exam-row'>"
+            f"<span>Diagnosis</span><b>{diagnosis}</b>"
+            "</div>"
+            "<div class='pr-exam-row'>"
+            "<span>X-Ray</span>"
+            f"<b class='{xray_class}'>"
+            f"<span class='material-symbols-rounded pr-xray-icon'>"
+            f"{xray_icon}</span>{xray_text}</b>"
+            "</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        if st.button(
+            "View Details",
+            key=f"pr_exam_view_{exam_id}",
+            icon=":material/arrow_forward:",
+            type="primary",
+            width="stretch",
+        ):
+            go_to_examination(exam)
+
+
+def render_record_list_card(record):
+
+    record_id = record.get("medical_record_id") or record.get("record_id")
+
+    with st.container(key=f"pr_rec_card_{record_id}"):
+
+        st.markdown(
+            "<div class='pr-exam-card'>"
+            "<div class='pr-exam-head'>"
+            f"<p class='pr-exam-title'>"
+            f"{record.get('record_type') or 'Medical Record'}</p>"
+            f"<span class='pr-exam-date'>"
+            f"{format_date(record.get('record_date'))}</span>"
+            "</div>"
+            "<div class='pr-exam-row'>"
+            f"<span>Facility</span>"
+            f"<b>{record.get('facility_name') or '—'}</b>"
+            "</div>"
+            "<div class='pr-exam-row'>"
+            f"<span>Diagnosis</span>"
+            f"<b>{record.get('diagnosis') or '—'}</b>"
+            "</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        if st.button(
+            "View Details",
+            key=f"pr_rec_view_{record_id}",
+            icon=":material/open_in_new:",
+            width="stretch",
+        ):
+            st.session_state[KEY_EXTERNAL] = record
+            st.session_state.pop(KEY_EXTERNAL_SHOWN, None)
+            st.rerun()
+
+
+def render_category_list(patient, category):
+
+    category_titles = {
+        CATEGORY_GENERAL: "General Consults",
+        CATEGORY_FOLLOWUP: "Follow-Up Examinations",
+        CATEGORY_EXTERNAL: "External Records",
+    }
+
+    if st.button(
+        "Back to Patient Overview",
+        key="pr_back_to_overview",
+        icon=":material/arrow_back:",
+    ):
+        back_to_patient_overview()
+
+    st.markdown(
+        "<div class='pr-report-header'>"
+        f"<p class='pr-report-title'>"
+        f"{category_titles.get(category, 'Records')}</p>"
+        f"<p class='pr-report-sub'>"
+        f"{patient_name(patient)} · {patient_code(patient)}</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    patient_id = patient.get("patient_id")
+
+    if category in (CATEGORY_GENERAL, CATEGORY_FOLLOWUP):
+
+        exams = get_examinations_by_patient(patient_id) or []
+        completed = [e for e in exams if e.get("status") == "Completed"]
+        general, follow_ups = split_examination_history(completed)
+
+        items = general if category == CATEGORY_GENERAL else follow_ups
+
+        if not items:
+            empty_state(
+                f"No completed "
+                f"{category_titles.get(category, 'records').lower()}."
+            )
+            return
+
+        for exam in items:
+            render_exam_list_card(exam)
+
+        return
+
+    records = get_medical_records_by_patient(patient_id) or []
+
+    if not records:
+        empty_state("No external medical records found.")
+        return
+
+    for record in records:
+        render_record_list_card(record)
+
+
+# ============================================================
+# EXTERNAL RECORD DIALOG
+# ============================================================
+
+@st.dialog("External Medical Record", width="medium")
+def show_external_record_dialog(record):
+
+    st.markdown(
+        "<div class='pr-report-header'>"
+        f"<p class='pr-report-title'>"
+        f"{record.get('record_type') or 'Medical Record'}</p>"
+        f"<p class='pr-report-sub'>"
+        f"{format_date(record.get('record_date'))}</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    show_rows([
+        ("Facility", record.get("facility_name") or "—"),
+        ("Department", record.get("department") or "—"),
+        ("Attending Physician", record.get("attending_physician") or "—"),
+        ("Chief Complaint", record.get("chief_complaint") or "—"),
+        ("Clinical History", record.get("clinical_history") or "—"),
+        ("Diagnosis", record.get("diagnosis") or "—"),
+        ("Procedure", record.get("procedure_name") or "—"),
+        ("Findings", record.get("findings") or "—"),
+        ("Impression", record.get("impression") or "—"),
+        ("Treatment", record.get("treatment") or "—"),
+        ("Follow-Up", record.get("follow_up") or "—"),
+    ])
+
+    st.divider()
+
+    if st.button(
+        "Close",
+        key="pr_external_close",
+        width="stretch",
+    ):
+        st.session_state.pop(KEY_EXTERNAL, None)
+        st.session_state.pop(KEY_EXTERNAL_SHOWN, None)
         st.rerun()
 
-    st.divider()
 
-    page_header(
-        patient_name(patient),
-        (
-            f"Patient ID: {patient_code(patient)}"
-        ),
+# ============================================================
+# LEVEL 3 — EXAMINATION REPORT
+# ============================================================
+
+def render_patient_info_card(patient, exam):
+    exam_date = exam.get("examination_date") or exam.get("created_at")
+
+    st.markdown(
+        "<div class='pr-hero-card'>"
+        "<p class='pr-hero-eyebrow'>Patient Information</p>"
+        f"<p class='pr-hero-name'>{patient_name(patient)}</p>"
+        "<div class='pr-hero-row'>"
+        f"<span>Patient ID</span><b>{patient_code(patient)}</b>"
+        "</div>"
+        "<div class='pr-hero-row'>"
+        "<span>Age / Gender</span>"
+        f"<b>{calculate_age(patient.get('date_of_birth'))} / "
+        f"{patient.get('sex') or '—'}</b>"
+        "</div>"
+        "<div class='pr-hero-row'>"
+        "<span>Scan Date</span>"
+        f"<b>{format_date_only(exam_date)}</b>"
+        "</div>"
+        "</div>",
+        unsafe_allow_html=True,
     )
 
-    section_title(
-        "Patient information"
-    )
 
-    show_rows(
-        patient_summary_rows(
-            patient
+def render_risk_card(ai_findings, ai_conf, pneumonia_type=None):
+    risk_label, risk_tone = risk_from_ai_findings(ai_findings)
+    conf_pct = confidence_percent(ai_conf)
+    type_label, type_tone = pneumonia_type_label(pneumonia_type)
+
+    # Confidence block
+    if conf_pct is not None:
+        conf_block = (
+            "<div class='pr-hero-row pr-hero-row-block'>"
+            "<div class='pr-conf-label'>"
+            "<span>AI Confidence</span>"
+            f"<b>{conf_pct:.1f}%</b>"
+            "</div>"
+            "<div class='pr-conf-bar'>"
+            f"<div class='pr-conf-fill' style='width:{conf_pct}%'></div>"
+            "</div>"
+            "</div>"
         )
-    )
-
-    st.divider()
-
-    examinations = (
-        get_examinations_by_patient(
-            patient_id
+    else:
+        conf_block = (
+            "<div class='pr-hero-row'>"
+            "<span>AI Confidence</span><b>—</b>"
+            "</div>"
         )
-        or []
+
+    st.markdown(
+        "<div class='pr-hero-card'>"
+        "<p class='pr-hero-eyebrow'>Risk Assessment</p>"
+        "<div class='pr-hero-row'>"
+        "<span>Risk Level</span>"
+        f"<div>{pill(risk_label, risk_tone)}</div>"
+        "</div>"
+        "<div class='pr-hero-row'>"
+        "<span>Pneumonia Type</span>"
+        f"<div>{pill(type_label, type_tone)}</div>"
+        "</div>"
+        f"{conf_block}"
+        "</div>",
+        unsafe_allow_html=True,
     )
 
-    completed_examinations = [
-        examination
-        for examination in examinations
-        if examination.get(
-            "status"
-        ) == "Completed"
+
+def render_examination_details_card(exam):
+
+    exam_date = exam.get("examination_date") or exam.get("created_at")
+
+    rows = [
+        ("Type", display_exam_type(exam)),
+        ("Date", format_date_only(exam_date)),
+        ("Time", format_time_only(exam_date)),
+        ("Status", exam.get("status") or "—"),
+        ("Chief Complaint", exam.get("chief_complaint") or "—"),
+        ("HPI", exam.get("history_of_present_illness") or "—"),
+        ("Physical Exam", exam.get("physical_examination") or "—"),
+        ("Diagnosis", exam.get("diagnosis") or "—"),
+        ("Plans / Orders", exam.get("plans_orders") or "—"),
+        ("Disposition", exam.get("disposition") or "—"),
     ]
 
-    general_consults, follow_up_examinations = (
-        split_examination_history(
-            completed_examinations
+    st.markdown(
+        "<div class='pr-hero-card'>"
+        "<p class='pr-hero-eyebrow'>Examination Details</p>"
+        + "".join(
+            f"<div class='pr-hero-row'>"
+            f"<span>{label}</span><b>{value}</b>"
+            f"</div>"
+            for label, value in rows
         )
+        + "</div>",
+        unsafe_allow_html=True,
     )
 
-    # ========================================================
-    # GENERAL CONSULT EXAMINATION HISTORY
-    # ========================================================
 
-    render_examination_history_section(
-        "General Consult Examination History",
-        general_consults,
-        "No completed general consultation examinations found.",
+def render_xray_analysis(exam):
+
+    section_title(
+        "X-Ray Analysis",
+        "Chest X-ray submitted for this examination.",
     )
 
-    st.divider()
+    exam_id = exam.get("examination_id")
+    request = get_xray_request_by_examination(exam_id)
 
-    # ========================================================
-    # FOLLOW-UP EXAMINATION HISTORY
-    # ========================================================
+    if not request:
+        st.markdown(
+            "<div class='pr-no-xray'>"
+            "<span class='pr-no-xray-icon material-symbols-rounded'>"
+            "radiology</span>"
+            "<p class='pr-no-xray-title'>No X-Ray Requested</p>"
+            "<p class='pr-no-xray-text'>"
+            "No chest X-ray was requested for this examination."
+            "</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        return None, None, None
 
-    render_examination_history_section(
-        "Follow-Up Examination History",
-        follow_up_examinations,
-        "No completed follow-up examinations found.",
+    images = get_xray_images_by_request(request["request_id"]) or []
+
+    if not images:
+        st.markdown(
+            "<div class='pr-no-xray'>"
+            "<span class='pr-no-xray-icon material-symbols-rounded'>"
+            "schedule</span>"
+            "<p class='pr-no-xray-title'>X-Ray Pending</p>"
+            "<p class='pr-no-xray-text'>"
+            "An X-ray was requested but no image has been "
+            "uploaded yet."
+            "</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        return request, None, None
+
+    image = images[0]
+    image_url = get_xray_image_url(image.get("image_path"))
+    ai = get_xray_ai_result(image.get("image_id"))
+
+    original_col, heatmap_col = st.columns(2, gap="medium")
+
+    with original_col:
+        st.markdown(
+            "<p class='pr-img-label'>Original X-Ray</p>",
+            unsafe_allow_html=True,
+        )
+        if image_url:
+            with st.container(key="pr_xray_frame"):
+                st.image(image_url, width="stretch")
+        else:
+            st.warning("Unable to load the X-ray image.")
+
+    with heatmap_col:
+        st.markdown(
+            "<p class='pr-img-label'>AI Heatmap Overlay</p>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<div class='pr-heatmap-placeholder'>"
+            "<span class='pr-heatmap-icon material-symbols-rounded'>"
+            "radiology</span>"
+            "<p class='pr-heatmap-title'>Heatmap Coming Soon</p>"
+            "<p class='pr-heatmap-text'>"
+            "Grad-CAM visualization of the regions the AI "
+            "model focused on will appear here."
+            "</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    return request, image, ai
+
+
+def ai_findings_narrative(ai_findings, pneumonia_type):
+    if not ai_findings:
+        return None
+
+    normalized = str(ai_findings).strip().lower()
+
+    if normalized == "positive":
+        if pneumonia_type == "bacterial_pneumonia":
+            return (
+                "The AI model has detected patterns consistent "
+                "with <b>bacterial pneumonia</b>. Recommend "
+                "clinical correlation, CBC and blood culture, "
+                "and consideration of empirical antibiotic therapy."
+            )
+        if pneumonia_type == "viral_pneumonia":
+            return (
+                "The AI model has detected patterns consistent "
+                "with <b>viral pneumonia</b>. Recommend clinical "
+                "correlation, symptomatic management, and "
+                "follow-up assessment."
+            )
+        return (
+            "The AI model has detected patterns consistent "
+            "with <b>pneumonia</b>. Recommend clinical "
+            "correlation and physician review."
+        )
+
+    if normalized == "negative":
+        return (
+            "The AI model has <b>not</b> detected patterns "
+            "consistent with pneumonia. Continue standard "
+            "clinical evaluation."
+        )
+
+    return None
+
+
+def ai_recommendations(ai_findings, pneumonia_type):
+    if not ai_findings:
+        return []
+
+    normalized = str(ai_findings).strip().lower()
+
+    if normalized == "positive":
+
+        base = [
+            "Immediate clinical evaluation recommended",
+            "Consider blood culture and CBC",
+        ]
+
+        if pneumonia_type == "bacterial_pneumonia":
+            base.append("Initiate empirical antibiotic therapy")
+        elif pneumonia_type == "viral_pneumonia":
+            base.append("Consider antiviral or supportive therapy")
+
+        base.append("Follow-up X-ray in 48–72 hours")
+        return base
+
+    if normalized == "negative":
+        return [
+            "Continue standard clinical evaluation",
+            "Reassess if symptoms worsen",
+        ]
+
+    return []
+
+
+def render_ai_summary(ai, ai_findings, pneumonia_type, ai_conf):
+
+    section_title("AI Findings Summary")
+
+    narrative = ai_findings_narrative(ai_findings, pneumonia_type)
+
+    if not narrative:
+        st.caption("No AI summary available for this record.")
+        return
+
+    risk_label, risk_tone = risk_from_ai_findings(ai_findings)
+    conf_pct = confidence_percent(ai_conf)
+
+    tone_class = (
+        "pr-ai-summary-positive"
+        if risk_tone == "red"
+        else "pr-ai-summary-negative"
     )
 
-    st.divider()
-
-    # ========================================================
-    # EXTERNAL MEDICAL RECORDS
-    # ========================================================
-
-    render_external_records(
-        patient
+    conf_line = (
+        "<br><span class='pr-ai-summary-meta'>"
+        f"Confidence: <b>{conf_pct:.1f}%</b>"
+        "</span>"
+        if conf_pct is not None
+        else ""
     )
+
+    st.markdown(
+        f"<div class='pr-ai-summary {tone_class}'>"
+        f"<p class='pr-ai-summary-text'>{narrative}</p>"
+        f"{conf_line}"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    recs = ai_recommendations(ai_findings, pneumonia_type)
+
+    if recs:
+        section_title("Recommendations")
+
+        items = "".join(
+            f"<li><span class='pr-rec-num'>{i+1}</span>"
+            f"<span>{text}</span></li>"
+            for i, text in enumerate(recs)
+        )
+
+        st.markdown(
+            f"<ul class='pr-rec-list'>{items}</ul>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        "<div class='pr-disclaimer'>"
+        "<b>Disclaimer:</b> This AI-generated analysis is intended "
+        "to assist medical professionals and should not be used as "
+        "the sole basis for clinical decisions. Always correlate with "
+        "clinical findings and consult with qualified healthcare providers."
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_examination_report(patient, exam):
+
+    if st.button(
+        "Back to Records",
+        key="pr_back_to_category",
+        icon=":material/arrow_back:",
+    ):
+        back_to_category()
+
+    exam_date = exam.get("examination_date") or exam.get("created_at")
+
+    st.markdown(
+        "<div class='pr-report-header'>"
+        "<p class='pr-report-title'>Analysis Report</p>"
+        f"<p class='pr-report-sub'>"
+        f"Patient ID: {patient_code(patient)} · "
+        f"{format_date_only(exam_date)}</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    exam_id = exam.get("examination_id")
+
+    ai = None
+    request = None
+    image = None
+
+    try:
+        request = get_xray_request_by_examination(exam_id)
+        if request:
+            imgs = get_xray_images_by_request(request["request_id"]) or []
+            if imgs:
+                image = imgs[0]
+                ai = get_xray_ai_result(image.get("image_id"))
+    except Exception:
+        pass
+
+    ai_findings = (ai or {}).get("ai_findings")
+    pneumonia_type = (ai or {}).get("pneumonia_type")
+    ai_conf = (ai or {}).get("ai_confidence")
+
+    left_col, right_col = st.columns([1, 1.5], gap="large")
+
+    with left_col:
+
+        with st.container(key="pr_hero_left"):
+
+            render_patient_info_card(patient, exam)
+
+            render_risk_card(ai_findings, ai_conf, pneumonia_type)
+
+            render_examination_details_card(exam)
+
+    with right_col:
+
+        render_xray_analysis(exam)
+
+        render_ai_summary(ai, ai_findings, pneumonia_type, ai_conf)
 
 
 # ============================================================
@@ -1707,89 +1145,54 @@ def render_patient_record(
 
 def show():
 
-    load_css(
-        "manage_examinations.css"
-    )
-
+    load_css("patient_records.css")
     show_flash_message()
 
     role_id = current_role_id()
 
-    if role_id not in (
-        DOCTOR_ROLES
-        + ADMIN_ROLES
-    ):
-
-        st.error(
-            "You don't have access to Patient Records."
-        )
-
-        return
-
-    selected_patient = (
-        st.session_state.get(
-            "physician_selected_patient"
-        )
-    )
-
-    # ========================================================
-    # SELECTED PATIENT
-    # ========================================================
-
-    if selected_patient:
-
-        render_patient_record(
-            selected_patient
-        )
-
+    if role_id not in (DOCTOR_ROLES + ADMIN_ROLES):
+        st.error("You don't have access to Patient Records.")
         return
 
     # ========================================================
-    # PATIENT LIST
+    # DIALOG DISPATCHER — one-shot display
     # ========================================================
 
-    with st.container(
-        key="physician_patient_records_page"
-    ):
+    if st.session_state.get(KEY_EXTERNAL):
 
-        page_header(
-            "Patient Records",
-            (
-                "View completed patient examinations, "
-                "X-Ray results, physician reviews, "
-                "and medical history."
-            ),
-        )
+        if not st.session_state.get(KEY_EXTERNAL_SHOWN):
 
-        if st.button(
-            "Refresh",
-            icon=":material/refresh:",
-            key="physician_patient_records_refresh",
-            width="stretch",
-        ):
+            show_external_record_dialog(
+                st.session_state[KEY_EXTERNAL]
+            )
 
+            st.session_state[KEY_EXTERNAL_SHOWN] = True
+
+        else:
+
+            st.session_state.pop(KEY_EXTERNAL, None)
+            st.session_state.pop(KEY_EXTERNAL_SHOWN, None)
             st.rerun()
 
-        patients = load_patients()
+    # ========================================================
+    # ROUTER
+    # ========================================================
 
-        patients = filter_patients(
-            patients
-        )
+    selected_patient = st.session_state.get(KEY_PATIENT)
+    selected_category = st.session_state.get(KEY_CATEGORY)
+    selected_exam = st.session_state.get(KEY_EXAM)
 
-        st.divider()
+    if selected_patient and selected_exam:
+        render_examination_report(selected_patient, selected_exam)
+        return
 
-        section_title(
-            "Patients"
-        )
+    if selected_patient and selected_category:
+        render_category_list(selected_patient, selected_category)
+        return
 
-        st.caption(
-            (
-                "Each patient appears only once. "
-                "Select a patient to view their complete "
-                "examination history."
-            )
-        )
+    if selected_patient:
+        render_patient_overview(selected_patient)
+        return
 
-        render_patient_table(
-            patients
-        )
+    rows = load_patient_rows()
+    render_patient_list(rows)

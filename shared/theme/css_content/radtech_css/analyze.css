@@ -62,19 +62,13 @@
 
 .rx-guard {
     display: flex;
-
     flex-direction: column;
-
     align-items: center;
-
     justify-content: center;
-
     gap: 12px;
 
     padding: 64px 24px;
-
     margin: 28px auto;
-
     max-width: 540px;
 
     background: linear-gradient(
@@ -84,9 +78,7 @@
     );
 
     border: 1px dashed #bcd8e2;
-
     border-radius: var(--rx-radius-lg);
-
     box-shadow: var(--rx-shadow-sm);
 
     text-align: center;
@@ -94,7 +86,6 @@
 
 .rx-guard-icon {
     display: flex;
-
     align-items: center;
     justify-content: center;
 
@@ -104,7 +95,6 @@
     border-radius: 50%;
 
     background: #eef7fa;
-
     color: var(--rx-primary);
 
     font-family: "Material Symbols Rounded";
@@ -112,7 +102,6 @@
     -webkit-font-feature-settings: 'liga';
 
     font-size: 30px;
-
     line-height: 1;
 }
 
@@ -122,21 +111,17 @@
     color: var(--rx-text);
 
     font-size: 1.1rem;
-
     font-weight: 800;
-
     letter-spacing: -0.01em;
 }
 
 .rx-guard-text {
     margin: 0;
-
     max-width: 380px;
 
     color: var(--rx-text-soft);
 
     font-size: 0.86rem;
-
     line-height: 1.6;
 }
 
@@ -146,15 +131,11 @@
 
 .rx-context {
     display: flex;
-
     align-items: flex-start;
-
     justify-content: space-between;
-
     gap: 20px;
 
     padding: 16px 20px;
-
     margin-bottom: 10px;
 
     background: linear-gradient(
@@ -164,9 +145,7 @@
     );
 
     border: 1px solid var(--rx-border);
-
     border-left: 4px solid var(--rx-primary);
-
     border-radius: var(--rx-radius-md);
 
     box-shadow: var(--rx-shadow-sm);
@@ -174,13 +153,11 @@
 
 .rx-context-left {
     flex: 1 1 auto;
-
     min-width: 0;
 }
 
 .rx-context-right {
     flex: 0 0 auto;
-
     text-align: right;
 }
 
@@ -190,9 +167,7 @@
     color: var(--rx-text);
 
     font-size: 1.05rem;
-
     font-weight: 800;
-
     letter-spacing: -0.01em;
 }
 
@@ -202,7 +177,6 @@
     color: var(--rx-muted);
 
     font-size: 0.76rem;
-
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -212,7 +186,6 @@
     color: var(--rx-primary);
 
     font-size: 0.8rem;
-
     font-weight: 700;
 }
 
@@ -227,9 +200,7 @@ div[class*="st-key-rx_panel_output"] {
     padding: 20px 22px;
 
     background: var(--rx-card);
-
     border: 1px solid var(--rx-border);
-
     border-radius: var(--rx-radius-lg);
 
     box-shadow: var(--rx-shadow-sm);
@@ -243,21 +214,16 @@ div[class*="st-key-rx_panel_output"] {
     color: var(--rx-text);
 
     font-size: 1rem;
-
     font-weight: 800;
-
     letter-spacing: -0.01em;
 }
 
 /* ---------------------------------------------------------
-   FILE UPLOADER — the REAL upload widget, restyled
-   Clicking the dropzone opens the file picker; visually it
-   looks like our custom upload card.
+   FILE UPLOADER — the real widget, restyled
    --------------------------------------------------------- */
 
 div[class*="st-key-rx_panel_input"] [data-testid="stFileUploader"] {
     margin: 0;
-
     width: 100%;
 }
 
@@ -269,31 +235,23 @@ div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"] {
     position: relative;
 
     display: flex;
-
     flex-direction: column;
-
     align-items: center;
-
     justify-content: center;
-
     gap: 8px;
 
     padding: 52px 20px;
 
     background: #f7fbfc;
-
     border: 2px dashed #bcd8e2;
-
     border-radius: var(--rx-radius-md);
 
     cursor: pointer;
-
     transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"]:hover {
     border-color: var(--rx-primary);
-
     background: #eef7fa;
 }
 
@@ -317,7 +275,6 @@ div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"]::befo
     content: "upload";
 
     display: flex;
-
     align-items: center;
     justify-content: center;
 
@@ -327,7 +284,6 @@ div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"]::befo
     border-radius: 50%;
 
     background: #ffffff;
-
     color: var(--rx-primary);
 
     font-family: "Material Symbols Rounded";
@@ -335,7 +291,6 @@ div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"]::befo
     -webkit-font-feature-settings: 'liga';
 
     font-size: 28px;
-
     line-height: 1;
 
     box-shadow: 0 2px 6px rgba(23, 55, 66, 0.08);
@@ -347,17 +302,15 @@ div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"]::afte
     content: "Click to upload X-ray image";
 
     display: block;
-
     text-align: center;
 
     color: var(--rx-text);
 
     font-size: 0.92rem;
-
     font-weight: 750;
 }
 
-/* Subtitle below the dropzone (only when no file is selected) */
+/* Subtitle below the dropzone */
 
 .rx-dropzone-sub {
     margin: 8px 0 0;
@@ -365,53 +318,42 @@ div[class*="st-key-rx_panel_input"] [data-testid="stFileUploaderDropzone"]::afte
     color: var(--rx-muted);
 
     font-size: 0.76rem;
-
     text-align: center;
 }
 
 /* ---------------------------------------------------------
-   PREVIEW CONTAINERS
+   PREVIEW CONTAINER (left panel)
    --------------------------------------------------------- */
 
-div[class*="st-key-rx_preview"],
-div[class*="st-key-rx_preview_result"] {
+div[class*="st-key-rx_preview"] {
     padding: 12px;
 
     background: #f7fbfc;
-
     border: 1px solid var(--rx-border-light);
-
     border-radius: var(--rx-radius-md);
 
     overflow: hidden;
 }
 
-div[class*="st-key-rx_preview"] img,
-div[class*="st-key-rx_preview_result"] img {
+div[class*="st-key-rx_preview"] img {
     border-radius: 8px;
 
     display: block;
-
     max-width: 100%;
 }
 
 /* ---------------------------------------------------------
-   EMPTY RESULTS
+   EMPTY RIGHT PANEL
    --------------------------------------------------------- */
 
 .rx-empty {
     display: flex;
-
     flex-direction: column;
-
     align-items: center;
-
     justify-content: center;
-
     gap: 10px;
 
     padding: 52px 20px;
-
     min-height: 320px;
 
     text-align: center;
@@ -419,7 +361,6 @@ div[class*="st-key-rx_preview_result"] img {
 
 .rx-empty-icon {
     display: flex;
-
     align-items: center;
     justify-content: center;
 
@@ -429,7 +370,6 @@ div[class*="st-key-rx_preview_result"] img {
     border-radius: 50%;
 
     background: #eef2f5;
-
     color: var(--rx-muted);
 
     font-family: "Material Symbols Rounded";
@@ -437,7 +377,6 @@ div[class*="st-key-rx_preview_result"] img {
     -webkit-font-feature-settings: 'liga';
 
     font-size: 26px;
-
     line-height: 1;
 }
 
@@ -447,36 +386,29 @@ div[class*="st-key-rx_preview_result"] img {
     color: var(--rx-text);
 
     font-size: 1rem;
-
     font-weight: 750;
 }
 
 .rx-empty-text {
     margin: 0;
-
     max-width: 320px;
 
     color: var(--rx-muted);
 
     font-size: 0.8rem;
-
     line-height: 1.55;
 }
 
 /* ---------------------------------------------------------
    PROGRESS CHECKLIST
-   Plain HTML — no Streamlit keyed container involved.
    --------------------------------------------------------- */
 
 .rx-progress-card {
     padding: 18px 20px;
-
     margin-top: 14px;
 
     background: var(--rx-card);
-
     border: 1px solid var(--rx-border);
-
     border-radius: var(--rx-radius-md);
 
     box-shadow: var(--rx-shadow-sm);
@@ -488,15 +420,12 @@ div[class*="st-key-rx_preview_result"] img {
     color: var(--rx-text);
 
     font-size: 0.95rem;
-
     font-weight: 800;
 }
 
 .rx-step {
     display: flex;
-
     align-items: center;
-
     gap: 10px;
 
     padding: 6px 0;
@@ -506,7 +435,6 @@ div[class*="st-key-rx_preview_result"] img {
 
 .rx-step-icon {
     display: inline-flex;
-
     align-items: center;
     justify-content: center;
 
@@ -516,7 +444,6 @@ div[class*="st-key-rx_preview_result"] img {
     border-radius: 50%;
 
     font-size: 0.72rem;
-
     font-weight: 800;
 
     flex: 0 0 auto;
@@ -524,25 +451,21 @@ div[class*="st-key-rx_preview_result"] img {
 
 .rx-step-done {
     color: var(--rx-success);
-
     font-weight: 700;
 }
 
 .rx-step-done .rx-step-icon {
     background: var(--rx-success-soft);
-
     color: var(--rx-success);
 }
 
 .rx-step-active {
     color: var(--rx-primary);
-
     font-weight: 750;
 }
 
 .rx-step-active .rx-step-icon {
     background: var(--rx-primary-soft);
-
     color: var(--rx-primary);
 
     animation: rxSpin 1.2s linear infinite;
@@ -555,136 +478,113 @@ div[class*="st-key-rx_preview_result"] img {
 
 .rx-step-pending {
     color: var(--rx-muted);
-
     font-weight: 500;
 }
 
 .rx-step-pending .rx-step-icon {
     background: #eef2f5;
-
     color: var(--rx-muted);
 }
 
-/* ---------------------------------------------------------
-   RESULT CAPTION
-   --------------------------------------------------------- */
+/* =========================================================
+   SUBMISSION SUMMARY
+   =========================================================
+   Shown on the right panel after analysis completes.
+   Technical information only — no clinical output.
+   ========================================================= */
 
-.rx-result-caption {
-    margin: 10px 0 18px;
+.rx-submission-banner {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
 
-    color: var(--rx-muted);
+    padding: 0.9rem 1rem;
+    margin-bottom: 1.25rem;
 
-    font-size: 0.72rem;
+    background: var(--rx-success-soft);
+    border: 1px solid rgba(22, 132, 91, 0.25);
+    border-left: 3px solid var(--rx-success);
+    border-radius: 10px;
+}
 
-    text-align: center;
+.rx-submission-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 
+    flex-shrink: 0;
+
+    font-family: "Material Symbols Rounded";
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+
+    font-size: 22px;
+    line-height: 1;
+
+    color: var(--rx-success);
+}
+
+.rx-submission-title {
+    margin: 0;
+
+    color: #14532D;
+
+    font-size: 0.95rem;
+    font-weight: 750;
+}
+
+.rx-submission-text {
+    margin: 0.2rem 0 0;
+
+    color: #166534;
+
+    font-size: 0.85rem;
     line-height: 1.5;
 }
 
-/* ---------------------------------------------------------
-   DIAGNOSIS SUMMARY
-   --------------------------------------------------------- */
+.rx-summary-card {
+    background: var(--rx-card);
 
-.rx-summary-title {
-    margin: 8px 0 12px;
+    border: 1px solid var(--rx-border-light);
+    border-radius: 10px;
 
-    color: var(--rx-text);
-
-    font-size: 1rem;
-
-    font-weight: 800;
-
-    letter-spacing: -0.01em;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
 }
 
 .rx-summary-row {
     display: flex;
-
-    align-items: center;
-
     justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
 
-    gap: 14px;
+    padding: 0.65rem 0.95rem;
 
-    padding: 12px 16px;
+    border-bottom: 1px solid var(--rx-border-light);
 
-    margin-bottom: 8px;
-
-    background: #f8fafb;
-
-    border: 1px solid var(--rx-border-light);
-
-    border-radius: 10px;
+    font-size: 0.85rem;
+    color: var(--rx-muted);
 }
 
-.rx-summary-row span {
-    color: var(--rx-muted);
-
-    font-size: 0.8rem;
-
-    font-weight: 650;
+.rx-summary-row:last-child {
+    border-bottom: none;
 }
 
 .rx-summary-row b {
-    color: var(--rx-primary);
+    color: var(--rx-text);
 
-    font-size: 1.05rem;
-
-    font-weight: 850;
-
-    letter-spacing: -0.01em;
+    font-weight: 650;
+    text-align: right;
+    word-break: break-word;
 }
 
-/* ---------------------------------------------------------
-   FINDINGS BOX
-   --------------------------------------------------------- */
+.rx-summary-note {
+    margin: 0.5rem 0 0;
 
-.rx-findings {
-    margin-top: 14px;
-
-    padding: 14px 16px;
-
-    border-radius: 11px;
-}
-
-.rx-findings-positive {
-    background: var(--rx-danger-soft);
-
-    border: 1px solid rgba(192, 57, 43, 0.2);
-}
-
-.rx-findings-positive .rx-findings-title {
-    color: var(--rx-danger);
-}
-
-.rx-findings-negative {
-    background: var(--rx-success-soft);
-
-    border: 1px solid rgba(22, 132, 91, 0.2);
-}
-
-.rx-findings-negative .rx-findings-title {
-    color: var(--rx-success);
-}
-
-.rx-findings-title {
-    margin: 0 0 6px;
+    color: var(--rx-muted);
 
     font-size: 0.8rem;
-
-    font-weight: 800;
-
-    letter-spacing: 0.02em;
-}
-
-.rx-findings-text {
-    margin: 0;
-
-    color: var(--rx-text-soft);
-
-    font-size: 0.78rem;
-
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
 /* ---------------------------------------------------------
@@ -704,7 +604,6 @@ div[class*="st-key-rx_panel_output"] button[kind="primary"] {
     ) !important;
 
     border: none !important;
-
     color: #ffffff !important;
 }
 
@@ -723,9 +622,7 @@ div[class*="st-key-rx_panel_output"] button[kind="primary"]:hover {
 
 section.main button[kind="primary"][key*="rx_guard_back"] {
     max-width: 260px;
-
     margin: 0 auto;
-
     display: block;
 }
 
@@ -737,13 +634,11 @@ section.main button[kind="primary"][key*="rx_guard_back"] {
 
     .rx-guard {
         padding: 48px 20px;
-
         margin: 20px auto;
     }
 
     .rx-context {
         flex-direction: column;
-
         gap: 8px;
     }
 
@@ -754,13 +649,69 @@ section.main button[kind="primary"][key*="rx_guard_back"] {
     div[class*="st-key-rx_panel_input"],
     div[class*="st-key-rx_panel_output"] {
         min-height: auto;
-
         margin-bottom: 16px;
     }
 
     .rx-summary-row {
         padding: 10px 13px;
     }
+}
+
+/* =========================================================
+   ANALYSIS COMPLETE DIALOG
+   ========================================================= */
+
+.rx-dialog-done {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.4rem;
+
+    padding: 1rem 0.5rem 1.25rem;
+}
+
+.rx-dialog-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 64px;
+    height: 64px;
+
+    border-radius: 50%;
+
+    background: var(--rx-success-soft);
+    color: var(--rx-success);
+
+    font-family: "Material Symbols Rounded";
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+
+    font-size: 34px;
+    line-height: 1;
+
+    margin-bottom: 0.5rem;
+}
+
+.rx-dialog-done-title {
+    margin: 0;
+
+    color: var(--rx-text);
+
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+
+.rx-dialog-done-text {
+    margin: 0.25rem 0 1.25rem;
+    max-width: 320px;
+
+    color: var(--rx-text-soft);
+
+    font-size: 0.85rem;
+    line-height: 1.55;
 }
 
 /* ---------------------------------------------------------
