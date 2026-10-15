@@ -22,6 +22,7 @@ from backend.crud import (
 from backend.backend_utils.subscription_usage import can_analyze_xray
 
 from backend.ai.pneumonia_model import predict
+from backend.ai.pneumonia_type_model import predict_type
 
 from streamlit_app.components.ui import (
     page_header,
@@ -49,6 +50,7 @@ ROLE_STAFF = 7
 RADTECH_ROLES = [ROLE_RADTECH]
 
 AI_MODEL_VERSION = "pneumonia_resnet50_v1"
+CLASSIFICATION_MODEL_VERSION = "pneumonia_densenet121_v1"
 
 
 # ============================================================
@@ -262,6 +264,47 @@ def render_result_panel(result, image_bytes):
         unsafe_allow_html=True,
     )
 
+    # Pneumonia type classification
+    pneumonia_type = result.get("pneumonia_type")
+    classification_confidence = result.get(
+        "classification_confidence"
+    )
+
+    if pneumonia_type:
+        type_label = {
+            "bacterial_pneumonia": "Bacterial Pneumonia",
+            "viral_pneumonia": "Viral Pneumonia",
+        }.get(pneumonia_type, pneumonia_type.replace("_", " ").title())
+
+        st.markdown(
+            "<div class='rx-summary-row'>"
+            "<span>Pneumonia Classification</span>"
+            f"<b>{type_label}</b>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        if classification_confidence is not None:
+            type_confidence_pct = (
+                f"{classification_confidence * 100:.1f}%"
+            )
+
+            st.markdown(
+                "<div class='rx-summary-row'>"
+                "<span>Classification Confidence</span>"
+                f"<b>{type_confidence_pct}</b>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+    elif str(result.get("label", "")).lower() == "negative":
+        st.markdown(
+            "<div class='rx-summary-row'>"
+            "<span>Pneumonia Classification</span>"
+            "<b>Not applicable — negative screening result</b>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
     # Findings box
     if is_positive:
 
@@ -301,14 +344,13 @@ def render_result_panel(result, image_bytes):
 # ANALYSIS RUNNER
 # ============================================================
 
+
 def run_analysis(uploaded_file, examination, patient, request):
 
     progress_placeholder = st.empty()
+    image_bytes = uploaded_file.getvalue()
 
-    # ----------------------------------------------------
-    # Step 0 — Image preprocessed
-    # ----------------------------------------------------
-
+    # Step 0 — Image preprocessing status
     progress_placeholder.markdown(
         _progress_html(0),
         unsafe_allow_html=True,
@@ -316,38 +358,81 @@ def run_analysis(uploaded_file, examination, patient, request):
 
     time.sleep(0.4)
 
-    # ----------------------------------------------------
-    # Step 1 — Running AI
-    # ----------------------------------------------------
-
+    # Step 1 — ResNet-50 pneumonia detection
     progress_placeholder.markdown(
         _progress_html(1),
         unsafe_allow_html=True,
     )
 
     try:
-        result = predict(uploaded_file.getvalue())
+        result = predict(image_bytes)
+
+        # Normalize and validate the first model's label.
+        label = str(result.get("label", "")).strip().lower()
+
+        if label not in ("positive", "negative"):
+            raise ValueError(
+                f"Unexpected ResNet-50 prediction label: {label!r}"
+            )
+
+        result["label"] = label
+        result["pneumonia_type"] = None
+        result["classification_confidence"] = None
+        result["classification_model_version"] = None
+
+        # Step 2 — Run DenseNet-121 only for positive cases.
+        if label == "positive":
+            progress_placeholder.markdown(
+                "<div class='rx-progress-card'>"
+                "<p class='rx-progress-title'>Analysis in Progress</p>"
+                "<div class='rx-step rx-step-done'>"
+                "<span class='rx-step-icon'>✓</span>"
+                "<span class='rx-step-label'>ResNet-50 detection complete</span>"
+                "</div>"
+                "<div class='rx-step rx-step-active'>"
+                "<span class='rx-step-icon'>⟳</span>"
+                "<span class='rx-step-label'>Running DenseNet-121 pneumonia classification...</span>"
+                "</div>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+            type_result = predict_type(image_bytes)
+            print("DEBUG - Full DenseNet result:", type_result)
+
+            type_label = str(
+                type_result.get("label", "")
+            ).strip().lower()
+
+            if type_label not in (
+                "bacterial_pneumonia",
+                "viral_pneumonia",
+            ):
+                raise ValueError(
+                    f"Unexpected DenseNet-121 prediction label: {type_label!r}"
+                )
+
+            result["pneumonia_type"] = type_label
+
+            result["classification_confidence"] = float(
+                type_result["confidence"]
+            )
+            result["classification_model_version"] = (
+                CLASSIFICATION_MODEL_VERSION
+            )
+
+            print("DEBUG - Pneumonia type:", result["pneumonia_type"])
+            print(
+                "DEBUG - Classification confidence:",
+                result["classification_confidence"],
+            )
 
     except Exception as error:
         progress_placeholder.empty()
         st.error(f"AI prediction failed: {error}")
         return
 
-    # ----------------------------------------------------
-    # Step 2 — Generating heatmap
-    # ----------------------------------------------------
-
-    progress_placeholder.markdown(
-        _progress_html(2),
-        unsafe_allow_html=True,
-    )
-
-    time.sleep(0.4)
-
-    # ----------------------------------------------------
-    # Step 3 — Preparing report
-    # ----------------------------------------------------
-
+    # Step 3 — Prepare report
     progress_placeholder.markdown(
         _progress_html(3),
         unsafe_allow_html=True,
@@ -355,26 +440,24 @@ def run_analysis(uploaded_file, examination, patient, request):
 
     time.sleep(0.4)
 
-    # ----------------------------------------------------
-    # Done — clear progress, store result, rerun
-    # ----------------------------------------------------
-
+    # Store both model outputs for the save step.
     progress_placeholder.empty()
-
     st.session_state["radtech_analysis_result"] = result
 
     st.rerun()
+
 
 
 # ============================================================
 # SAVE WORKFLOW
 # ============================================================
 
+
 def save_analysis(uploaded_file, result, examination, request, patient):
 
     user_id = current_user_id()
 
-    # 1. Upload image
+    # 1. Upload the X-ray image.
     upload_result = upload_xray_image(
         request_id=request["request_id"],
         file_bytes=uploaded_file.getvalue(),
@@ -388,34 +471,53 @@ def save_analysis(uploaded_file, result, examination, request, patient):
 
     image_id = upload_result["image_id"]
 
-    # 2. Mark quality passed
-    update_xray_image_quality(
+    # 2. Mark the image quality check.
+    quality_updated = update_xray_image_quality(
         image_id=image_id,
         quality_status="Passed",
         quality_checked_by=user_id,
     )
 
-    # 3. Save AI result
-    save_ai_result(
+    if quality_updated is False:
+        st.error("Failed to save the X-ray quality-check status.")
+        return False
+
+    # 3. Save both AI outputs in one database row.
+    saved_result = save_ai_result(
         image_id=image_id,
         ai_findings=result["label"],
         ai_confidence=result["confidence"],
         ai_model_version=AI_MODEL_VERSION,
+        pneumonia_type=result.get("pneumonia_type"),
+        classification_confidence=result.get(
+            "classification_confidence"
+        ),
+        classification_model_version=result.get(
+            "classification_model_version"
+        ),
     )
 
-    # 4. Mark request completed
+    if not saved_result:
+        st.error(
+            "The X-ray image was uploaded, but saving the AI results "
+            "failed. The examination has not been marked as completed."
+        )
+        return False
+
+    # 4. Mark the X-ray request completed.
     update_xray_request_status(
         request["request_id"],
         status="Completed",
     )
 
-    # 5. Move examination to X-Ray Ready
+    # 5. Move the examination to X-Ray Ready.
     update_examination(
         examination_id=examination["examination_id"],
         status="X-Ray Ready",
     )
 
     return True
+
 
 
 # ============================================================

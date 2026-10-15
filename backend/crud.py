@@ -1463,33 +1463,42 @@ def update_xray_request_status(
 # AI RESULT
 # ==========================================
 
+
 def save_ai_result(
     image_id,
     ai_findings,
     ai_confidence,
     ai_model_version,
+    pneumonia_type=None,
+    classification_confidence=None,
+    classification_model_version=None,
 ):
     """
-    Save the AI prediction result for an X-ray.
+    Save both AI model results for an X-ray in one row.
 
-    ai_findings:
-        Example:
-        - positive
-        - negative
+    ResNet-50:
+        ai_findings
+        ai_confidence
+        ai_model_version
 
-    ai_confidence:
-        Numeric confidence returned by the model.
+    DenseNet-121:
+        pneumonia_type
+        classification_confidence
+        classification_model_version
+
+    DenseNet fields remain NULL when the first model
+    predicts negative pneumonia.
     """
 
     try:
-
         data = {
             "image_id": image_id,
             "ai_findings": ai_findings,
             "ai_confidence": ai_confidence,
-            "ai_model_version": (
-                ai_model_version
-            ),
+            "ai_model_version": ai_model_version,
+            "pneumonia_type": pneumonia_type,
+            "classification_confidence": classification_confidence,
+            "classification_model_version": classification_model_version,
         }
 
         response = (
@@ -1506,12 +1515,9 @@ def save_ai_result(
         )
 
     except Exception as exc:
-
-        print(
-            f"Failed to save AI result: {exc}"
-        )
-
+        print(f"Failed to save AI result: {exc}")
         return None
+
 
 
 # ==========================================
