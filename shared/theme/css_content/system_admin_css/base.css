@@ -1,0 +1,577 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+
+/* ==========================================================
+   SYSTEM ADMIN - BASE (reusable)
+   shared/theme/css_content/system_admin_css/base.css
+
+   Loaded on every system administrator page by ui.load_css().
+   Page-specific files (manage_users.css, ...) only add what is
+   unique to that page.
+
+   Two scopes are styled:
+     .st-key-sa_page    the page itself
+     .st-key-sa_dialog  the inside of dialogs (dialogs render
+                        outside the page, so they need their own key)
+   ========================================================== */
+
+:root {
+  --sa-film:       #F2F6F7;
+  --sa-white:      #FFFFFF;
+  --sa-ink:        #12283A;
+  --sa-slate:      #5A6F7F;
+  --sa-mist:       #DDE8EB;
+  --sa-teal:       #0F7C88;
+  --sa-teal-dark:  #0B626C;
+  --sa-teal-soft:  #E8F4F6;
+  --sa-green:      #23745A;
+  --sa-green-soft: #EAF6F1;
+  --sa-amber:      #8A5A00;
+  --sa-amber-soft: #FFF4DC;
+  --sa-red:        #B3402F;
+  --sa-red-soft:   #FDECEA;
+  --sa-blue:       #2A5FA8;
+  --sa-blue-soft:  #E8F1FB;
+
+  --sa-font-display: 'Fraunces', Georgia, serif;
+  --sa-font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+
+/* ----------------------------------------------------------
+   Dialog window
+   ---------------------------------------------------------- */
+
+[data-testid="stDialog"] [role="dialog"] {
+  border-radius: 16px;
+  font-family: var(--sa-font-body);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+[data-testid="stDialog"] [role="dialog"] h2 {
+  font-family: var(--sa-font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+}
+
+
+/* ----------------------------------------------------------
+   Page and dialog containers
+   ---------------------------------------------------------- */
+
+.st-key-sa_page {
+  max-width: 1180px;            /* keeps the page from stretching on wide screens */
+  margin: 0 auto;
+  gap: 1rem;
+  color: var(--sa-ink);
+  font-family: var(--sa-font-body);
+}
+
+.st-key-sa_dialog {
+  gap: 0.85rem;
+  color: var(--sa-ink);
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid="stHorizontalBlock"] {
+  gap: 0.75rem;
+}
+
+
+/* ----------------------------------------------------------
+   Page header, section titles
+   ---------------------------------------------------------- */
+
+.sa-page-title {
+  margin: 0;
+  font-family: var(--sa-font-display);
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--sa-ink);
+}
+
+.sa-page-caption {
+  margin: 0.2rem 0 0.4rem;
+  font-size: 0.95rem;
+  color: var(--sa-slate);
+}
+
+.sa-section-title {
+  margin: 0.4rem 0 0.1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+}
+
+.sa-section-caption {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--sa-slate);
+}
+
+
+/* ----------------------------------------------------------
+   Metric cards
+   ---------------------------------------------------------- */
+
+.sa-metric {
+  margin-bottom: 0.75rem;       /* Streamlit trims 1rem under HTML blocks */
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.95rem 1.1rem;
+  background: var(--sa-white);
+  border: 1px solid var(--sa-mist);
+  border-radius: 12px;
+}
+
+.sa-metric-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--sa-teal-soft);
+  color: var(--sa-teal);
+
+  /* draws the icon name (e.g. "groups") as a Material icon */
+  font-family: "Material Symbols Rounded";
+  font-size: 1.5rem;
+  font-weight: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  font-feature-settings: "liga";
+}
+
+.sa-metric-amber .sa-metric-icon { background: var(--sa-amber-soft); color: #A86B00; }
+.sa-metric-green .sa-metric-icon { background: var(--sa-green-soft); color: var(--sa-green); }
+.sa-metric-red   .sa-metric-icon { background: var(--sa-red-soft);   color: var(--sa-red); }
+.sa-metric-blue  .sa-metric-icon { background: var(--sa-blue-soft);  color: var(--sa-blue); }
+
+.sa-metric-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--sa-slate);
+}
+
+.sa-metric-value {
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--sa-ink);
+}
+
+
+/* ----------------------------------------------------------
+   Cards (any container whose key starts with sa_card_)
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_card_"] {
+  gap: 0.6rem;
+  padding: 1rem 1.15rem;
+  background: var(--sa-white);
+  border: 1px solid var(--sa-mist);
+  border-radius: 12px;
+}
+
+
+/* ----------------------------------------------------------
+   Tabs
+   ---------------------------------------------------------- */
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [role="tab"] p {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--sa-slate);
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [role="tab"][aria-selected="true"] p {
+  color: var(--sa-teal);
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-baseweb="tab-highlight"] {
+  background-color: var(--sa-teal);
+}
+
+
+/* ----------------------------------------------------------
+   Form fields
+   Newer Streamlit versions use data-testid names, older ones
+   use data-baseweb, so both are listed.
+   ---------------------------------------------------------- */
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid="stForm"] {
+  border: none;
+  padding: 0;
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) label p {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) :is(
+  [data-testid="stTextInputRootElement"],
+  [data-testid="stTextAreaRootElement"],
+  [data-testid="stNumberInputContainer"],
+  [data-testid="stDateInputField"],
+  [data-testid="stSelectbox"] [role="group"],
+  div[data-baseweb="input"],
+  div[data-baseweb="textarea"],
+  div[data-baseweb="select"] > div
+) {
+  background: var(--sa-film);
+  border: 1px solid var(--sa-mist);
+  border-radius: 8px;
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) :is(input, textarea, div[data-baseweb="base-input"]) {
+  background: transparent;
+  color: var(--sa-ink);
+  font-family: var(--sa-font-body);
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) :is(
+  [data-testid="stTextInputRootElement"],
+  [data-testid="stTextAreaRootElement"],
+  [data-testid="stNumberInputContainer"],
+  [data-testid="stDateInputField"],
+  [data-testid="stSelectbox"] [role="group"],
+  div[data-baseweb="input"],
+  div[data-baseweb="textarea"],
+  div[data-baseweb="select"] > div
+):focus-within {
+  border-color: var(--sa-teal);
+  box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.18);
+}
+
+
+/* ----------------------------------------------------------
+   Buttons
+   !important is used on background/border because Streamlit
+   repaints buttons on hover, focus and click.
+   ---------------------------------------------------------- */
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton"] {
+  min-height: 2.1rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton"] p {
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+/* main action */
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton-primary"] {
+  background: var(--sa-teal) !important;
+  border: 1px solid var(--sa-teal) !important;
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton-primary"] p {
+  color: #FFFFFF;
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton-primary"]:hover {
+  background: var(--sa-teal-dark) !important;
+  border-color: var(--sa-teal-dark) !important;
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton-primary"]:disabled {
+  background: #C9D8DC !important;
+  border-color: #C9D8DC !important;
+}
+
+/* quiet action */
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton-secondary"] {
+  background: var(--sa-white) !important;
+  border: 1px solid var(--sa-mist) !important;
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton-secondary"] p,
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton-secondary"] [data-testid="stIconMaterial"] {
+  color: var(--sa-slate);
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton-secondary"]:hover {
+  border-color: var(--sa-teal) !important;
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton-secondary"]:hover p,
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton-secondary"]:hover [data-testid="stIconMaterial"] {
+  color: var(--sa-teal);
+}
+
+:is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton"]:focus-visible {
+  outline: 3px solid rgba(15, 124, 136, 0.4);
+  outline-offset: 2px;
+}
+
+/* destructive buttons (keys that start with delete_ or confirm_delete) */
+[class*="st-key-delete_"] [data-testid^="stBaseButton"]:hover {
+  border-color: #E5B5B0 !important;
+  background: #FDF5F4 !important;
+}
+
+[class*="st-key-delete_"] [data-testid^="stBaseButton"]:hover :is(p, [data-testid="stIconMaterial"]) {
+  color: var(--sa-red);
+}
+
+[class*="st-key-confirm_delete"] [data-testid^="stBaseButton"] {
+  background: var(--sa-red) !important;
+  border-color: var(--sa-red) !important;
+}
+
+[class*="st-key-confirm_delete"] [data-testid^="stBaseButton"]:hover {
+  background: #963424 !important;
+  border-color: #963424 !important;
+}
+
+
+/* ----------------------------------------------------------
+   Status pills
+   ---------------------------------------------------------- */
+
+.sa-pill {
+  display: inline-block;
+  padding: 0.18rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sa-pill-green { background: var(--sa-green-soft); color: var(--sa-green); }
+.sa-pill-amber { background: var(--sa-amber-soft); color: var(--sa-amber); }
+.sa-pill-red   { background: var(--sa-red-soft);   color: var(--sa-red); }
+.sa-pill-blue  { background: var(--sa-blue-soft);  color: var(--sa-blue); }
+.sa-pill-teal  { background: var(--sa-teal-soft);  color: var(--sa-teal-dark); }
+.sa-pill-grey  { background: #EEF2F4;              color: var(--sa-slate); }
+
+
+/* ----------------------------------------------------------
+   Data table (keys: sa_table_*, sa_head_*, sa_row_*)
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_table_"] {
+  gap: 0;
+  background: var(--sa-white);
+  border: 1px solid var(--sa-mist);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+[class*="st-key-sa_head_"] {
+  padding: 0.6rem 1rem;
+  background: var(--sa-film);
+  border-bottom: 1px solid var(--sa-mist);
+}
+
+[class*="st-key-sa_row_"] {
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid var(--sa-mist);
+  transition: background 0.15s ease;
+}
+
+[class*="st-key-sa_row_"]:last-child {
+  border-bottom: none;
+}
+
+[class*="st-key-sa_row_"]:hover {
+  background: #FAFCFC;
+}
+
+.sa-th {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--sa-slate);
+  white-space: nowrap;          /* "Actions" stays on one line above the icon buttons */
+}
+
+.sa-cell {
+  font-size: 0.88rem;
+  color: var(--sa-ink);
+  overflow-wrap: anywhere;
+}
+
+.sa-cell-strong { font-weight: 700; }
+.sa-cell-muted  { color: var(--sa-slate); }
+
+/* small icon buttons at the end of a row */
+[class*="st-key-sa_row_"] [data-testid^="stBaseButton"] {
+  min-height: 2rem;
+  padding: 0.25rem 0.4rem;
+}
+
+/* name with a round initials avatar */
+.sa-namecell {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.sa-namecell b {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+}
+
+.sa-namecell small {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--sa-slate);
+  overflow-wrap: anywhere;
+}
+
+.sa-avatar {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--sa-teal-soft);
+  color: var(--sa-teal-dark);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+
+/* ----------------------------------------------------------
+   Label / value rows and text fields (details dialogs)
+   ---------------------------------------------------------- */
+
+.sa-rows {
+  margin-bottom: 0.9rem;        /* Streamlit trims 1rem under HTML blocks */
+  border-top: 1px solid var(--sa-mist);
+}
+
+.sa-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--sa-mist);
+  font-size: 0.88rem;
+  color: var(--sa-slate);
+}
+
+.sa-row:last-child { border-bottom: none; }
+
+.sa-row b {
+  max-width: 65%;
+  font-weight: 600;
+  text-align: right;
+  color: var(--sa-ink);
+  overflow-wrap: anywhere;
+}
+
+.sa-field {
+  margin-bottom: 0.5rem;
+}
+
+.sa-field span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--sa-slate);
+}
+
+.sa-field p {
+  margin: 0.1rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--sa-ink);
+  white-space: pre-wrap;
+}
+
+.sa-subtitle {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--sa-slate);
+}
+
+.sa-dialog-text {
+  margin: 0 0 0.5rem;
+  font-size: 0.97rem;
+  line-height: 1.5;
+  color: var(--sa-ink);
+}
+
+
+/* ----------------------------------------------------------
+   Notes and empty state
+   ---------------------------------------------------------- */
+
+.sa-note {
+  margin-bottom: 0.9rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--sa-film);
+  border: 1px solid var(--sa-mist);
+  border-left: 3px solid var(--sa-teal);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--sa-slate);
+}
+
+.sa-note-green { background: var(--sa-green-soft); border-color: #CBE8DC; border-left-color: var(--sa-green); }
+.sa-note-red   { background: #FDF3F2; border-color: #F2D3CF; border-left-color: var(--sa-red); }
+.sa-note-amber { background: #FFF9EB; border-color: #F5E4BB; border-left-color: #D9930D; }
+
+.sa-empty {
+  padding: 1.5rem 1rem;
+  border: 1px dashed var(--sa-mist);
+  border-radius: 12px;
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--sa-slate);
+}
+
+
+/* ----------------------------------------------------------
+   Limits grid (three numbers side by side, e.g. plan limits)
+   ---------------------------------------------------------- */
+
+.sa-limits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem 0 0.9rem;
+  border-top: 1px solid var(--sa-mist);
+}
+
+.sa-limit b {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+}
+
+.sa-limit span {
+  font-size: 0.78rem;
+  color: var(--sa-slate);
+}
+
+
+/* ----------------------------------------------------------
+   Small screens
+   ---------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .sa-page-title { font-size: 1.6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.st-key-sa_page, .st-key-sa_dialog) * { transition: none !important; }
+}

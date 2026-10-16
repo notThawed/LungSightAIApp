@@ -1,0 +1,20 @@
+/* ==========================================================
+   SYSTEM ADMIN - MANAGE PATIENTS
+   shared/theme/css_content/system_admin_css/manage_patients.css
+   Only what is unique to this page. The table, avatars, buttons
+   and dialogs come from base.css.
+   ========================================================== */
+
+/* the two icon buttons at the end of a row sit close together */
+[class*="st-key-sa_row_patients_"] [data-testid="stHorizontalBlock"] {
+  gap: 0.35rem;
+}
+
+[class*="st-key-sa_row_patients_"] [data-testid^="stBaseButton"] {
+  width: 100%;
+}
+
+/* the patient form is wide: give the suffix box a little less room */
+.st-key-sa_dialog [data-testid="stForm"] [data-testid="stHorizontalBlock"] {
+  align-items: flex-start;
+}

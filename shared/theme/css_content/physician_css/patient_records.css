@@ -1,0 +1,673 @@
+/* =========================================================
+   LUNGSIGHT — PHYSICIAN
+   Patient Records + Analysis Report
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+
+/* ----------------------------------------------------------
+   Tokens
+   ---------------------------------------------------------- */
+
+:root {
+    --pr-film:         #F2F6F7;
+    --pr-white:        #FFFFFF;
+    --pr-ink:          #12283A;
+    --pr-slate:        #5A6F7F;
+    --pr-mist:         #DDE8EB;
+
+    --pr-teal:         #0F7C88;
+    --pr-teal-soft:    #E8F4F6;
+
+    --pr-green:        #2E8B6A;
+    --pr-green-soft:   #EAF6F1;
+
+    --pr-amber:        #B45309;
+    --pr-amber-soft:   #FEF3C7;
+
+    --pr-red:          #B91C1C;
+    --pr-red-soft:     #FEE2E2;
+
+    --pr-font-display: 'Fraunces', Georgia, serif;
+    --pr-font-body:    'Manrope', system-ui, -apple-system, sans-serif;
+}
+
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    vertical-align: middle;
+}
+
+
+/* ----------------------------------------------------------
+   Page — narrowed
+   ---------------------------------------------------------- */
+
+.st-key-physician_patient_records_page {
+    font-family: var(--pr-font-body);
+    color: var(--pr-ink);
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+
+/* ----------------------------------------------------------
+   List — header row
+   ---------------------------------------------------------- */
+
+.st-key-pr_table_header {
+    padding: 0.7rem 1rem;
+    background: var(--pr-film);
+    border: 1px solid var(--pr-mist);
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+}
+
+.st-key-pr_table_header .pr-header-cell {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pr-slate);
+}
+
+
+/* ----------------------------------------------------------
+   List — patient row
+   ---------------------------------------------------------- */
+
+[class*="st-key-pr_row_"] {
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--pr-mist);
+    border-radius: 10px;
+    background: var(--pr-white);
+    margin-bottom: 0.4rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[class*="st-key-pr_row_"]:hover {
+    border-color: var(--pr-teal);
+    box-shadow: 0 4px 12px rgba(15, 124, 136, 0.08);
+}
+
+[class*="st-key-pr_row_"] .pr-cell {
+    font-size: 0.84rem;
+    color: var(--pr-slate);
+    padding-top: 0.3rem;
+}
+
+[class*="st-key-pr_row_"] .pr-cell-id {
+    font-family: ui-monospace, monospace;
+    font-size: 0.76rem;
+    color: var(--pr-ink);
+    font-weight: 600;
+}
+
+[class*="st-key-pr_row_"] .pr-cell-name {
+    font-weight: 700;
+    color: var(--pr-ink);
+    font-size: 0.88rem;
+}
+
+
+/* ----------------------------------------------------------
+   Report header
+   ---------------------------------------------------------- */
+
+.pr-report-header {
+    margin-bottom: 1.25rem;
+}
+
+.pr-report-title {
+    margin: 0;
+    font-family: var(--pr-font-display);
+    font-size: 1.65rem;
+    font-weight: 600;
+    color: var(--pr-ink);
+    letter-spacing: -0.01em;
+}
+
+.pr-report-sub {
+    margin: 0.2rem 0 0;
+    font-size: 0.8rem;
+    color: var(--pr-slate);
+    font-family: ui-monospace, monospace;
+}
+
+
+/* ----------------------------------------------------------
+   Section label
+   ---------------------------------------------------------- */
+
+.pr-section-label {
+    margin: 1.5rem 0 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--pr-slate);
+}
+
+
+/* ----------------------------------------------------------
+   Category cards (Level 1)
+   ---------------------------------------------------------- */
+
+[class*="st-key-pr_cat_"]:not([class*="pr_cat_view"]) {
+    padding: 1.35rem 1.15rem 0.85rem;
+    background: var(--pr-white);
+    border: 1px solid var(--pr-mist);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(18, 40, 58, 0.04);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    margin-bottom: 0.4rem;
+}
+
+[class*="st-key-pr_cat_"]:not([class*="pr_cat_view"]):hover {
+    border-color: var(--pr-teal);
+    box-shadow: 0 6px 18px rgba(15, 124, 136, 0.10);
+}
+
+.pr-cat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.35rem;
+}
+
+.pr-cat-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: var(--pr-teal-soft);
+    color: var(--pr-teal);
+    font-size: 22px;
+    line-height: 1;
+    margin-bottom: 0.4rem;
+}
+
+.pr-cat-title {
+    margin: 0;
+    font-family: var(--pr-font-display);
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--pr-ink);
+    line-height: 1.2;
+}
+
+.pr-cat-count {
+    margin: 0 0 0.5rem;
+    font-size: 0.76rem;
+    color: var(--pr-slate);
+}
+
+
+/* ----------------------------------------------------------
+   Exam list card (Level 2)
+   ---------------------------------------------------------- */
+
+[class*="st-key-pr_exam_card_"],
+[class*="st-key-pr_rec_card_"] {
+    padding: 1rem 1.15rem 0.75rem;
+    background: var(--pr-white);
+    border: 1px solid var(--pr-mist);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(18, 40, 58, 0.03);
+    margin-bottom: 0.75rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[class*="st-key-pr_exam_card_"]:hover,
+[class*="st-key-pr_rec_card_"]:hover {
+    border-color: var(--pr-teal);
+    box-shadow: 0 6px 16px rgba(15, 124, 136, 0.10);
+}
+
+.pr-exam-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 0.55rem;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid var(--pr-film);
+}
+
+.pr-exam-title {
+    margin: 0;
+    font-family: var(--pr-font-display);
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--pr-ink);
+}
+
+.pr-exam-date {
+    font-size: 0.72rem;
+    color: var(--pr-slate);
+    font-family: ui-monospace, monospace;
+    white-space: nowrap;
+}
+
+.pr-exam-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.32rem 0;
+    font-size: 0.8rem;
+}
+
+.pr-exam-row span {
+    color: var(--pr-slate);
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.pr-exam-row b {
+    color: var(--pr-ink);
+    font-weight: 600;
+    text-align: right;
+    word-break: break-word;
+}
+
+.pr-xray-available {
+    color: var(--pr-green) !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.pr-xray-missing {
+    color: var(--pr-amber) !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.pr-xray-icon {
+    font-size: 16px !important;
+    line-height: 1;
+}
+
+
+/* ----------------------------------------------------------
+   Left column — stacked cards
+   ---------------------------------------------------------- */
+
+.st-key-pr_hero_left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.pr-hero-card {
+    padding: 1.1rem 1.25rem;
+    background: var(--pr-white);
+    border: 1px solid var(--pr-mist);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(18, 40, 58, 0.04);
+    margin-bottom: 0.85rem;
+}
+
+.pr-hero-eyebrow {
+    margin: 0 0 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--pr-teal);
+}
+
+.pr-hero-name {
+    margin: 0 0 0.85rem;
+    font-family: var(--pr-font-display);
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--pr-ink);
+    line-height: 1.15;
+}
+
+.pr-hero-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--pr-film);
+    font-size: 0.82rem;
+}
+
+.pr-hero-row:last-child {
+    border-bottom: none;
+}
+
+.pr-hero-row span {
+    color: var(--pr-slate);
+    font-weight: 500;
+    flex-shrink: 0;
+    max-width: 45%;
+}
+
+.pr-hero-row b {
+    color: var(--pr-ink);
+    font-weight: 600;
+    text-align: right;
+    word-break: break-word;
+}
+
+.pr-hero-row-block {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+}
+
+.pr-conf-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.82rem;
+}
+
+.pr-conf-label span {
+    color: var(--pr-slate);
+}
+
+.pr-conf-label b {
+    color: var(--pr-teal);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.pr-conf-bar {
+    width: 100%;
+    height: 7px;
+    background: var(--pr-film);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.pr-conf-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--pr-teal), #2BB6C4);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+
+/* ----------------------------------------------------------
+   Image labels
+   ---------------------------------------------------------- */
+
+.pr-img-label {
+    margin: 0 0 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--pr-slate);
+}
+
+
+/* ----------------------------------------------------------
+   X-ray frame + heatmap
+   ---------------------------------------------------------- */
+
+.st-key-pr_xray_frame {
+    padding: 12px;
+    background: var(--pr-film);
+    border: 1px solid var(--pr-mist);
+    border-radius: 12px;
+    margin: 0 0 0.85rem;
+
+    height: 300px;
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.st-key-pr_xray_frame [data-testid="stImage"] {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.st-key-pr_xray_frame img {
+    border-radius: 8px;
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.pr-heatmap-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+
+    padding: 1.25rem 1rem;
+
+    height: 300px;
+    box-sizing: border-box;
+
+    background:
+        repeating-linear-gradient(
+            45deg,
+            #F7FAFB,
+            #F7FAFB 12px,
+            #F2F6F7 12px,
+            #F2F6F7 24px
+        );
+
+    border: 2px dashed var(--pr-mist);
+    border-radius: 12px;
+
+    text-align: center;
+    margin: 0 0 0.85rem;
+}
+
+.pr-heatmap-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--pr-teal-soft);
+    color: var(--pr-teal);
+    font-size: 24px;
+    line-height: 1;
+}
+
+.pr-heatmap-title {
+    margin: 0.25rem 0 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--pr-ink);
+}
+
+.pr-heatmap-text {
+    margin: 0;
+    max-width: 240px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--pr-slate);
+}
+
+
+/* ----------------------------------------------------------
+   No X-Ray notice
+   ---------------------------------------------------------- */
+
+.pr-no-xray {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+
+    padding: 1.75rem 1.25rem;
+
+    background: var(--pr-film);
+    border: 1px dashed var(--pr-mist);
+    border-radius: 12px;
+
+    text-align: center;
+    margin: 0.4rem 0 0.85rem;
+}
+
+.pr-no-xray-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--pr-white);
+    color: var(--pr-slate);
+    font-size: 22px;
+    line-height: 1;
+}
+
+.pr-no-xray-title {
+    margin: 0.35rem 0 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--pr-ink);
+}
+
+.pr-no-xray-text {
+    margin: 0;
+    max-width: 300px;
+    font-size: 0.76rem;
+    line-height: 1.5;
+    color: var(--pr-slate);
+}
+
+
+/* ----------------------------------------------------------
+   AI findings summary
+   ---------------------------------------------------------- */
+
+.pr-ai-summary {
+    padding: 1rem 1.15rem;
+    border-radius: 12px;
+    margin: 0.65rem 0 1.1rem;
+    border-left: 4px solid var(--pr-slate);
+    background: var(--pr-film);
+}
+
+.pr-ai-summary-positive {
+    background: var(--pr-red-soft);
+    border-left-color: var(--pr-red);
+}
+
+.pr-ai-summary-negative {
+    background: var(--pr-green-soft);
+    border-left-color: var(--pr-green);
+}
+
+.pr-ai-summary-text {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--pr-ink);
+}
+
+.pr-ai-summary-meta {
+    display: inline-block;
+    margin-top: 0.4rem;
+    font-size: 0.76rem;
+    color: var(--pr-slate);
+}
+
+.pr-ai-summary-meta b {
+    color: var(--pr-ink);
+}
+
+
+/* ----------------------------------------------------------
+   Recommendations
+   ---------------------------------------------------------- */
+
+.pr-rec-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 1.1rem;
+}
+
+.pr-rec-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--pr-film);
+    font-size: 0.82rem;
+    color: var(--pr-ink);
+}
+
+.pr-rec-list li:last-child {
+    border-bottom: none;
+}
+
+.pr-rec-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--pr-teal-soft);
+    color: var(--pr-teal);
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+
+/* ----------------------------------------------------------
+   Disclaimer
+   ---------------------------------------------------------- */
+
+.pr-disclaimer {
+    padding: 0.85rem 1rem;
+    background: var(--pr-film);
+    border: 1px solid var(--pr-mist);
+    border-radius: 10px;
+    font-size: 0.76rem;
+    line-height: 1.55;
+    color: var(--pr-slate);
+    margin-top: 0.5rem;
+}
+
+.pr-disclaimer b {
+    color: var(--pr-ink);
+}
+
+
+/* ----------------------------------------------------------
+   Responsive
+   ---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    .st-key-pr_xray_frame,
+    .pr-heatmap-placeholder {
+        height: 240px;
+    }
+}

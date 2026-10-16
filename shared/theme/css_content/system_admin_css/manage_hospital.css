@@ -1,0 +1,411 @@
+/* ==========================================================
+   SYSTEM ADMIN - MANAGE HOSPITALS
+   shared/theme/css_content/system_admin_css/manage_hospital.css
+
+   Pattern A — list + map split, detail card below.
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   Page + search
+   ---------------------------------------------------------- */
+
+.st-key-sa_page [data-testid="stTextInputRootElement"] {
+  margin-bottom: 0.9rem;
+}
+
+.st-key-sa_page [data-testid="stSelectbox"] {
+  margin-bottom: 0.9rem;
+}
+
+
+/* ----------------------------------------------------------
+   Split view — list pane + map pane
+   ---------------------------------------------------------- */
+
+.st-key-mh_hospital_list {
+  max-height: 560px;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.st-key-mh_hospital_list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.st-key-mh_hospital_list::-webkit-scrollbar-thumb {
+  background: var(--sa-mist);
+  border-radius: 3px;
+}
+
+
+/* ----------------------------------------------------------
+   Hospital list card
+   ---------------------------------------------------------- */
+
+[class*="st-key-mh_list_item_"] {
+  padding: 0.6rem 0.75rem 0.5rem;
+  margin-bottom: 0.35rem;
+  border: 1px solid var(--sa-mist);
+  border-radius: 10px;
+  background: #FFFFFF;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[class*="st-key-mh_list_item_"]:hover {
+  border-color: var(--sa-teal-soft);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.mh-list-name {
+  font-family: var(--sa-font-display);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+  line-height: 1.25;
+  margin-bottom: 0.15rem;
+}
+
+.mh-list-meta {
+  font-size: 0.75rem;
+  color: var(--sa-slate);
+  line-height: 1.3;
+}
+
+.mh-list-dots {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.mh-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.mh-dot-active    { background: #16A34A; }
+.mh-dot-inactive  { background: #DC2626; }
+.mh-dot-verified  { background: #0EA5A4; }
+
+
+/* ----------------------------------------------------------
+   Detail card
+   ---------------------------------------------------------- */
+
+.st-key-mh_detail_card {
+  margin-top: 1.25rem;
+  padding: 1.1rem 1.25rem 0.85rem;
+  border: 1px solid var(--sa-mist);
+  border-radius: 14px;
+  background: #FBFDFD;
+}
+
+.mh-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.mh-detail-title {
+  font-family: var(--sa-font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+}
+
+.mh-detail-pills {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.mh-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.mh-pill-green  { background: #DCFCE7; color: #166534; }
+.mh-pill-red    { background: #FEE2E2; color: #991B1B; }
+.mh-pill-amber  { background: #FEF3C7; color: #92400E; }
+
+.mh-detail-subline {
+  font-size: 0.8rem;
+  color: var(--sa-slate);
+  margin-bottom: 0.5rem;
+}
+
+.mh-detail-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--sa-mist);
+}
+
+.mh-detail-contact span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+
+/* ----------------------------------------------------------
+   Detail metric blocks
+   ---------------------------------------------------------- */
+
+.mh-metric-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.15rem 0;
+}
+
+.mh-metric-primary {
+  font-family: var(--sa-font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+}
+
+.mh-metric-secondary {
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+}
+
+.mh-metric-tertiary {
+  font-size: 0.75rem;
+  color: var(--sa-slate);
+  opacity: 0.85;
+}
+
+.mh-usage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.15rem 0;
+  font-size: 0.82rem;
+}
+
+.mh-usage-label {
+  color: var(--sa-slate);
+}
+
+.mh-usage-value {
+  font-weight: 600;
+  color: var(--sa-ink);
+}
+
+
+/* ----------------------------------------------------------
+   Hospital secondary action row
+   (kept for backward compatibility — see
+   manage_hospital_dialogs.py for the new layout)
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_hospital_secondary_"] {
+  min-height: 2.15rem;
+  padding: 0.25rem 1rem 0.45rem;
+  background: #FAFCFC;
+  border-left: 1px solid var(--sa-mist);
+  border-right: 1px solid var(--sa-mist);
+  border-bottom: 1px solid var(--sa-mist);
+}
+
+[class*="st-key-sa_hospital_secondary_"] p {
+  margin: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Small action buttons — hospital table
+   (FIXED: was st-key-sa_row_hospitals_, now matches
+   the actual key used by manage_hospital.py: hospitals_<id>)
+   ---------------------------------------------------------- */
+
+[class*="st-key-hospitals_"] [data-testid^="stBaseButton"] {
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.35rem;
+}
+
+[class*="st-key-hospitals_"] [data-testid="stIconMaterial"] {
+  font-size: 1.05rem;
+}
+
+
+/* ----------------------------------------------------------
+   Dialog header icon
+   ---------------------------------------------------------- */
+
+.mh-dialog-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0.1rem 0 0.9rem;
+}
+
+.mh-dialog-heading h3 {
+  margin: 0;
+  font-family: var(--sa-font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+}
+
+.mh-dialog-heading p {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+}
+
+.mh-dialog-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: var(--sa-teal-soft);
+  color: var(--sa-teal);
+
+  font-family: "Material Symbols Rounded";
+  font-size: 1.35rem;
+  font-feature-settings: "liga";
+}
+
+
+/* ----------------------------------------------------------
+   Staff table
+   ---------------------------------------------------------- */
+
+.st-key-sa_table_hospital_staff {
+  margin-top: 0.15rem;
+}
+
+
+/* ----------------------------------------------------------
+   Staff profile avatar (fallback)
+   ---------------------------------------------------------- */
+
+.mh-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--sa-mist);
+}
+
+.mh-profile-avatar {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  background: var(--sa-teal-soft);
+  color: var(--sa-teal-dark);
+
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.mh-profile-header h3 {
+  margin: 0;
+  font-family: var(--sa-font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+}
+
+.mh-profile-header p {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+}
+
+
+/* ----------------------------------------------------------
+   Staff table action buttons
+   ---------------------------------------------------------- */
+
+.st-key-sa_table_hospital_staff
+[class*="st-key-staff_"]
+[data-testid^="stBaseButton"] {
+  min-height: 2rem;
+  padding: 0.25rem 0.5rem;
+}
+
+
+/* ----------------------------------------------------------
+   Dialog spacing
+   ---------------------------------------------------------- */
+
+[data-testid="stDialog"] [role="dialog"] .sa-section-title {
+  margin-top: 0.9rem;
+}
+
+[data-testid="stDialog"] [role="dialog"] .sa-metric {
+  margin-bottom: 0.65rem;
+}
+
+
+/* ----------------------------------------------------------
+   Status action button inside secondary row
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_hospital_secondary_"]
+[data-testid^="stBaseButton-secondary"] {
+  min-height: 1.9rem;
+  padding: 0.2rem 0.65rem;
+}
+
+[class*="st-key-sa_hospital_secondary_"]
+[data-testid^="stBaseButton-secondary"] p {
+  font-size: 0.78rem;
+}
+
+
+/* ----------------------------------------------------------
+   Responsive
+   ---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+
+  .st-key-mh_hospital_list {
+    max-height: 320px;
+  }
+}
+
+@media (max-width: 640px) {
+
+  .mh-dialog-heading {
+    gap: 0.6rem;
+  }
+
+  .mh-dialog-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .mh-profile-avatar {
+    width: 46px;
+    height: 46px;
+  }
+}

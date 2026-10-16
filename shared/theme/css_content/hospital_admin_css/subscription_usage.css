@@ -1,0 +1,686 @@
+/* =========================================================
+   LUNGSIGHT — HOSPITAL ADMIN
+   Subscription & Usage
+   shared/theme/css_content/hospital_admin_css/subscription_usage.css
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   MATERIAL SYMBOLS
+   --------------------------------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0');
+
+/* ---------------------------------------------------------
+   ROOT / GLOBAL TOKENS
+   (same palette as the rest of the app)
+   --------------------------------------------------------- */
+
+:root {
+    --ls-primary: #176b87;
+    --ls-primary-dark: #0f526a;
+    --ls-primary-soft: #eaf6fa;
+
+    --ls-accent: #2b8ca8;
+    --ls-success: #16845b;
+    --ls-success-soft: #eaf8f1;
+
+    --ls-warning: #b7791f;
+    --ls-warning-soft: #fff7e8;
+
+    --ls-danger: #c0392b;
+    --ls-danger-soft: #fff0ee;
+
+    --ls-text: #172b35;
+    --ls-text-soft: #52636c;
+    --ls-muted: #7a8990;
+
+    --ls-border: #dce6ea;
+    --ls-border-light: #e9eff2;
+
+    --ls-background: #f7fafb;
+    --ls-card: #ffffff;
+
+    --ls-radius-sm: 8px;
+    --ls-radius-md: 14px;
+    --ls-radius-lg: 20px;
+
+    --ls-shadow-sm:
+        0 2px 8px rgba(23, 55, 66, 0.05);
+
+    --ls-shadow-md:
+        0 8px 24px rgba(23, 55, 66, 0.08);
+}
+
+/* ---------------------------------------------------------
+   MATERIAL SYMBOLS — SAFETY NET
+   --------------------------------------------------------- */
+
+.material-symbols-rounded,
+.material-symbols-outlined {
+    font-family: "Material Symbols Rounded" !important;
+    font-weight: normal;
+    font-style: normal;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------------------------------------------------
+   PAGE WRAPPER
+   <div class="st-key-sa_page" data-testid="stVerticalBlock">
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] {
+    animation: suFadeIn 0.35s ease-out;
+}
+
+@keyframes suFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ---------------------------------------------------------
+   SECTION SUBHEADERS
+   "Current subscription", "Subscription usage",
+   "Remaining capacity", "About subscription usage"
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] [data-testid="stHeadingWithActionElements"] h3,
+div[class*="st-key-sa_page"] h3 {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin: 4px 0 4px;
+
+    color: var(--ls-text);
+
+    font-size: 1.22rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.02em;
+
+    line-height: 1.3;
+}
+
+/* The first subheader (inside the header block) gets more breathing room */
+
+div[class*="st-key-sa_page"] [data-testid="stHeadingWithActionElements"] h3::before {
+    content: "";
+
+    display: inline-block;
+
+    width: 4px;
+    height: 18px;
+
+    border-radius: 2px;
+
+    background: linear-gradient(
+        180deg,
+        var(--ls-primary),
+        var(--ls-accent)
+    );
+
+    margin-right: 2px;
+}
+
+/* ---------------------------------------------------------
+   CAPTIONS UNDER SUBHEADERS
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] [data-testid="stCaptionContainer"] {
+    color: var(--ls-muted);
+
+    font-size: 0.82rem;
+
+    line-height: 1.55;
+
+    margin-bottom: 6px;
+}
+
+/* ---------------------------------------------------------
+   STREAMLIT DIVIDERS
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] hr {
+    border: 0;
+
+    border-top: 1px solid var(--ls-border-light);
+
+    margin: 26px 0 22px;
+}
+
+/* ---------------------------------------------------------
+   ROWS — from show_rows() / sa-rows / sa-row
+   These are the label/value pairs rendered inside
+   each column of the subscription details block
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] .sa-rows {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 1px;
+
+    padding: 4px 0;
+
+    background: transparent;
+
+    border: none;
+
+    border-radius: 0;
+}
+
+div[class*="st-key-sa_page"] .sa-row {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 14px;
+
+    padding: 8px 0;
+
+    border-bottom: 1px solid var(--ls-border-light);
+
+    background: transparent;
+}
+
+div[class*="st-key-sa_page"] .sa-row:last-child {
+    border-bottom: none;
+}
+
+div[class*="st-key-sa_page"] .sa-row span {
+    color: var(--ls-muted);
+
+    font-size: 0.72rem;
+
+    font-weight: 650;
+
+    letter-spacing: 0.02em;
+}
+
+div[class*="st-key-sa_page"] .sa-row b {
+    color: var(--ls-text);
+
+    font-size: 0.82rem;
+
+    font-weight: 750;
+
+    text-align: right;
+
+    overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------
+   COLUMN "CARDS" IN THE SUBSCRIPTION DETAILS
+   The three st.columns(3) blocks each contain a small
+   stack of rows. Wrap them visually.
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    padding: 14px 16px;
+
+    background: var(--ls-card);
+
+    border: 1px solid var(--ls-border);
+
+    border-radius: var(--ls-radius-md);
+
+    box-shadow: var(--ls-shadow-sm);
+
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:hover {
+    transform: translateY(-1px);
+
+    border-color: rgba(23, 107, 135, 0.22);
+
+    box-shadow: var(--ls-shadow-md);
+}
+
+/* But: remove that card styling inside the "Remaining capacity"
+   row of metric cards, because metric_card already provides
+   its own visual treatment. */
+
+div[class*="st-key-sa_page"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has(.sa-metric) {
+    padding: 0;
+
+    background: transparent;
+
+    border: none;
+
+    box-shadow: none;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has(.sa-metric):hover {
+    transform: none;
+
+    box-shadow: none;
+}
+
+/* ---------------------------------------------------------
+   METRIC CARDS — from metric_card() / sa-metric
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] .sa-metric {
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+
+    padding: 20px 20px;
+
+    background: var(--ls-card);
+
+    border: 1px solid var(--ls-border);
+
+    border-radius: var(--ls-radius-md);
+
+    box-shadow: var(--ls-shadow-sm);
+
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease;
+
+    overflow: hidden;
+}
+
+div[class*="st-key-sa_page"] .sa-metric::before {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    top: 0;
+    bottom: 0;
+
+    width: 4px;
+
+    background: var(--ls-border);
+
+    border-radius: 4px 0 0 4px;
+}
+
+div[class*="st-key-sa_page"] .sa-metric:hover {
+    transform: translateY(-2px);
+
+    border-color: rgba(23, 107, 135, 0.28);
+
+    box-shadow: var(--ls-shadow-md);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-icon {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 auto;
+
+    width: 44px;
+    height: 44px;
+
+    background: var(--ls-primary-soft);
+
+    border-radius: 11px;
+
+    color: var(--ls-primary);
+
+    font-family: "Material Symbols Rounded";
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+
+    font-size: 22px;
+
+    line-height: 1;
+}
+
+div[class*="st-key-sa_page"] .sa-metric-title {
+    color: var(--ls-muted);
+
+    font-size: 0.68rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.1em;
+
+    text-transform: uppercase;
+
+    margin-bottom: 3px;
+}
+
+div[class*="st-key-sa_page"] .sa-metric-value {
+    color: var(--ls-text);
+
+    font-size: 1.65rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.02em;
+
+    line-height: 1.1;
+}
+
+/* Metric tones */
+
+div[class*="st-key-sa_page"] .sa-metric-blue::before {
+    background: var(--ls-accent);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-green::before {
+    background: var(--ls-success);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-green .sa-metric-icon {
+    background: var(--ls-success-soft);
+
+    color: var(--ls-success);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-amber::before {
+    background: var(--ls-warning);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-amber .sa-metric-icon {
+    background: var(--ls-warning-soft);
+
+    color: var(--ls-warning);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-red::before {
+    background: var(--ls-danger);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-red .sa-metric-icon {
+    background: var(--ls-danger-soft);
+
+    color: var(--ls-danger);
+}
+
+/* ---------------------------------------------------------
+   ST.METRIC — used by render_usage_item() for Used
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] [data-testid="stMetric"] {
+    padding: 0;
+
+    background: transparent;
+
+    border: none;
+
+    box-shadow: none;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stMetricLabel"] {
+    color: var(--ls-muted) !important;
+
+    font-size: 0.68rem !important;
+
+    font-weight: 800 !important;
+
+    letter-spacing: 0.1em !important;
+
+    text-transform: uppercase !important;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stMetricValue"] {
+    color: var(--ls-text) !important;
+
+    font-size: 2rem !important;
+
+    font-weight: 800 !important;
+
+    letter-spacing: -0.025em !important;
+
+    line-height: 1.1 !important;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stMetricDelta"] {
+    color: var(--ls-muted) !important;
+
+    font-size: 0.78rem !important;
+
+    font-weight: 600 !important;
+
+    letter-spacing: 0.01em !important;
+}
+
+/* Remove the default delta arrow icon (delta_color="off" hides it,
+   but Streamlit still reserves space) */
+
+div[class*="st-key-sa_page"] [data-testid="stMetricDelta"] svg {
+    display: none;
+}
+
+/* ---------------------------------------------------------
+   PILLS — from pill() / sa-pill
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] .sa-pill {
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 4px 11px;
+
+    border-radius: 999px;
+
+    font-size: 0.68rem;
+
+    font-weight: 750;
+
+    letter-spacing: 0.02em;
+
+    line-height: 1.4;
+
+    white-space: nowrap;
+
+    border: 1px solid transparent;
+}
+
+div[class*="st-key-sa_page"] .sa-pill-green {
+    background: var(--ls-success-soft);
+
+    color: var(--ls-success);
+
+    border-color: rgba(22, 132, 91, 0.18);
+}
+
+div[class*="st-key-sa_page"] .sa-pill-amber {
+    background: var(--ls-warning-soft);
+
+    color: var(--ls-warning);
+
+    border-color: rgba(183, 121, 31, 0.18);
+}
+
+div[class*="st-key-sa_page"] .sa-pill-red {
+    background: var(--ls-danger-soft);
+
+    color: var(--ls-danger);
+
+    border-color: rgba(192, 57, 43, 0.18);
+}
+
+div[class*="st-key-sa_page"] .sa-pill-blue {
+    background: var(--ls-primary-soft);
+
+    color: var(--ls-primary);
+
+    border-color: rgba(23, 107, 135, 0.18);
+}
+
+div[class*="st-key-sa_page"] .sa-pill-grey {
+    background: #f0f3f5;
+
+    color: #64748b;
+
+    border-color: #dce4e8;
+}
+
+/* ---------------------------------------------------------
+   PROGRESS BARS — st.progress used in render_usage_item
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] [data-testid="stProgressBar"] > div {
+    height: 8px;
+
+    background: #e8eff2;
+
+    border-radius: 999px;
+
+    overflow: hidden;
+}
+
+/* The filled portion Streamlit renders inside */
+
+div[class*="st-key-sa_page"] [data-testid="stProgressBar"] [role="progressbar"] > div {
+    border-radius: 999px;
+
+    background: linear-gradient(
+        90deg,
+        var(--ls-primary),
+        var(--ls-accent)
+    );
+
+    transition: width 0.4s ease;
+}
+
+/* Color the progress bar based on the tone class we add
+   via a wrapper span (see usage tip below).
+   Fallback styling — green by default. */
+
+div[class*="st-key-sa_page"] .su-bar-amber + div [role="progressbar"] > div,
+div[class*="st-key-sa_page"] [data-tone="amber"] [role="progressbar"] > div {
+    background: linear-gradient(
+        90deg,
+        #d99b3f,
+        var(--ls-warning)
+    ) !important;
+}
+
+div[class*="st-key-sa_page"] [data-tone="red"] [role="progressbar"] > div {
+    background: linear-gradient(
+        90deg,
+        #d8614f,
+        var(--ls-danger)
+    ) !important;
+}
+
+/* ---------------------------------------------------------
+   STREAMLIT INFO BOX — used by render_usage_information()
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] [data-testid="stAlert"] {
+    padding: 14px 16px;
+
+    border-radius: 12px;
+
+    border: 1px solid rgba(23, 107, 135, 0.15);
+
+    background: var(--ls-primary-soft);
+
+    color: var(--ls-text-soft);
+
+    font-size: 0.82rem;
+
+    line-height: 1.6;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stAlert"] svg {
+    color: var(--ls-primary);
+}
+
+/* ---------------------------------------------------------
+   WARNING BOX — "No active subscription..."
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] [data-testid="stAlert"][data-baseweb="notification"] {
+    border-radius: 12px;
+}
+
+/* ---------------------------------------------------------
+   USAGE ITEM HEADER
+   Rendered as markdown "### :material/group: Users"
+   Streamlit renders the icon as inline material span and
+   the text as bold — we just space them out nicely.
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] h3 .material-symbols-rounded,
+div[class*="st-key-sa_page"] h3 .material-symbols-outlined {
+    font-size: 22px;
+
+    color: var(--ls-primary);
+
+    vertical-align: -4px;
+
+    margin-right: 4px;
+}
+
+/* ---------------------------------------------------------
+   RESPONSIVE
+   --------------------------------------------------------- */
+
+@media (max-width: 760px) {
+
+    div[class*="st-key-sa_page"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        padding: 12px 14px;
+
+        margin-bottom: 10px;
+    }
+
+    div[class*="st-key-sa_page"] .sa-metric {
+        padding: 16px;
+    }
+
+    div[class*="st-key-sa_page"] .sa-metric-value {
+        font-size: 1.4rem;
+    }
+
+    div[class*="st-key-sa_page"] [data-testid="stMetricValue"] {
+        font-size: 1.65rem !important;
+    }
+}
+
+/* ---------------------------------------------------------
+   REDUCED MOTION
+   --------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+
+        animation-iteration-count: 1 !important;
+
+        transition-duration: 0.01ms !important;
+    }
+}
