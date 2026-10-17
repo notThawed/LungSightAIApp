@@ -12,6 +12,9 @@ from torchvision import models, transforms
 from PIL import Image
 import io
 
+import numpy as np
+from matplotlib import colormaps
+
 # ============================================================
 # PATHS
 # ============================================================
@@ -164,3 +167,145 @@ def predict(image_input):
             name: float(p) for name, p in zip(class_names, probs_list)
         },
     }
+
+    
+# ============================================================
+# GRAD-CAM — GENERATE A HEATMAP FOR THE PREDICTED CLASS
+# ============================================================
+
+
+def generate_gradcam(image_input):
+    """
+    Generate a Grad-CAM heatmap and overlay for a chest X-ray.
+
+    Args:
+        image_input: file path (str/Path), bytes, or PIL.Image.
+
+    Returns:
+        dict containing:
+            - label: predicted class
+            - confidence: predicted class confidence
+            - heatmap: raw heatmap as a NumPy array (0.0 to 1.0)
+            - overlay: PIL.Image with heatmap over the X-ray
+
+    This function does not upload files or modify predict().
+    """
+
+    model, class_names = _load()
+    transform = _build_transform()
+
+    # 1. Convert input to a PIL image.
+    if isinstance(image_input, (str, Path)):
+        original_img = Image.open(image_input).convert("RGB")
+    elif isinstance(image_input, bytes):
+        original_img = Image.open(io.BytesIO(image_input)).convert("RGB")
+    elif isinstance(image_input, Image.Image):
+        original_img = image_input.convert("RGB")
+    else:
+        raise TypeError(
+            f"Unsupported image type: {type(image_input)}"
+        )
+
+    # 2. Prepare the image exactly as the model expects.
+    input_tensor = transform(original_img).unsqueeze(0).to(DEVICE)
+
+    # Keep the original image for the final overlay.
+    display_img = original_img.resize((IMG_SIZE, IMG_SIZE))
+
+    # 3. Store activations and gradients from the final
+    #    convolutional block of ResNet-50.
+    activations = []
+    gradients = []
+
+    target_layer = model.layer4[-1]
+
+    def save_activation(module, inputs, output):
+        activations.append(output)
+
+    def save_gradient(module, grad_input, grad_output):
+        gradients.append(grad_output[0])
+
+    activation_handle = target_layer.register_forward_hook(
+        save_activation
+    )
+    gradient_handle = target_layer.register_full_backward_hook(
+        save_gradient
+    )
+
+    try:
+        # 4. Run the model with gradients enabled.
+        model.eval()
+        model.zero_grad(set_to_none=True)
+
+        with torch.enable_grad():
+            outputs = model(input_tensor)
+
+            probabilities = torch.softmax(outputs, dim=1)[0]
+            pred_idx = int(torch.argmax(probabilities).item())
+
+            # Calculate gradients for the predicted class score.
+            target_score = outputs[0, pred_idx]
+            target_score.backward()
+
+        # 5. Retrieve saved activations and gradients.
+        feature_maps = activations[0].detach()
+        feature_gradients = gradients[0].detach()
+
+        # Average gradients spatially to obtain channel weights.
+        weights = feature_gradients.mean(dim=(2, 3), keepdim=True)
+
+        # Combine feature maps using the Grad-CAM weights.
+        cam = (weights * feature_maps).sum(dim=1, keepdim=True)
+        cam = torch.relu(cam)
+
+        # Normalize the heatmap between 0 and 1.
+        cam = torch.nn.functional.interpolate(
+            cam,
+            size=(IMG_SIZE, IMG_SIZE),
+            mode="bilinear",
+            align_corners=False,
+        )
+
+        cam = cam[0, 0]
+        cam_min = cam.min()
+        cam_max = cam.max()
+
+        if (cam_max - cam_min).item() > 1e-8:
+            cam = (cam - cam_min) / (cam_max - cam_min)
+        else:
+            cam = torch.zeros_like(cam)
+
+        heatmap = cam.cpu().numpy()
+
+        # 6. Convert the heatmap to a colored image.
+        color_map = colormaps["jet"]
+        colored_heatmap = color_map(heatmap)[..., :3]
+        colored_heatmap = (colored_heatmap * 255).astype(np.uint8)
+
+        heatmap_img = Image.fromarray(colored_heatmap).resize(
+            display_img.size,
+            Image.Resampling.BILINEAR,
+        )
+
+        # 7. Blend the heatmap with the original X-ray.
+        overlay = Image.blend(
+            display_img.convert("RGB"),
+            heatmap_img.convert("RGB"),
+            alpha=0.4,
+        )
+
+        probabilities_list = probabilities.detach().cpu().tolist()
+
+        return {
+            "label": class_names[pred_idx],
+            "confidence": float(probabilities_list[pred_idx]),
+            "heatmap": heatmap,
+            "overlay": overlay,
+        }
+
+    finally:
+        # Always remove hooks so repeated predictions don't
+        # accumulate callbacks or consume unnecessary memory.
+        activation_handle.remove()
+        gradient_handle.remove()
+        model.zero_grad(set_to_none=True)

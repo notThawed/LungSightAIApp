@@ -18,19 +18,23 @@ from zoneinfo import ZoneInfo
 
 from backend.supabase_client import admin_supabase
 
+
 from backend.fetches import (
     get_xray_ready_examinations,
     get_xray_request_by_examination,
     get_xray_images_by_request,
     get_xray_image_url,
     get_xray_ai_result,
+    get_xray_ai_heatmap,
     get_examinations_by_patient,
     get_medical_records_by_patient,
 )
 
+
 from backend.crud import (
     save_xray_review,
     update_examination,
+    save_training_candidate,
 )
 
 from backend.backend_utils.followup_utils import (
@@ -82,6 +86,13 @@ DISPOSITION_OPTIONS = [
     "Referred",
     "Refused Admission",
     "Nowhere When Called",
+]
+
+CONFIRMED_LABEL_OPTIONS = [
+    ("normal",              "Normal (No pneumonia)"),
+    ("bacterial_pneumonia", "Bacterial Pneumonia"),
+    ("viral_pneumonia",     "Viral Pneumonia"),
+    ("other_uncertain",     "Other / Uncertain"),
 ]
 
 
@@ -241,6 +252,32 @@ def ai_findings_narrative(ai_findings, pneumonia_type):
     return None
 
 
+def _ai_predicted_key(ai):
+    """
+    Map the AI result to one of the four confirmed_label keys.
+    Returns None if the AI result is missing or unclear.
+    """
+    if not ai:
+        return None
+
+    ai_findings = (ai.get("ai_findings") or "").strip().lower()
+    pneumonia_type = (ai.get("pneumonia_type") or "").strip().lower()
+
+    if ai_findings == "negative":
+        return "normal"
+
+    if pneumonia_type == "bacterial_pneumonia":
+        return "bacterial_pneumonia"
+
+    if pneumonia_type == "viral_pneumonia":
+        return "viral_pneumonia"
+
+    if ai_findings == "positive":
+        return "other_uncertain"
+
+    return None
+
+
 # ============================================================
 # FOLLOW-UP HELPERS
 # ============================================================
@@ -325,6 +362,8 @@ def clear_review_state():
         "review_schedule_followup_open",
         "review_edit_followup_open",
         "review_remove_followup_open",
+        "review_training_label",
+        "review_training_notes",
     ):
         st.session_state.pop(key, None)
 
@@ -541,7 +580,6 @@ def show_edit_followup_dialog(follow_up):
 
     follow_up_id = follow_up.get("follow_up_id")
 
-    # Prefill from existing
     existing_date_str = follow_up.get("follow_up_date")
     existing_time_str = follow_up.get("follow_up_time")
     existing_notes = follow_up.get("notes") or ""
@@ -740,22 +778,50 @@ def render_xray_section(examination):
         else:
             st.warning("Unable to load the X-ray image.")
 
+
     with heatmap_col:
         st.markdown(
             "<p class='rx-img-label'>AI Heatmap Overlay</p>",
             unsafe_allow_html=True,
         )
-        st.markdown(
-            "<div class='rx-heatmap-placeholder'>"
-            "<span class='rx-heatmap-icon material-symbols-rounded'>"
-            "radiology</span>"
-            "<p class='rx-heatmap-title'>Heatmap Coming Soon</p>"
-            "<p class='rx-heatmap-text'>"
-            "Grad-CAM visualization will appear here."
-            "</p>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
+
+        heatmap_bytes = None
+
+        if ai:
+            ai_result_id = ai.get("ai_result_id")
+
+            if ai_result_id:
+                heatmap_bytes = get_xray_ai_heatmap(
+                    ai_result_id
+                )
+
+        if heatmap_bytes:
+            st.image(
+                heatmap_bytes,
+                caption=(
+                    "Grad-CAM overlay — highlighted regions "
+                    "indicate areas that influenced the AI "
+                    "prediction. This is an explanatory aid, "
+                    "not a diagnosis."
+                ),
+                width="stretch",
+            )
+
+        else:
+            st.markdown(
+                "<div class='rx-heatmap-placeholder'>"
+                "<span class='rx-heatmap-icon material-symbols-rounded'>"
+                "radiology</span>"
+                "<p class='rx-heatmap-title'>"
+                "Heatmap Unavailable</p>"
+                "<p class='rx-heatmap-text'>"
+                "No saved Grad-CAM visualization is available "
+                "for this X-ray."
+                "</p>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
 
     return request, image, ai
 
@@ -853,7 +919,6 @@ def render_ai_result_card(ai):
 
     narrative = ai_findings_narrative(ai_findings, pneumonia_type)
 
-    # Confidence bar
     if conf_pct is not None:
         conf_block = (
             "<div class='rx-ai-row rx-ai-row-block'>"
@@ -873,7 +938,6 @@ def render_ai_result_card(ai):
             "</div>"
         )
 
-    # Classification confidence
     if class_conf_pct is not None:
         class_conf_block = (
             "<div class='rx-ai-row'>"
@@ -884,7 +948,6 @@ def render_ai_result_card(ai):
     else:
         class_conf_block = ""
 
-    # Findings narrative
     if narrative:
         findings_block = (
             "<div class='rx-ai-findings'>"
@@ -1093,10 +1156,151 @@ def render_followup_card(examination):
 
 
 # ============================================================
+# REPORT — TRAINING DATA CONFIRMATION
+# ============================================================
+
+def render_training_confirmation(ai):
+    """
+    Render the training-data confirmation section.
+
+    Returns a dict:
+        {
+            "label":       str,          -- confirmed_label key
+            "notes":       str | None,
+            "overrode_ai": bool,
+            "ai_predicted": str | None,
+        }
+    """
+
+    section_title("Training Data Confirmation")
+
+    st.caption(
+        "Confirm the final diagnosis to help improve the AI model. "
+        "This is separate from the clinical record."
+    )
+
+    # ----------------------------------------------
+    # Show what the AI predicted
+    # ----------------------------------------------
+
+    ai_findings = (ai or {}).get("ai_findings")
+
+    ai_predicted_key = _ai_predicted_key(ai)
+
+    if ai_predicted_key:
+
+        ai_label_text = dict(CONFIRMED_LABEL_OPTIONS)[
+            ai_predicted_key
+        ]
+
+        risk_label, risk_tone = risk_label_from_findings(
+            ai_findings
+        )
+
+        st.markdown(
+            "<div class='rx-training-ai-preview'>"
+            "<span class='rx-training-ai-label'>"
+            "AI predicted</span>"
+            f"<b>{ai_label_text}</b> "
+            f"<div>{pill(risk_label, risk_tone)}</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    else:
+
+        st.markdown(
+            "<div class='rx-training-ai-preview rx-training-ai-preview--empty'>"
+            "<span class='rx-training-ai-label'>"
+            "AI prediction</span>"
+            "<b>Not available for this image</b>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    # ----------------------------------------------
+    # Confirmed diagnosis dropdown
+    # ----------------------------------------------
+
+    label_keys = [key for key, _ in CONFIRMED_LABEL_OPTIONS]
+    label_names = [name for _, name in CONFIRMED_LABEL_OPTIONS]
+
+    default_index = (
+        label_keys.index(ai_predicted_key)
+        if ai_predicted_key in label_keys
+        else 0
+    )
+
+    confirmed_index = st.selectbox(
+        "Your confirmed diagnosis *",
+        options=range(len(label_keys)),
+        format_func=lambda i: label_names[i],
+        index=default_index,
+        key="review_training_label",
+    )
+
+    confirmed_key = label_keys[confirmed_index]
+
+    # ----------------------------------------------
+    # Warn if overriding the AI
+    # ----------------------------------------------
+
+    overrode_ai = (
+        ai_predicted_key is not None
+        and confirmed_key != ai_predicted_key
+    )
+
+    if overrode_ai:
+
+        ai_text = dict(CONFIRMED_LABEL_OPTIONS)[
+            ai_predicted_key
+        ]
+        chosen_text = dict(CONFIRMED_LABEL_OPTIONS)[
+            confirmed_key
+        ]
+
+        st.warning(
+            f"⚠️ You are overriding the AI. "
+            f"AI said **{ai_text}**, you confirmed "
+            f"**{chosen_text}**. This case will be flagged "
+            f"for ML review."
+        )
+
+    # ----------------------------------------------
+    # Optional notes
+    # ----------------------------------------------
+
+    notes = st.text_area(
+        "Notes (optional)",
+        value="",
+        height=80,
+        key="review_training_notes",
+        placeholder=(
+            "Why did you choose this label? "
+            "Especially helpful if you overrode the AI."
+        ),
+    )
+
+    return {
+        "label": confirmed_key,
+        "notes": notes.strip() or None,
+        "overrode_ai": overrode_ai,
+        "ai_predicted": ai_predicted_key,
+    }
+
+
+# ============================================================
 # REPORT — ACTION BUTTONS
 # ============================================================
 
-def render_report_actions(examination, patient, form_values, request):
+def render_report_actions(
+    examination,
+    patient,
+    form_values,
+    request,
+    ai=None,
+    training_values=None,
+):
 
     exam_id = examination.get("examination_id")
     user_id = current_user_id()
@@ -1126,7 +1330,10 @@ def render_report_actions(examination, patient, form_values, request):
     if not save_clicked:
         return
 
+    # ==========================================
     # Validation
+    # ==========================================
+
     if not form_values["findings"].strip():
         st.error("X-Ray Findings is required.")
         return
@@ -1139,8 +1346,33 @@ def render_report_actions(examination, patient, form_values, request):
         st.error("X-Ray request not found.")
         return
 
+    if not training_values or not training_values.get("label"):
+        st.error("Confirmed diagnosis is required.")
+        return
+
+    # ==========================================
+    # Gather image info (for the candidate row)
+    # ==========================================
+
+    image_id = None
+
     try:
-        # Save X-ray review
+        imgs = (
+            get_xray_images_by_request(request["request_id"])
+            or []
+        )
+        if imgs:
+            image_id = imgs[0].get("image_id")
+    except Exception:
+        image_id = None
+
+    # ==========================================
+    # Save everything
+    # ==========================================
+
+    try:
+
+        # 1. Save X-ray review
         save_xray_review(
             request_id=request["request_id"],
             reviewed_by=user_id,
@@ -1148,7 +1380,7 @@ def render_report_actions(examination, patient, form_values, request):
             impression=form_values["impression"].strip() or None,
         )
 
-        # Complete examination
+        # 2. Complete examination
         update_examination(
             examination_id=exam_id,
             status="Completed",
@@ -1160,6 +1392,40 @@ def render_report_actions(examination, patient, form_values, request):
                 form_values["disposition_notes"].strip() or None
             ),
         )
+
+        # 3. Save training candidate
+        if image_id:
+
+            ai_payload = ai or {}
+
+            save_training_candidate(
+                image_id=image_id,
+                examination_id=exam_id,
+                patient_id=patient.get("patient_id"),
+                request_id=request.get("request_id"),
+                ai_result_id=ai_payload.get("ai_result_id"),
+                ai_findings=ai_payload.get("ai_findings"),
+                ai_confidence=ai_payload.get("ai_confidence"),
+                ai_pneumonia_type=ai_payload.get("pneumonia_type"),
+                ai_classification_confidence=(
+                    ai_payload.get("classification_confidence")
+                ),
+                ai_model_version=(
+                    ai_payload.get("ai_model_version")
+                ),
+                ai_classification_model_version=(
+                    ai_payload.get("classification_model_version")
+                ),
+                confirmed_label=training_values["label"],
+                doctor_notes=training_values.get("notes"),
+                confirmed_by=user_id,
+            )
+
+        else:
+            print(
+                "Training candidate skipped: "
+                "no image_id found for this examination."
+            )
 
         clear_review_state()
         remember("X-Ray reviewed successfully. Examination completed.")
@@ -1175,7 +1441,6 @@ def render_report_actions(examination, patient, form_values, request):
 
 def render_review_report_page(patient, examination):
 
-    # Back button
     if st.button(
         "Back",
         key="review_back_to_list",
@@ -1194,7 +1459,6 @@ def render_review_report_page(patient, examination):
         unsafe_allow_html=True,
     )
 
-    # Fetch shared data
     exam_id = examination.get("examination_id")
     request = get_xray_request_by_examination(exam_id)
 
@@ -1207,7 +1471,6 @@ def render_review_report_page(patient, examination):
         except Exception:
             pass
 
-    # Two-column layout
     left_col, right_col = st.columns([1.4, 1], gap="large")
 
     # --------------------------------------------------------
@@ -1235,11 +1498,15 @@ def render_review_report_page(patient, examination):
 
         render_followup_card(examination)
 
+        training_values = render_training_confirmation(ai)
+
         render_report_actions(
             examination,
             patient,
             form_values,
             request,
+            ai=ai,
+            training_values=training_values,
         )
 
 
@@ -1387,7 +1654,6 @@ def show():
     load_css("review_patient.css")
     show_flash_message()
 
-    # Follow-up flash from previous dialog action
     fu_flash = st.session_state.pop("review_fu_flash", None)
     if fu_flash:
         st.toast(fu_flash)
@@ -1398,9 +1664,6 @@ def show():
         st.error("You don't have access to Review Patient.")
         return
 
-    # ------------------------------------------------
-    # Router: report page vs list page
-    # ------------------------------------------------
     selected_exam = st.session_state.get("review_examination")
     selected_patient = st.session_state.get("review_patient")
 
@@ -1412,7 +1675,7 @@ def show():
             render_review_list_page()
 
     # ------------------------------------------------
-    # Dialog dispatcher (independent of page level)
+    # Dialog dispatcher
     # ------------------------------------------------
 
     if st.session_state.get("review_previous_examinations"):

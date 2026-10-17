@@ -186,6 +186,17 @@ ADMIN_NAV = [
     },
 
     {
+        "section": "AI TRAINING",
+        "items": [
+            (
+                "Training",
+                "Data Training",
+                "settings",
+            ),
+        ],
+    },
+
+    {
         "section": "Configuration",
         "items": [
             (

@@ -17,11 +17,18 @@ from backend.crud import (
     update_xray_image_quality,
     update_examination,
     save_ai_result,
+    save_xray_ai_heatmap,
 )
 
 from backend.backend_utils.subscription_usage import can_analyze_xray
 
-from backend.ai.pneumonia_model import predict
+
+from backend.ai.pneumonia_model import (
+    predict,
+    generate_gradcam,
+)
+
+
 from backend.ai.pneumonia_type_model import predict_type
 
 from streamlit_app.components.ui import (
@@ -269,6 +276,24 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
     try:
         result = predict(image_bytes)
 
+        
+        # Generate Grad-CAM explanation for this prediction.
+        # If it fails, keep the original AI prediction.
+
+        gradcam_result = None
+        gradcam_error = None
+
+        try:
+            gradcam_result = generate_gradcam(image_bytes)
+
+        except Exception as exc:
+            gradcam_error = str(exc)
+
+            print(
+                f"Grad-CAM generation failed: {exc}"
+            )
+
+
         label = str(result.get("label", "")).strip().lower()
 
         if label not in ("positive", "negative"):
@@ -338,8 +363,12 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
     # --------------------------------------------------------
 
     st.session_state[ANALYSIS_RESULT_KEY] = result
-    st.session_state[ANALYSIS_STATE_KEY] = "complete"
 
+    # Keep the Grad-CAM result separately.
+    st.session_state["gradcam_result"] = gradcam_result
+    st.session_state["gradcam_error"] = gradcam_error
+
+    st.session_state[ANALYSIS_STATE_KEY] = "complete"
     st.rerun()
 
 
@@ -463,6 +492,41 @@ def render_submission_summary(request, patient, uploaded_file, result):
         unsafe_allow_html=True,
     )
 
+    
+    # ------------------------------------------
+    # GRAD-CAM HEATMAP
+    # ------------------------------------------
+
+    st.divider()
+
+    st.markdown("### AI Attention Heatmap")
+
+    gradcam_result = st.session_state.get(
+        "gradcam_result"
+    )
+
+    if (
+        gradcam_result
+        and gradcam_result.get("overlay") is not None
+    ):
+        st.image(
+            gradcam_result["overlay"],
+            caption=(
+                "Grad-CAM visualization. "
+                "Highlighted areas show image regions "
+                "that influenced the model's prediction. "
+                "This visualization is not a diagnosis."
+            ),
+            width="stretch",
+        )
+
+    else:
+        st.info(
+            "Heatmap unavailable. The original AI "
+            "prediction is still available."
+        )
+
+
 
 # ============================================================
 # SAVE WORKFLOW
@@ -515,6 +579,54 @@ def save_analysis(uploaded_file, result, examination, request, patient):
             "failed. The examination has not been marked as completed."
         )
         return False
+
+    
+    # ------------------------------------------
+    # SAVE GRAD-CAM HEATMAP
+    # ------------------------------------------
+
+    gradcam_result = st.session_state.get(
+        "gradcam_result"
+    )
+
+    if gradcam_result and gradcam_result.get("overlay") is not None:
+
+        try:
+            import io
+
+            heatmap_buffer = io.BytesIO()
+
+            gradcam_result["overlay"].save(
+                heatmap_buffer,
+                format="PNG",
+            )
+
+            heatmap_bytes = heatmap_buffer.getvalue()
+
+            heatmap_save_result = save_xray_ai_heatmap(
+                ai_result_id=saved_result["ai_result_id"],
+                heatmap_bytes=heatmap_bytes,
+                model_version=AI_MODEL_VERSION,
+                target_class=result["label"],
+            )
+
+            if not heatmap_save_result.get("success"):
+                print(
+                    "Grad-CAM storage warning: "
+                    f"{heatmap_save_result.get('message')}"
+                )
+
+        except Exception as exc:
+            print(
+                f"Grad-CAM saving failed: {exc}"
+            )
+
+    else:
+        print(
+            "Grad-CAM heatmap unavailable; "
+            "continuing without saving it."
+        )
+
 
     update_xray_request_status(
         request["request_id"],

@@ -5,6 +5,7 @@ from components.navbar import show_top_navbar
 
 from pages.physician import dashboard, patient_queue, review_patient, physician_patient_records, profile, followups
 from pages.hospital_administrator import subscription_gate
+from pages.system_administrator import manage_medical_records
 
 def show_physician_layout():
 
@@ -49,8 +50,9 @@ def show_physician_layout():
         review_patient.show()
 
     elif page == "Patient Records":
-
-        physician_patient_records.show()
+        # gi ilisan nako like gi usa nako ba pero wala nako gi delete ang file para pang comparison
+        # physician_patient_records.show()
+        manage_medical_records.show()
 
     elif page == "Follow-Ups":
 

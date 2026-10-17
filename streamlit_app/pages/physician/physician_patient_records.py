@@ -27,6 +27,7 @@ from backend.fetches import (
     get_xray_images_by_request,
     get_xray_image_url,
     get_xray_ai_result,
+    get_xray_ai_heatmap,
     get_xray_review,
     get_medications_by_examination,
     get_referral_by_examination,
@@ -929,23 +930,42 @@ def render_xray_analysis(exam):
         else:
             st.warning("Unable to load the X-ray image.")
 
+    
     with heatmap_col:
         st.markdown(
             "<p class='pr-img-label'>AI Heatmap Overlay</p>",
             unsafe_allow_html=True,
         )
-        st.markdown(
-            "<div class='pr-heatmap-placeholder'>"
-            "<span class='pr-heatmap-icon material-symbols-rounded'>"
-            "radiology</span>"
-            "<p class='pr-heatmap-title'>Heatmap Coming Soon</p>"
-            "<p class='pr-heatmap-text'>"
-            "Grad-CAM visualization of the regions the AI "
-            "model focused on will appear here."
-            "</p>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
+
+        heatmap_bytes = None
+
+        if ai and ai.get("ai_result_id"):
+            heatmap_bytes = get_xray_ai_heatmap(
+                ai.get("ai_result_id")
+            )
+
+        if heatmap_bytes:
+            st.image(
+                heatmap_bytes,
+                caption=(
+                    "Grad-CAM overlay — highlighted regions indicate "
+                    "areas that influenced the AI prediction. This is "
+                    "an explanatory aid, not a diagnosis."
+                ),
+                width="stretch",
+            )
+        else:
+            st.markdown(
+                "<div class='pr-heatmap-placeholder'>"
+                "<span class='pr-heatmap-icon material-symbols-rounded'>"
+                "radiology</span>"
+                "<p class='pr-heatmap-title'>Heatmap Unavailable</p>"
+                "<p class='pr-heatmap-text'>"
+                "No saved Grad-CAM visualization is available for this X-ray."
+                "</p>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
 
     return request, image, ai
 

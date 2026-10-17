@@ -2426,3 +2426,380 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
         )
 
         return []
+
+
+# ==========================================
+# X-RAY AI HEATMAP (GRAD-CAM)
+# ==========================================
+
+def get_xray_ai_heatmap(ai_result_id):
+    """
+    Retrieve the saved Grad-CAM heatmap for an AI result.
+
+    Returns the PNG image bytes, or None if unavailable.
+    """
+
+    if not ai_result_id:
+        return None
+
+    try:
+
+        # 1. Find the saved heatmap file path.
+        response = (
+            admin_supabase
+            .table("xray_ai_heatmaps")
+            .select("heatmap_path")
+            .eq(
+                "ai_result_id",
+                ai_result_id,
+            )
+            .limit(1)
+            .execute()
+        )
+
+        rows = response.data or []
+
+        if not rows:
+            return None
+
+        heatmap_path = rows[0].get(
+            "heatmap_path"
+        )
+
+        if not heatmap_path:
+            return None
+
+        # 2. Download the PNG from private Storage.
+        image_bytes = (
+            admin_supabase
+            .storage
+            .from_("xray-ai-heatmaps")
+            .download(heatmap_path)
+        )
+
+        return image_bytes
+
+    except Exception as exc:
+
+        print(
+            f"Failed to retrieve Grad-CAM heatmap: {exc}"
+        )
+
+        return None
+
+
+
+# ==========================================
+# X-RAY TRAINING CANDIDATES
+# ==========================================
+
+def get_training_candidates(
+    status=None,
+    hospital_id=None,
+    limit=500,
+):
+    """
+    Fetch training candidates for review or analysis.
+
+    Parameters
+    ----------
+    status : str | None
+        Filter by workflow status:
+            "pending_review" | "approved" | "rejected" | "used_in_training"
+        None = return all statuses.
+
+    hospital_id : str | None
+        Filter by patient's hospital.
+        None = return all hospitals.
+
+    limit : int
+        Maximum rows to return. Default 500.
+    """
+
+    try:
+
+        query = (
+            admin_supabase
+            .table("xray_training_candidates")
+            .select("""
+                candidate_id,
+                image_id,
+                ai_result_id,
+                request_id,
+                examination_id,
+                patient_id,
+
+                ai_findings,
+                ai_confidence,
+                ai_pneumonia_type,
+                ai_classification_confidence,
+                ai_model_version,
+
+                confirmed_label,
+                doctor_notes,
+                confirmed_by,
+                confirmed_at,
+
+                status,
+                reviewed_by,
+                reviewed_at,
+                review_notes,
+                used_in_model_version,
+
+                created_at,
+                updated_at
+            """)
+            .order("confirmed_at", desc=True)
+            .limit(limit)
+        )
+
+        if status:
+            query = query.eq("status", status)
+
+        response = query.execute()
+
+        rows = response.data or []
+
+        # ------------------------------------------
+        # Optional hospital filter
+        # (patient's hospital_id, not candidate's)
+        # ------------------------------------------
+
+        if hospital_id and rows:
+
+            patient_ids = list({
+                row.get("patient_id")
+                for row in rows
+                if row.get("patient_id")
+            })
+
+            if patient_ids:
+
+                patient_response = (
+                    admin_supabase
+                    .table("patients")
+                    .select("patient_id, hospital_id")
+                    .in_("patient_id", patient_ids)
+                    .execute()
+                )
+
+                patient_hospital_map = {
+                    p["patient_id"]: p.get("hospital_id")
+                    for p in (patient_response.data or [])
+                }
+
+                rows = [
+                    row for row in rows
+                    if patient_hospital_map.get(
+                        row.get("patient_id")
+                    ) == hospital_id
+                ]
+
+        return rows
+
+    except Exception as exc:
+
+        print(
+            f"Failed to fetch training candidates: {exc}"
+        )
+
+        return []
+
+
+def get_training_candidate_stats():
+    """
+    Return counts of candidates grouped by status.
+
+    Useful for showing badges like
+    "12 pending review" on an admin dashboard.
+    """
+
+    try:
+
+        response = (
+            admin_supabase
+            .table("xray_training_candidates")
+            .select("status")
+            .execute()
+        )
+
+        rows = response.data or []
+
+        stats = {
+            "pending_review": 0,
+            "approved": 0,
+            "rejected": 0,
+            "used_in_training": 0,
+            "total": len(rows),
+        }
+
+        for row in rows:
+
+            status = row.get("status")
+
+            if status in stats:
+                stats[status] += 1
+
+        return stats
+
+    except Exception as exc:
+
+        print(
+            f"Failed to fetch candidate stats: {exc}"
+        )
+
+        return {
+            "pending_review": 0,
+            "approved": 0,
+            "rejected": 0,
+            "used_in_training": 0,
+            "total": 0,
+        }
+
+
+
+def get_training_candidates_detailed(
+    status=None,
+    hospital_id=None,
+    limit=200,
+):
+    """
+    Return training candidates joined with patient, examination,
+    X-ray image, and doctor info.
+
+    Used by the Training Data Review page.
+
+    Each row contains:
+        -- candidate fields (all)
+        -- patient         (dict)
+        -- examination     (dict)
+        -- image           (dict)
+        -- confirming_user (dict: user_fname, user_lname)
+    """
+
+    try:
+
+        query = (
+            admin_supabase
+            .table("xray_training_candidates")
+            .select("""
+                *,
+
+                patients (
+                    patient_id,
+                    patient_code,
+                    first_name,
+                    middle_name,
+                    last_name,
+                    suffix,
+                    date_of_birth,
+                    sex,
+                    contact_number,
+                    hospital_id,
+
+                    hospitals (
+                        hospital_id,
+                        hospital_name
+                    )
+                ),
+
+                examinations (
+                    examination_id,
+                    examination_type,
+                    examination_date,
+                    status,
+                    follow_up_sequence,
+                    chief_complaint,
+                    diagnosis
+                )
+            """)
+            .order("confirmed_at", desc=True)
+            .limit(limit)
+        )
+
+        if status:
+            query = query.eq("status", status)
+
+        response = query.execute()
+        rows = response.data or []
+
+        # ------------------------------------------
+        # Resolve image + user info in bulk
+        # ------------------------------------------
+
+        if rows:
+
+            # Images
+            image_ids = list({
+                r.get("image_id")
+                for r in rows
+                if r.get("image_id")
+            })
+
+            image_map = {}
+
+            if image_ids:
+                img_response = (
+                    admin_supabase
+                    .table("xray_images")
+                    .select("image_id, image_path, request_id")
+                    .in_("image_id", image_ids)
+                    .execute()
+                )
+                image_map = {
+                    img["image_id"]: img
+                    for img in (img_response.data or [])
+                }
+
+            # Confirmers
+            user_ids = list({
+                r.get("confirmed_by")
+                for r in rows
+                if r.get("confirmed_by")
+            })
+
+            user_map = {}
+
+            if user_ids:
+                user_response = (
+                    admin_supabase
+                    .table("user_profiles")
+                    .select(
+                        "user_id, user_fname, user_mname, "
+                        "user_lname"
+                    )
+                    .in_("user_id", user_ids)
+                    .execute()
+                )
+                user_map = {
+                    u["user_id"]: u
+                    for u in (user_response.data or [])
+                }
+
+            # Attach
+            for row in rows:
+                row["image"] = image_map.get(row.get("image_id"))
+                row["confirming_user"] = user_map.get(
+                    row.get("confirmed_by")
+                )
+
+        # ------------------------------------------
+        # Optional hospital filter
+        # ------------------------------------------
+
+        if hospital_id and rows:
+            rows = [
+                r for r in rows
+                if (r.get("patients") or {}).get("hospital_id")
+                == hospital_id
+            ]
+
+        return rows
+
+    except Exception as exc:
+
+        print(
+            f"Failed to fetch detailed training candidates: {exc}"
+        )
+
+        return []

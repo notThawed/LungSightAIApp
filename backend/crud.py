@@ -1781,3 +1781,258 @@ def delete_referrals_by_examination(
         )
 
         return []
+
+
+# ==========================================
+# X-RAY AI HEATMAP (GRAD-CAM)
+# ==========================================
+
+def save_xray_ai_heatmap(
+    ai_result_id,
+    heatmap_bytes,
+    model_version,
+    target_class,
+):
+    """
+    Upload a Grad-CAM overlay to private Supabase
+    Storage and save its metadata in the database.
+
+    Returns a dictionary indicating success or failure.
+    """
+
+    bucket_name = "xray-ai-heatmaps"
+    file_path = f"{ai_result_id}/gradcam.png"
+
+    try:
+
+        # ------------------------------------------
+        # 1. UPLOAD THE HEATMAP PNG
+        # ------------------------------------------
+
+        (
+            admin_supabase
+            .storage
+            .from_(bucket_name)
+            .upload(
+                path=file_path,
+                file=heatmap_bytes,
+                file_options={
+                    "content-type": "image/png",
+                    "upsert": "true",
+                },
+            )
+        )
+
+        # ------------------------------------------
+        # 2. SAVE HEATMAP METADATA
+        # ------------------------------------------
+
+        heatmap_data = {
+            "ai_result_id": ai_result_id,
+            "heatmap_path": file_path,
+            "heatmap_method": "Grad-CAM",
+            "heatmap_model_version": model_version,
+            "heatmap_target_class": target_class,
+        }
+
+        response = (
+            admin_supabase
+            .table("xray_ai_heatmaps")
+            .upsert(
+                heatmap_data,
+                on_conflict="ai_result_id",
+            )
+            .execute()
+        )
+
+        if not response.data:
+            return {
+                "success": False,
+                "message": (
+                    "Heatmap uploaded, but its "
+                    "database metadata was not returned."
+                ),
+            }
+
+        return {
+            "success": True,
+            "message": "Heatmap saved successfully.",
+            "data": response.data[0],
+        }
+
+    except Exception as exc:
+
+        print(
+            f"Failed to save Grad-CAM heatmap: {exc}"
+        )
+
+        return {
+            "success": False,
+            "message": str(exc),
+        }
+
+
+
+# ==========================================
+# X-RAY TRAINING CANDIDATES
+# ==========================================
+
+def save_training_candidate(
+    image_id,
+    examination_id,
+    patient_id,
+    confirmed_label,
+    confirmed_by,
+    request_id=None,
+    ai_result_id=None,
+    ai_findings=None,
+    ai_confidence=None,
+    ai_pneumonia_type=None,
+    ai_classification_confidence=None,
+    ai_model_version=None,
+    ai_classification_model_version=None,
+    doctor_notes=None,
+):
+    """
+    Save a structured ground-truth label confirmed by a doctor.
+
+    Called when an examination is completed. The label is used
+    later to retrain the AI models.
+
+    If a candidate already exists for this image, updates it
+    instead of inserting a duplicate.
+    """
+
+    try:
+
+        data = {
+            "image_id": image_id,
+            "examination_id": examination_id,
+            "patient_id": patient_id,
+            "request_id": request_id,
+            "ai_result_id": ai_result_id,
+
+            "ai_findings": ai_findings,
+            "ai_confidence": ai_confidence,
+            "ai_pneumonia_type": ai_pneumonia_type,
+            "ai_classification_confidence": (
+                ai_classification_confidence
+            ),
+            "ai_model_version": ai_model_version,
+            "ai_classification_model_version": (
+                ai_classification_model_version
+            ),
+
+            "confirmed_label": confirmed_label,
+            "doctor_notes": doctor_notes,
+            "confirmed_by": confirmed_by,
+
+            "status": "pending_review",
+            "updated_at": datetime.now(
+                timezone.utc
+            ).isoformat(),
+        }
+
+        response = (
+            admin_supabase
+            .table("xray_training_candidates")
+            .upsert(
+                data,
+                on_conflict="image_id",
+            )
+            .execute()
+        )
+
+        if not response.data:
+            return {
+                "success": False,
+                "message": (
+                    "Training candidate was not saved."
+                ),
+            }
+
+        return {
+            "success": True,
+            "message": "Training candidate saved.",
+            "data": response.data[0],
+        }
+
+    except Exception as exc:
+
+        print(
+            f"Failed to save training candidate: {exc}"
+        )
+
+        return {
+            "success": False,
+            "message": str(exc),
+        }
+
+
+
+def review_training_candidate(
+    candidate_id,
+    decision,
+    reviewer_id,
+    review_notes=None,
+):
+    """
+    Approve or reject a training candidate.
+
+    decision: "approve" | "reject"
+    """
+
+    if decision not in ("approve", "reject"):
+        return {
+            "success": False,
+            "message": "Invalid decision.",
+        }
+
+    status = "approved" if decision == "approve" else "rejected"
+
+    try:
+
+        data = {
+            "status": status,
+            "reviewed_by": reviewer_id,
+            "reviewed_at": datetime.now(
+                timezone.utc
+            ).isoformat(),
+            "review_notes": review_notes,
+            "updated_at": datetime.now(
+                timezone.utc
+            ).isoformat(),
+        }
+
+        response = (
+            admin_supabase
+            .table("xray_training_candidates")
+            .update(data)
+            .eq("candidate_id", candidate_id)
+            .execute()
+        )
+
+        if not response.data:
+            return {
+                "success": False,
+                "message": "Candidate not found.",
+            }
+
+        return {
+            "success": True,
+            "message": (
+                f"Candidate {status}."
+            ),
+            "data": response.data[0],
+        }
+
+    except Exception as exc:
+
+        print(
+            f"Failed to review candidate: {exc}"
+        )
+
+        return {
+            "success": False,
+            "message": str(exc),
+        }
