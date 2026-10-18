@@ -1612,6 +1612,18 @@ def show_examination_form(
             ),
         )
 
+        # --- NEW: AI TRAINING CONSENT ---
+        st.markdown("---")
+        st.markdown("### Research & AI Training Consent")
+        st.info("Under the Data Privacy Act, the patient must explicitly consent to their data being used for AI research.")
+        
+        ai_consent = st.checkbox(
+            "The patient has been informed and consents to their de-identified X-ray "
+            "and clinical data being used to train the LungSight AI model.",
+            key="exam_ai_consent_checkbox"
+        )
+        # --------------------------------
+
         # ----------------------------------------------------
         # VITALS
         # ----------------------------------------------------
@@ -1780,6 +1792,7 @@ def show_examination_form(
                     temperature
                     or None
                 ),
+                ai_consent_given=ai_consent, 
             )
 
             if not rows:

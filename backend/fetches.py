@@ -1232,6 +1232,7 @@ def get_pending_examinations(
                 sex,
                 contact_number,
                 hospital_id,
+                
 
                 hospitals (
                     hospital_id,
@@ -1571,6 +1572,7 @@ def get_xray_ready_examinations(
                 sex,
                 contact_number,
                 hospital_id,
+                ai_consent_granted,
 
                 hospitals (
                     hospital_id,
@@ -2667,14 +2669,7 @@ def get_training_candidates_detailed(
     Return training candidates joined with patient, examination,
     X-ray image, and doctor info.
 
-    Used by the Training Data Review page.
-
-    Each row contains:
-        -- candidate fields (all)
-        -- patient         (dict)
-        -- examination     (dict)
-        -- image           (dict)
-        -- confirming_user (dict: user_fname, user_lname)
+    ONLY returns candidates where the patient has consented to AI training.
     """
 
     try:
@@ -2696,6 +2691,7 @@ def get_training_candidates_detailed(
                     sex,
                     contact_number,
                     hospital_id,
+                    ai_consent_granted,
 
                     hospitals (
                         hospital_id,
@@ -2782,6 +2778,15 @@ def get_training_candidates_detailed(
                 row["confirming_user"] = user_map.get(
                     row.get("confirmed_by")
                 )
+
+        # ------------------------------------------
+        # FILTER: ONLY SHOW CONSENTED PATIENTS
+        # ------------------------------------------
+        if rows:
+            rows = [
+                r for r in rows
+                if (r.get("patients") or {}).get("ai_consent_granted") is True
+            ]
 
         # ------------------------------------------
         # Optional hospital filter
