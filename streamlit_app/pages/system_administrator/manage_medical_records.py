@@ -23,6 +23,7 @@ Session keys (prefixed with mmr_ to isolate from physician page):
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
@@ -37,6 +38,7 @@ from backend.fetches import (
     get_xray_ai_result,
     get_xray_ai_heatmap,
     get_all_hospitals,
+    get_hospital_staff_member,
 )
 
 from backend.crud import (
@@ -1010,6 +1012,177 @@ def show_add_medical_record_dialog(patient):
 # LEVEL 3 — EXAMINATION REPORT
 # ============================================================
 
+def trigger_print_report(patient, exam, request, ai):
+    """Builds a clean HTML document that mimics the Cebu South Medical Center layout."""
+    
+    # 1. Get Hospital info
+    hospitals = get_all_hospitals()
+    hospital_id = patient.get("hospital_id")
+    hospital = next((h for h in hospitals if h.get("hospital_id") == hospital_id), {})
+    
+    hospital_name = hospital.get("hospital_name", "LUNGSIGHT MEDICAL CENTER")
+    hospital_logo = hospital.get("hospital_logo_url", "")
+    hospital_address = hospital.get("address", "San Isidro, Talisay City, Cebu")
+    hospital_contact = hospital.get("contact_number", "(032) 123-4567")
+    hospital_email = hospital.get("email", "info@lungsight.com")
+    
+    # 2. Get Doctor's name
+    doctor_name = "Attending Physician"
+    reviewed_by = exam.get("reviewed_by")
+    if reviewed_by:
+        doctor = get_hospital_staff_member(reviewed_by)
+        if doctor:
+            doctor_name = f"Dr. {doctor.get('user_fname')} {doctor.get('user_lname')}"
+            
+    # 3. Format AI and Doctor data
+    ai_findings = (ai or {}).get("ai_findings", "No AI Result")
+    ai_type = (ai or {}).get("pneumonia_type", "")
+    ai_conf = (ai or {}).get("ai_confidence")
+    
+    ai_text = f"AI Analysis: {ai_findings.title()}"
+    if ai_type:
+        ai_text += f" ({ai_type.replace('_', ' ').title()})"
+    if ai_conf:
+        ai_text += f" - {float(ai_conf)*100:.1f}% confidence"
+        
+    doc_diagnosis = exam.get("diagnosis", "No diagnosis recorded.")
+    chief_complaint = exam.get("chief_complaint", "N/A")
+    
+    # Build the logo HTML (fallback to empty string if none)
+    logo_html = f"<img src='{hospital_logo}' style='height: 70px; margin-right: 20px;' />" if hospital_logo else ""
+    
+    # 4. Build HTML matching the design
+    html = f"""
+    <html>
+    <head>
+        <title>X-Ray Report - {patient.get('first_name')}</title>
+        <style>
+            body {{ 
+                font-family: 'Times New Roman', Times, serif; 
+                color: #000; 
+                padding: 40px; 
+                font-size: 13px;
+            }}
+            .header {{ 
+                display: flex; 
+                align-items: center; 
+                border-bottom: 2px solid #000; 
+                padding-bottom: 10px; 
+                margin-bottom: 20px; 
+            }}
+            .header-text h2 {{ margin: 0; font-size: 16px; font-weight: normal; }}
+            .header-text h1 {{ margin: 0; font-size: 20px; font-weight: bold; }}
+            .header-text p {{ margin: 2px 0; font-size: 12px; }}
+            
+            .title-box {{
+                text-align: center;
+                font-size: 16px;
+                font-weight: bold;
+                text-decoration: underline;
+                margin: 20px 0;
+                letter-spacing: 1px;
+            }}
+            
+            .info-grid {{ 
+                display: grid; 
+                grid-template-columns: 1.2fr 1fr 1fr; 
+                gap: 8px; 
+                margin-bottom: 20px; 
+            }}
+            .info-grid div {{ font-size: 13px; }}
+            
+            .divider {{ border-top: 1px solid #000; margin: 15px 0; }}
+            
+            .section-title {{ font-weight: bold; margin-top: 15px; }}
+            .content {{ margin-top: 5px; line-height: 1.4; }}
+            
+            .signature {{ 
+                margin-top: 60px; 
+                text-align: right; 
+                padding-right: 50px;
+            }}
+            .signature-line {{ border-top: 1px solid #000; width: 200px; display: inline-block; margin-bottom: 5px; }}
+            
+            .footer {{
+                margin-top: 60px;
+                border-top: 2px solid #000;
+                padding-top: 10px;
+                font-size: 11px;
+                display: flex;
+                justify-content: space-between;
+            }}
+        </style>
+    </head>
+    <body>
+        <!-- HEADER -->
+        <div class="header">
+            {logo_html}
+            <div class="header-text">
+                <h2>Republic of the Philippines</h2>
+                <h2>Department of Health</h2>
+                <h1>{hospital_name.upper()}</h1>
+                <p>{hospital_address}</p>
+            </div>
+        </div>
+        
+        <!-- TITLE -->
+        <div class="title-box">XRAY RESULT</div>
+        
+        <!-- PATIENT INFO GRID -->
+        <div class="info-grid">
+            <div><b>Patient Name:</b> {patient.get('first_name')} {patient.get('last_name')}</div>
+            <div><b>Age:</b> {calculate_age(patient.get('date_of_birth'))}</div>
+            <div><b>Sex:</b> {patient.get('sex')}</div>
+            
+            <div><b>Address:</b> {patient.get('address', 'N/A')}</div>
+            <div><b>Date:</b> {format_date_only(exam.get('examination_date'))}</div>
+            <div><b>X-ray No.:</b> {str(exam.get('examination_id'))[:8]}</div>
+            
+            <div><b>Procedure:</b> {request.get('body_part', 'CHEST PA')}</div>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <!-- CONTENT -->
+        <div class="section-title">Clinical Indication:</div>
+        <div class="content">{chief_complaint}</div>
+        
+        <div class="section-title">AI Findings (Research Tool):</div>
+        <div class="content">{ai_text}</div>
+        
+        <div class="section-title">******* [IMPRESSION] *******</div>
+        <div class="content" style="white-space: pre-wrap;">{doc_diagnosis}</div>
+        
+        <!-- SIGNATURE -->
+        <div class="signature">
+            <div class="signature-line"></div>
+            <div style="margin-top: 5px; font-weight: bold;">{doctor_name}</div>
+            <div style="font-size: 12px;">Attending Radiologist</div>
+        </div>
+        
+        <!-- FOOTER -->
+        <div class="footer">
+            <div>
+                <b>Lungsight AI System</b><br>
+                {hospital_contact} | {hospital_email}
+            </div>
+            <div style="text-align: right;">
+                Page 1 of 1
+            </div>
+        </div>
+        
+        <script>
+            window.onload = function() {{ window.print(); }};
+        </script>
+    </body>
+    </html>
+    """
+    
+    # 5. Render and trigger
+    components.html(html, height=0, width=0)
+    st.success("Print dialog opened.")
+
+
 def render_patient_info_card(patient, exam):
     exam_date = exam.get("examination_date") or exam.get("created_at")
 
@@ -1336,12 +1509,29 @@ def render_ai_summary(ai, ai_findings, pneumonia_type, ai_conf):
 
 
 def render_examination_report(patient, exam):
-    if st.button(
-        "Back to Records",
-        key="mmr_back_to_category",
-        icon=":material/arrow_back:",
-    ):
-        back_to_category()
+    
+    # --- NEW: Back and Print Buttons ---
+    back_col, print_col, _ = st.columns([2, 2, 6])
+    
+    with back_col:
+        if st.button("Back to Records", key="mmr_back_to_category", icon=":material/arrow_back:", width="stretch"):
+            back_to_category()
+            
+    with print_col:
+        if st.button("Print Report", type="primary", icon=":material/print:", width="stretch"):
+            # Fetch the AI and request data needed for printing
+            exam_id = exam.get("examination_id")
+            req = get_xray_request_by_examination(exam_id)
+            img = None
+            ai_res = None
+            if req:
+                imgs = get_xray_images_by_request(req["request_id"]) or []
+                if imgs:
+                    img = imgs[0]
+                    ai_res = get_xray_ai_result(img.get("image_id"))
+            
+            trigger_print_report(patient, exam, req or {}, ai_res)
+    # -----------------------------------
 
     exam_date = exam.get("examination_date") or exam.get("created_at")
 

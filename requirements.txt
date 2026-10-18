@@ -11,3 +11,9 @@ torch
 torchvision
 folium
 streamlit-folium
+matplotlib
+seaborn
+scikit-learn
+tqdm
+numpy
+transformers
