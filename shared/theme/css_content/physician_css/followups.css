@@ -340,6 +340,50 @@ div[class*="st-key-physician_patient_list_"] > div[data-testid="stHorizontalBloc
     background: #f1f5f9;
 }
 
+/* ----------------------------------------------------------
+   New additions for FU code + action card
+   ---------------------------------------------------------- */
+
+[class*="st-key-physician_fu_card_"] {
+    padding: 1rem 1.15rem 0.85rem;
+    background: #FFFFFF;
+    border: 1px solid #DDE8EB;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(18, 40, 58, 0.03);
+    margin-bottom: 0.85rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[class*="st-key-physician_fu_card_"]:hover {
+    border-color: #0F7C88;
+    box-shadow: 0 6px 16px rgba(15, 124, 136, 0.10);
+}
+
+.pf-fu-code {
+    font-family: ui-monospace, monospace;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #0F7C88;
+    letter-spacing: -0.01em;
+}
+
+.pf-fu-when {
+    font-size: 0.85rem;
+    color: #12283A;
+    font-weight: 600;
+}
+
+.pf-fu-notes {
+    margin: 0.4rem 0 0.75rem;
+    padding: 0.65rem 0.9rem;
+    background: #F2F6F7;
+    border-left: 3px solid #0F7C88;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: #12283A;
+    line-height: 1.5;
+}
+
 /* ------------------------------------------------------------
    RESPONSIVE
    ------------------------------------------------------------ */
