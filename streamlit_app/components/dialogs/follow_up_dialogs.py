@@ -1,48 +1,71 @@
 # streamlit_app/components/dialogs/follow_up_dialogs.py
 
 """
-Shared follow-up dialogs used by:
-  - physician/followups.py
-  - physician_patient_queue.py (kept minimal)
+Shared physician follow-up dialogs.
 
-Includes:
-  - show_follow_up_dialog(follow_up, patient)      (Details + actions)
-  - show_details_dialog(follow_up, patient)        (Parent + Previous combined)
-  - show_reschedule_dialog(follow_up)
-  - show_cancel_dialog(follow_up)
-  - show_missed_dialog(follow_up)
+Used by:
+    streamlit_app/pages/physician/followups.py
+    (and any future staff/physician page)
 
-The "Start Follow-Up Examination" action has been removed.
-Staff is responsible for arrival check-in.
+Provides:
+    show_follow_up_details_dialog(fu)  -> combined details + actions
+    show_reschedule_dialog(fu)
+    show_cancel_dialog(fu)
+    show_missed_dialog(fu)
+
+The physician does NOT create follow-up examinations here.
+Reception staff handle check-in via mark_follow_up_arrived(),
+which creates the examination and completes the follow-up.
 """
 
 import streamlit as st
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time as time_cls
 
 from backend.backend_utils.followup_utils import (
     get_follow_up,
     reschedule_follow_up,
     cancel_follow_up,
     update_follow_up_status,
-    complete_follow_up,
 )
 
 from streamlit_app.components.ui import (
+    section_title,
     show_rows,
     full_name,
     pill,
-    section_title,
+    empty_state,
     remember,
 )
 
 
-ACTIVE_FOLLOW_UP_STATUSES = ["Scheduled", "Rescheduled"]
+ACTIVE_STATUSES = ["Scheduled", "Rescheduled"]
 
 
 # ============================================================
 # HELPERS
 # ============================================================
+
+def _patient(fu):
+    patient = (fu or {}).get("patients") or {}
+    if isinstance(patient, list):
+        return patient[0] if patient else {}
+    return patient
+
+
+def _source_exam(fu):
+    exam = (fu or {}).get("source_examination") or {}
+    if isinstance(exam, list):
+        return exam[0] if exam else {}
+    return exam
+
+
+def _follow_up_exam(fu):
+    exam = (fu or {}).get("follow_up_examination") or {}
+    if isinstance(exam, list):
+        return exam[0] if exam else {}
+    return exam
+
 
 def _patient_name(patient):
     return full_name(
@@ -54,310 +77,259 @@ def _patient_name(patient):
 
 
 def _patient_code(patient):
-    return patient.get("patient_code") or patient.get("patient_id")
+    return patient.get("patient_code") or patient.get("patient_id") or "—"
+
+
+def _status(fu):
+    return (fu or {}).get("status") or "Scheduled"
 
 
 def _status_tone(status):
-    s = str(status or "").strip().lower()
     return {
-        "scheduled": "blue",
-        "completed": "green",
-        "missed": "red",
-        "cancelled": "red",
-        "rescheduled": "amber",
-    }.get(s, "grey")
+        "Scheduled": "blue",
+        "Rescheduled": "amber",
+        "Completed": "green",
+        "Missed": "red",
+        "Cancelled": "red",
+    }.get(status, "grey")
 
 
-def _format_datetime(date_value, time_value=None):
-    if not date_value:
+def _format_date(value):
+    if not value:
         return "—"
     try:
-        date_text = str(date_value)
-        if date_text.endswith("Z"):
-            date_text = date_text.replace("Z", "+00:00")
-        if "T" in date_text:
-            dt = datetime.fromisoformat(date_text)
-            if dt.tzinfo is not None:
-                dt = dt.astimezone()
-            return dt.strftime("%B %d, %Y at %I:%M %p")
-
-        date_obj = datetime.strptime(date_text[:10], "%Y-%m-%d")
-        formatted_date = date_obj.strftime("%B %d, %Y")
-
-        if time_value:
-            time_text = str(time_value)
-            try:
-                t = datetime.strptime(time_text[:8], "%H:%M:%S")
-                return f"{formatted_date} at {t.strftime('%I:%M %p')}"
-            except Exception:
-                try:
-                    t = datetime.strptime(time_text[:5], "%H:%M")
-                    return f"{formatted_date} at {t.strftime('%I:%M %p')}"
-                except Exception:
-                    return f"{formatted_date} at {time_text}"
-
-        return formatted_date
+        if isinstance(value, datetime):
+            return value.strftime("%B %d, %Y")
+        if isinstance(value, date):
+            return value.strftime("%B %d, %Y")
+        return datetime.strptime(str(value)[:10], "%Y-%m-%d").strftime("%B %d, %Y")
     except Exception:
-        return str(date_value)
+        return str(value)
 
 
-def _follow_up_when(follow_up):
-    return _format_datetime(
-        follow_up.get("follow_up_date"),
-        follow_up.get("follow_up_time"),
+def _format_time(value):
+    if not value:
+        return "—"
+    try:
+        if isinstance(value, time_cls):
+            return value.strftime("%I:%M %p")
+        return datetime.strptime(str(value)[:8], "%H:%M:%S").strftime("%I:%M %p")
+    except Exception:
+        return str(value)
+
+
+def _format_appointment(fu):
+    return (
+        f"{_format_date((fu or {}).get('follow_up_date'))} "
+        f"at {_format_time((fu or {}).get('follow_up_time'))}"
     )
 
 
-def _source_exam(follow_up):
-    ex = follow_up.get("source_examination") or {}
-    if isinstance(ex, list):
-        return ex[0] if ex else {}
-    return ex
+def _format_exam_date(exam):
+    return _format_date((exam or {}).get("examination_date"))
 
 
-def _follow_up_exam(follow_up):
-    ex = follow_up.get("follow_up_examination") or {}
-    if isinstance(ex, list):
-        return ex[0] if ex else {}
-    return ex
+def _show_rows_with_pill(rows, pill_values):
+    """
+    Render label/value rows, but inject pill HTML for specific rows
+    instead of letting show_rows() escape it.
+
+    rows        : list of (label, value)
+    pill_values : dict mapping row index -> (pill_text, tone)
+    """
+    items = []
+    for index, (label, value) in enumerate(rows):
+        if index in pill_values:
+            pill_text, tone = pill_values[index]
+            items.append(
+                f"<div class='sa-row'><span>{label}</span>"
+                f"<b>{pill(pill_text, tone)}</b></div>"
+            )
+        else:
+            safe_value = str(value) if value not in (None, "") else "—"
+            items.append(
+                f"<div class='sa-row'><span>{label}</span>"
+                f"<b>{safe_value}</b></div>"
+            )
+    st.markdown(f"<div class='sa-rows'>{''.join(items)}</div>", unsafe_allow_html=True)
 
 
 # ============================================================
-# DETAILS DIALOG (Parent + Previous combined)
+# DETAILS DIALOG (combined parent + previous + exam + actions)
 # ============================================================
 
-@st.dialog("Follow-Up Details", width="medium")
-def show_details_dialog(follow_up, patient):
+@st.dialog("Follow-Up Details", width="large")
+def show_follow_up_details_dialog(fu):
 
-    fu_code = follow_up.get("follow_up_code") or "—"
-    status = follow_up.get("status") or "Scheduled"
-    source = _source_exam(follow_up)
-    previous_id = follow_up.get("previous_follow_up_id")
+    if not fu:
+        st.error("Follow-up not found.")
+        return
 
-    previous_fu = None
-    if previous_id:
-        try:
-            previous_fu = get_follow_up(previous_id)
-        except Exception:
-            previous_fu = None
+    fu_id = fu.get("follow_up_id")
+    patient = _patient(fu)
+    source = _source_exam(fu)
+    linked = _follow_up_exam(fu)
+    status = _status(fu)
+    linked_status = (linked or {}).get("status") if linked else None
+    is_active = status in ACTIVE_STATUSES
+    has_linked_exam = bool(linked and linked.get("examination_id"))
 
-    section_title(f"Follow-Up {fu_code}")
+    # ---------- Follow-Up summary ----------
+    section_title("Follow-Up")
 
-    show_rows([
-        ("Patient", _patient_name(patient)),
-        ("Patient ID", _patient_code(patient)),
-        ("Scheduled", _follow_up_when(follow_up)),
-        ("Status", pill(status, _status_tone(status))),
-        ("Notes", follow_up.get("notes") or "—"),
-    ])
+    _show_rows_with_pill(
+        rows=[
+            ("Code", fu.get("follow_up_code") or "—"),
+            ("Patient", _patient_name(patient)),
+            ("Patient ID", _patient_code(patient)),
+            ("Scheduled", _format_appointment(fu)),
+            ("Status", status),
+            ("Notes", fu.get("notes") or "—"),
+        ],
+        pill_values={
+            4: (status, _status_tone(status)),
+        },
+    )
 
-    # --------------------------------------------------------
-    # Parent General Consult
-    # --------------------------------------------------------
-
+    # ---------- Parent consult ----------
     st.divider()
-    section_title("Parent General Consult")
+    section_title("Parent Consult")
 
-    if source:
-        show_rows([
-            ("Examination", source.get("examination_type") or "—"),
-            ("Date", _format_datetime(source.get("examination_date"))),
-            ("Chief Complaint", source.get("chief_complaint") or "—"),
-            ("Diagnosis", source.get("diagnosis") or "—"),
-            ("Plans / Orders", source.get("plans_orders") or "—"),
-            ("Disposition", source.get("disposition") or "—"),
-        ])
+    if source and source.get("examination_id"):
+        source_status = source.get("status") or "—"
+        _show_rows_with_pill(
+            rows=[
+                ("Type", source.get("examination_type") or "General Consult"),
+                ("Date", _format_exam_date(source)),
+                ("Diagnosis", source.get("diagnosis") or "—"),
+                ("Status", source_status),
+            ],
+            pill_values={
+                3: (
+                    source_status,
+                    "green" if source_status == "Completed" else "amber",
+                ),
+            },
+        )
     else:
-        st.caption("No parent consultation linked.")
+        empty_state("No parent consultation linked to this follow-up.")
 
-    # --------------------------------------------------------
-    # Previous Follow-Up
-    # --------------------------------------------------------
-
+    # ---------- Previous follow-up ----------
     st.divider()
     section_title("Previous Follow-Up")
 
-    if previous_fu:
-        prev_status = previous_fu.get("status") or "—"
-        prev_exam = _follow_up_exam(previous_fu)
+    prev_id = fu.get("previous_follow_up_id")
+    prev_fu = None
 
-        show_rows([
-            ("Code", previous_fu.get("follow_up_code") or "—"),
-            ("Scheduled", _follow_up_when(previous_fu)),
-            ("Status", pill(prev_status, _status_tone(prev_status))),
-            ("Notes", previous_fu.get("notes") or "—"),
-        ])
+    if prev_id:
+        try:
+            prev_fu = get_follow_up(prev_id)
+        except Exception:
+            prev_fu = None
 
-        if prev_exam:
-            st.markdown("**Examination**")
-            show_rows([
-                ("Type", prev_exam.get("examination_type") or "—"),
-                ("Date", _format_datetime(prev_exam.get("examination_date"))),
-                ("Diagnosis", prev_exam.get("diagnosis") or "—"),
-            ])
+    if prev_fu:
+        prev_status = _status(prev_fu)
+        _show_rows_with_pill(
+            rows=[
+                ("Code", prev_fu.get("follow_up_code") or "—"),
+                ("Scheduled", _format_appointment(prev_fu)),
+                ("Status", prev_status),
+            ],
+            pill_values={
+                2: (prev_status, _status_tone(prev_status)),
+            },
+        )
     else:
-        st.caption("No previous follow-up — this is the first.")
+        empty_state("This is the first follow-up in the chain.")
 
+    # ---------- Follow-up examination ----------
+    st.divider()
+    section_title("Follow-Up Examination")
+
+    if has_linked_exam:
+        linked_label = linked_status or "Pending"
+        linked_tone = "green" if linked_status == "Completed" else "amber"
+        _show_rows_with_pill(
+            rows=[
+                ("Type", linked.get("examination_type") or "Follow-Up Examination"),
+                ("Date", _format_exam_date(linked)),
+                ("Diagnosis", linked.get("diagnosis") or "—"),
+                ("Status", linked_label),
+            ],
+            pill_values={
+                3: (linked_label, linked_tone),
+            },
+        )
+    else:
+        st.info(
+            "No follow-up examination has been created yet. "
+            "Reception staff will create the examination when "
+            "the patient arrives at the hospital."
+        )
+
+    # ---------- Actions ----------
     st.divider()
 
-    if st.button(
-        "Close",
-        key=f"fu_details_close_{follow_up.get('follow_up_id')}",
+    if not is_active:
+        st.caption("This follow-up is closed. Only details are available.")
+        if st.button(
+            "Close",
+            key=f"pf_fu_close_{fu_id}",
+            width="stretch",
+        ):
+            st.session_state.pop("follow_up_details_id", None)
+            st.rerun()
+        return
+
+    can_mark_missed = not has_linked_exam
+
+    col_resched, col_cancel, col_missed = st.columns(3)
+
+    if col_resched.button(
+        "Reschedule",
+        key=f"pf_fu_resched_open_{fu_id}",
+        icon=":material/event_repeat:",
         width="stretch",
     ):
-        st.session_state.pop("physician_details_fu", None)
+        st.session_state["follow_up_details_id"] = None
+        st.session_state["reschedule_follow_up_id"] = fu_id
         st.rerun()
 
+    if col_cancel.button(
+        "Cancel",
+        key=f"pf_fu_cancel_open_{fu_id}",
+        icon=":material/cancel:",
+        width="stretch",
+    ):
+        st.session_state["follow_up_details_id"] = None
+        st.session_state["cancel_follow_up_id"] = fu_id
+        st.rerun()
 
-# ============================================================
-# MANAGE DIALOG (reschedule / cancel / mark missed / mark completed)
-# ============================================================
+    if col_missed.button(
+        "Mark Missed",
+        key=f"pf_fu_missed_open_{fu_id}",
+        icon=":material/schedule:",
+        width="stretch",
+        disabled=not can_mark_missed,
+    ):
+        st.session_state["follow_up_details_id"] = None
+        st.session_state["missed_follow_up_id"] = fu_id
+        st.rerun()
 
-@st.dialog("Manage Follow-Up", width="medium")
-def show_follow_up_dialog(follow_up, patient):
-
-    fu_id = follow_up.get("follow_up_id")
-    fu_code = follow_up.get("follow_up_code") or "—"
-    status = follow_up.get("status") or "Scheduled"
-    linked_exam = _follow_up_exam(follow_up)
-    linked_status = linked_exam.get("status") if linked_exam else None
-    exam_completed = (linked_status == "Completed")
-    is_active = status in ACTIVE_FOLLOW_UP_STATUSES
-
-    section_title(f"Manage Follow-Up {fu_code}")
-
-    show_rows([
-        ("Patient", _patient_name(patient)),
-        ("Scheduled", _follow_up_when(follow_up)),
-        ("Status", pill(status, _status_tone(status))),
-    ])
-
-    st.divider()
-
-    # Terminal states
-    if status in ("Completed", "Cancelled", "Missed"):
-        st.info(f"This follow-up is {status.lower()}. No further actions available.")
-        if st.button(
-            "Close",
-            key=f"fu_manage_close_{fu_id}",
-            width="stretch",
-        ):
-            st.session_state.pop("physician_manage_fu", None)
-            st.rerun()
-        return
-
-    # Active + exam already done
-    if is_active and exam_completed:
-        st.success("Examination completed. You may formally close this follow-up.")
-
-        if st.button(
-            "Mark Follow-Up Completed",
-            key=f"fu_manage_complete_{fu_id}",
-            icon=":material/check_circle:",
-            type="primary",
-            width="stretch",
-        ):
-            result = complete_follow_up(fu_id)
-            if result.get("success"):
-                remember("Follow-up marked as completed.")
-                st.session_state.pop("physician_manage_fu", None)
-                st.rerun()
-            else:
-                st.error(result.get("message", "Failed to complete."))
-
-        st.divider()
-        if st.button(
-            "Close",
-            key=f"fu_manage_close2_{fu_id}",
-            width="stretch",
-        ):
-            st.session_state.pop("physician_manage_fu", None)
-            st.rerun()
-        return
-
-    # Active + no exam yet
-    if is_active and not linked_exam:
-        st.info(
-            "The patient has not yet been checked in. Reception "
-            "staff will create the follow-up examination when the "
-            "patient arrives. Once created, it will appear in the "
-            "Patient Queue for you to examine."
+    if not can_mark_missed:
+        st.caption(
+            "Mark Missed is unavailable because an examination "
+            "has already been created for this follow-up."
         )
-
-        st.divider()
-
-        col1, col2 = st.columns(2)
-
-        if col1.button(
-            "Reschedule",
-            key=f"fu_manage_resched_{fu_id}",
-            icon=":material/event_repeat:",
-            width="stretch",
-        ):
-            st.session_state["physician_reschedule_fu"] = follow_up
-            st.session_state.pop("physician_manage_fu", None)
-            st.rerun()
-
-        if col2.button(
-            "Cancel Follow-Up",
-            key=f"fu_manage_cancel_{fu_id}",
-            icon=":material/cancel:",
-            width="stretch",
-        ):
-            st.session_state["physician_cancel_fu"] = follow_up
-            st.session_state.pop("physician_manage_fu", None)
-            st.rerun()
-
-        st.divider()
-
-        if st.button(
-            "Mark Follow-Up Missed",
-            key=f"fu_manage_missed_{fu_id}",
-            width="stretch",
-        ):
-            st.session_state["physician_missed_fu"] = follow_up
-            st.session_state.pop("physician_manage_fu", None)
-            st.rerun()
-
-    # Active + exam pending (already created by staff)
-    elif is_active and linked_status == "Pending":
-        st.info(
-            "The follow-up examination is waiting in the Patient "
-            "Queue for physician review."
-        )
-
-        st.divider()
-
-        col1, col2 = st.columns(2)
-
-        if col1.button(
-            "Reschedule",
-            key=f"fu_manage_resched2_{fu_id}",
-            icon=":material/event_repeat:",
-            width="stretch",
-        ):
-            st.session_state["physician_reschedule_fu"] = follow_up
-            st.session_state.pop("physician_manage_fu", None)
-            st.rerun()
-
-        if col2.button(
-            "Cancel Follow-Up",
-            key=f"fu_manage_cancel2_{fu_id}",
-            icon=":material/cancel:",
-            width="stretch",
-        ):
-            st.session_state["physician_cancel_fu"] = follow_up
-            st.session_state.pop("physician_manage_fu", None)
-            st.rerun()
 
     st.divider()
 
     if st.button(
         "Close",
-        key=f"fu_manage_close3_{fu_id}",
+        key=f"pf_fu_close_active_{fu_id}",
         width="stretch",
     ):
-        st.session_state.pop("physician_manage_fu", None)
+        st.session_state.pop("follow_up_details_id", None)
         st.rerun()
 
 
@@ -366,62 +338,63 @@ def show_follow_up_dialog(follow_up, patient):
 # ============================================================
 
 @st.dialog("Reschedule Follow-Up", width="medium")
-def show_reschedule_dialog(follow_up):
+def show_reschedule_dialog(fu):
 
-    fu_id = follow_up.get("follow_up_id")
+    if not fu:
+        st.error("Follow-up not found.")
+        return
 
-    default_date = follow_up.get("follow_up_date")
-    if isinstance(default_date, str):
-        try:
-            default_date = date.fromisoformat(default_date[:10])
-        except Exception:
-            default_date = date.today()
-    if not isinstance(default_date, date):
+    fu_id = fu.get("follow_up_id")
+    patient = _patient(fu)
+
+    try:
+        default_date = date.fromisoformat(str(fu.get("follow_up_date"))[:10])
+    except Exception:
         default_date = date.today()
+
     if default_date < date.today():
         default_date = date.today()
 
-    default_time = follow_up.get("follow_up_time")
-    if isinstance(default_time, str):
-        try:
-            default_time = time.fromisoformat(default_time[:8])
-        except Exception:
-            default_time = time(9, 0)
-    if not isinstance(default_time, time):
-        default_time = time(9, 0)
+    try:
+        default_time = time_cls.fromisoformat(str(fu.get("follow_up_time"))[:8])
+    except Exception:
+        default_time = time_cls(9, 0)
 
-    section_title(
-        f"Reschedule {follow_up.get('follow_up_code') or 'Follow-Up'}"
+    st.markdown(
+        f"**{fu.get('follow_up_code') or 'Follow-Up'}** • "
+        f"{_patient_name(patient)}"
     )
+
+    st.divider()
 
     new_date = st.date_input(
         "New Follow-Up Date",
         value=default_date,
         min_value=date.today(),
-        key=f"fu_resched_date_{fu_id}",
+        key=f"pf_fu_resched_date_{fu_id}",
     )
 
     new_time = st.time_input(
         "New Follow-Up Time",
         value=default_time,
-        key=f"fu_resched_time_{fu_id}",
+        key=f"pf_fu_resched_time_{fu_id}",
     )
 
     st.divider()
 
-    col1, col2 = st.columns(2)
+    col_cancel, col_save = st.columns(2)
 
-    if col1.button(
+    if col_cancel.button(
         "Cancel",
-        key=f"fu_resched_cancel_{fu_id}",
+        key=f"pf_fu_resched_cancel_{fu_id}",
         width="stretch",
     ):
-        st.session_state.pop("physician_reschedule_fu", None)
+        st.session_state.pop("reschedule_follow_up_id", None)
         st.rerun()
 
-    if col2.button(
+    if col_save.button(
         "Save Schedule",
-        key=f"fu_resched_save_{fu_id}",
+        key=f"pf_fu_resched_save_{fu_id}",
         type="primary",
         width="stretch",
     ):
@@ -431,8 +404,8 @@ def show_reschedule_dialog(follow_up):
             new_time.strftime("%H:%M:%S"),
         )
         if result.get("success"):
-            remember("Follow-up rescheduled successfully.")
-            st.session_state.pop("physician_reschedule_fu", None)
+            st.session_state.pop("reschedule_follow_up_id", None)
+            remember("Follow-up rescheduled.")
             st.rerun()
         else:
             st.error(result.get("message", "Failed to reschedule."))
@@ -443,84 +416,92 @@ def show_reschedule_dialog(follow_up):
 # ============================================================
 
 @st.dialog("Cancel Follow-Up", width="small")
-def show_cancel_dialog(follow_up):
+def show_cancel_dialog(fu):
 
-    fu_id = follow_up.get("follow_up_id")
+    if not fu:
+        st.error("Follow-up not found.")
+        return
 
-    st.warning(
-        f"Cancel follow-up **{follow_up.get('follow_up_code') or ''}**?"
-    )
-    st.caption(
-        "This cannot be undone from here. A new follow-up can be "
-        "scheduled by the physician if needed."
-    )
+    fu_id = fu.get("follow_up_id")
+    patient = _patient(fu)
+
+    st.warning("Cancel this follow-up? This cannot be undone from here.")
+
+    show_rows([
+        ("Patient", _patient_name(patient)),
+        ("Scheduled", _format_appointment(fu)),
+    ])
 
     st.divider()
 
-    keep_col, cancel_col = st.columns(2)
+    col_keep, col_cancel = st.columns(2)
 
-    if keep_col.button(
+    if col_keep.button(
         "Keep Follow-Up",
-        key=f"fu_cancel_keep_{fu_id}",
+        key=f"pf_fu_cancel_keep_{fu_id}",
         width="stretch",
     ):
-        st.session_state.pop("physician_cancel_fu", None)
+        st.session_state.pop("cancel_follow_up_id", None)
         st.rerun()
 
-    if cancel_col.button(
+    if col_cancel.button(
         "Yes, Cancel",
-        key=f"fu_cancel_confirm_{fu_id}",
+        key=f"pf_fu_cancel_confirm_{fu_id}",
         type="primary",
         width="stretch",
     ):
         result = cancel_follow_up(fu_id)
         if result.get("success"):
+            st.session_state.pop("cancel_follow_up_id", None)
             remember("Follow-up cancelled.")
-            st.session_state.pop("physician_cancel_fu", None)
             st.rerun()
         else:
             st.error(result.get("message", "Failed to cancel."))
 
 
 # ============================================================
-# MISSED DIALOG
+# MARK MISSED DIALOG
 # ============================================================
 
 @st.dialog("Mark Follow-Up Missed", width="small")
-def show_missed_dialog(follow_up):
+def show_missed_dialog(fu):
 
-    fu_id = follow_up.get("follow_up_id")
+    if not fu:
+        st.error("Follow-up not found.")
+        return
 
-    st.warning(
-        f"Mark **{follow_up.get('follow_up_code') or 'this follow-up'}** as missed?"
-    )
-    st.caption(
-        "Use this when the patient did not arrive for their "
-        "scheduled visit."
-    )
+    fu_id = fu.get("follow_up_id")
+    patient = _patient(fu)
+
+    st.warning("Mark this follow-up as missed?")
+
+    show_rows([
+        ("Patient", _patient_name(patient)),
+        ("Scheduled", _format_appointment(fu)),
+    ])
 
     st.divider()
 
-    cancel_col, missed_col = st.columns(2)
+    col_cancel, col_missed = st.columns(2)
 
-    if cancel_col.button(
+    if col_cancel.button(
         "Cancel",
-        key=f"fu_missed_cancel_{fu_id}",
+        key=f"pf_fu_missed_cancel_{fu_id}",
         width="stretch",
     ):
-        st.session_state.pop("physician_missed_fu", None)
+        st.session_state.pop("missed_follow_up_id", None)
         st.rerun()
 
-    if missed_col.button(
+    if col_missed.button(
         "Mark Missed",
-        key=f"fu_missed_confirm_{fu_id}",
+        key=f"pf_fu_missed_confirm_{fu_id}",
         type="primary",
         width="stretch",
     ):
         result = update_follow_up_status(fu_id, "Missed")
         if result.get("success"):
+            st.session_state.pop("missed_follow_up_id", None)
             remember("Follow-up marked as missed.")
-            st.session_state.pop("physician_missed_fu", None)
             st.rerun()
         else:
-            st.error(result.get("message", "Failed to update."))
+            st.error(result.get("message", "Failed to update follow-up."))

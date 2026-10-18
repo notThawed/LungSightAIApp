@@ -20,8 +20,19 @@ def show_physician_layout():
             "physician_selected_examination",
             "pr_external_record",
             "pr_external_displayed",
+            "pf_fu_selected_patient_id",
+            "follow_up_details_id",
+            "reschedule_follow_up_id",
+            "cancel_follow_up_id",
+            "missed_follow_up_id",
+            "physician_parent_view",
+            "physician_prev_fu_view",
+            "pf_fu_page",
+            "pf_fu_query",
+            "pf_fu_status_filter",
         ):
             st.session_state.pop(key, None)
+
 
     st.session_state["_physician_last_page"] = page
 

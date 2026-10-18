@@ -61,6 +61,9 @@ from streamlit_app.components.ui import (
     show_flash_message,
 )
 
+# NEW IMPORT FOR CURB-65
+from streamlit_app.components.curb65_widget import render_curb65
+
 from shared.assets import load_css
 
 
@@ -989,7 +992,7 @@ def render_ai_result_card(ai):
 # REPORT — PHYSICIAN FORM
 # ============================================================
 
-def render_physician_form(examination):
+def render_physician_form(examination, ai):
 
     exam_id = examination.get("examination_id")
 
@@ -1037,6 +1040,21 @@ def render_physician_form(examination):
         unsafe_allow_html=True,
     )
 
+    # NEW LOGIC: Only show CURB-65 if pneumonia is confirmed
+    ai_findings = (ai or {}).get("ai_findings")
+    is_negative = str(ai_findings).strip().lower() == "negative"
+
+    if not is_negative:
+        curb_score = render_curb65()
+    else:
+        curb_score = None  # Not applicable
+        st.info("ℹ️ CURB-65 is not applicable because the AI detected no pneumonia.")
+
+    st.markdown(
+        "<p class='rx-form-divider'></p>",
+        unsafe_allow_html=True,
+    )
+
     section_title("Disposition")
 
     current_disposition = examination.get("disposition")
@@ -1053,6 +1071,13 @@ def render_physician_form(examination):
         key=f"review_{exam_id}_disposition",
     )
 
+    # NEW LOGIC: Smart recommendation based on CURB-65 (Only if score exists)
+    if curb_score is not None:
+        if curb_score >= 2 and disposition == "Treated and Sent Home":
+            st.error("⚠️ **Warning:** CURB-65 score is ≥ 2. Clinical guidelines strongly recommend hospital admission. Please document your clinical justification in Disposition Notes if sending home.")
+        elif curb_score >= 3 and disposition == "Admission":
+            st.info("ℹ️ **Note:** CURB-65 score is ≥ 3. Consider assessing for ICU admission if clinically indicated.")
+
     disposition_notes = st.text_area(
         "Disposition Notes",
         value=examination.get("disposition_notes") or "",
@@ -1067,7 +1092,9 @@ def render_physician_form(examination):
         "plans": plans,
         "disposition": disposition,
         "disposition_notes": disposition_notes,
+        "curb65_score": curb_score,  # This will be None if AI was negative
     }
+
 
 
 # ============================================================
@@ -1402,10 +1429,10 @@ def render_report_actions(
             disposition_notes=(
                 form_values["disposition_notes"].strip() or None
             ),
+            curb65_score=form_values["curb65_score"], # NEW: Save the score
         )
 
         # 3. Save training candidate (ONLY IF PATIENT CONSENTED)
-                # 3. Save training candidate (ONLY IF PATIENT CONSENTED)
         if image_id:
             
             consented = patient.get("ai_consent_granted", False)
@@ -1518,7 +1545,7 @@ def render_review_report_page(patient, examination):
 
         render_ai_result_card(ai)
 
-        form_values = render_physician_form(examination)
+        form_values = render_physician_form(examination, ai)
 
         render_followup_card(examination)
 
