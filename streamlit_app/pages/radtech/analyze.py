@@ -31,6 +31,8 @@ from backend.ai.pneumonia_model import (
 
 from backend.ai.pneumonia_type_model import predict_type
 
+from backend.ai.ood_validator import is_chest_xray
+
 from streamlit_app.components.ui import (
     page_header,
     section_title,
@@ -203,7 +205,7 @@ def render_empty_results():
 def _progress_steps_html(current_step):
 
     steps = [
-        "Image preprocessed",
+        "Validating image (X-ray check)...",
         "Running AI detection model...",
         "Running pneumonia classification...",
         "Preparing summary",
@@ -255,13 +257,24 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
     image_bytes = uploaded_file.getvalue()
 
     # --------------------------------------------------------
-    # Step 0 — Preprocessing
+    # Step 0 — Preprocessing (OOD validation)
     # --------------------------------------------------------
 
     status.markdown(
         _progress_steps_html(0),
         unsafe_allow_html=True,
     )
+
+    # Validate that the image is actually a chest X-ray
+    # before running the pneumonia model.
+    if not is_chest_xray(image_bytes):
+        st.error(
+            "⚠️ This image does not appear to be a chest X-ray. "
+            "Please upload a valid chest radiograph."
+        )
+        st.session_state[ANALYSIS_STATE_KEY] = None
+        return
+
     time.sleep(0.4)
 
     # --------------------------------------------------------
