@@ -508,6 +508,7 @@ def create_examination(
     bp_diastolic=None,
     temperature=None,
     follow_up_sequence=None,
+    ai_consent_given=False,
 ):
     """
     Create an examination together with optional
@@ -621,6 +622,20 @@ def create_examination(
                 .insert(consent_data)
                 .execute()
             )
+
+        # ------------------------------------------
+        # SAVE AI TRAINING CONSENT
+        # ------------------------------------------
+        # If the nurse checked the AI consent box, we update 
+        # the patient's profile permanently.
+        if ai_consent_given:
+            try:
+                admin_supabase.table("patients").update({
+                    "ai_consent_granted": True,
+                    "ai_consent_date": datetime.now(timezone.utc).isoformat(),
+                }).eq("patient_id", patient_id).execute()
+            except Exception as exc:
+                print(f"Failed to save patient AI consent: {exc}")
 
         # ------------------------------------------
         # 3. CREATE INITIAL VITALS
@@ -1936,10 +1951,7 @@ def save_training_candidate(
         response = (
             admin_supabase
             .table("xray_training_candidates")
-            .upsert(
-                data,
-                on_conflict="image_id",
-            )
+            .insert(data)  # <--- CHANGED FROM UPSERT TO INSERT
             .execute()
         )
 

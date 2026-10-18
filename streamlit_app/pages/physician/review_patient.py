@@ -1369,6 +1369,17 @@ def render_report_actions(
     # ==========================================
     # Save everything
     # ==========================================
+        # ==========================================
+    # DEBUGGING SECTION
+    # ==========================================
+    print("\n" + "="*40)
+    print("🚀 SAVE BUTTON CLICKED")
+    print(f"Patient ID: {patient.get('patient_id')}")
+    print(f"Consent Granted?: {patient.get('ai_consent_granted')}")
+    print(f"Image ID: {image_id}")
+    print(f"Training Label: {training_values.get('label')}")
+    print("="*40 + "\n")
+    # ==========================================
 
     try:
 
@@ -1393,33 +1404,46 @@ def render_report_actions(
             ),
         )
 
-        # 3. Save training candidate
+        # 3. Save training candidate (ONLY IF PATIENT CONSENTED)
+                # 3. Save training candidate (ONLY IF PATIENT CONSENTED)
         if image_id:
+            
+            consented = patient.get("ai_consent_granted", False)
+            
+            print(f"🤔 Is patient consented? {consented}")
 
-            ai_payload = ai or {}
+            if not consented:
+                print(f"🚫 SKIPPING candidate: Patient {patient.get('patient_id')} did not consent.")
+            else:
+                print(f"✅ ATTEMPTING to save candidate for patient {patient.get('patient_id')}...")
+                
+                ai_payload = ai or {}
 
-            save_training_candidate(
-                image_id=image_id,
-                examination_id=exam_id,
-                patient_id=patient.get("patient_id"),
-                request_id=request.get("request_id"),
-                ai_result_id=ai_payload.get("ai_result_id"),
-                ai_findings=ai_payload.get("ai_findings"),
-                ai_confidence=ai_payload.get("ai_confidence"),
-                ai_pneumonia_type=ai_payload.get("pneumonia_type"),
-                ai_classification_confidence=(
-                    ai_payload.get("classification_confidence")
-                ),
-                ai_model_version=(
-                    ai_payload.get("ai_model_version")
-                ),
-                ai_classification_model_version=(
-                    ai_payload.get("classification_model_version")
-                ),
-                confirmed_label=training_values["label"],
-                doctor_notes=training_values.get("notes"),
-                confirmed_by=user_id,
-            )
+                result = save_training_candidate(
+                    image_id=image_id,
+                    examination_id=exam_id,
+                    patient_id=patient.get("patient_id"),
+                    request_id=request.get("request_id"),
+                    ai_result_id=ai_payload.get("ai_result_id"),
+                    ai_findings=ai_payload.get("ai_findings"),
+                    ai_confidence=ai_payload.get("ai_confidence"),
+                    ai_pneumonia_type=ai_payload.get("pneumonia_type"),
+                    ai_classification_confidence=(
+                        ai_payload.get("classification_confidence")
+                    ),
+                    ai_model_version=(
+                        ai_payload.get("ai_model_version")
+                    ),
+                    ai_classification_model_version=(
+                        ai_payload.get("classification_model_version")
+                    ),
+                    confirmed_label=training_values["label"],
+                    doctor_notes=training_values.get("notes"),
+                    confirmed_by=user_id,
+                )
+                
+                # Check what the database function returned
+                print(f"🗄️ DB RESULT: {result}")
 
         else:
             print(
