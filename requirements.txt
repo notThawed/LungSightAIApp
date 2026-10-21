@@ -1,6 +1,26 @@
 streamlit
+<<<<<<< HEAD
 PyQt6
+=======
+>>>>>>> origin/LungSightV2
 fastapi
 uvicorn
 sqlalchemy
 pillow
+<<<<<<< HEAD
+=======
+supabase
+psycopg2-binary
+python-dotenv
+streamlit-drawable-canvas
+torch
+torchvision
+folium
+streamlit-folium
+matplotlib
+seaborn
+scikit-learn
+tqdm
+numpy
+transformers
+>>>>>>> origin/LungSightV2

@@ -1,0 +1,360 @@
+/* =========================================================
+   LUNGSIGHT — HOSPITAL ADMIN
+   My Hospital
+   shared/theme/css_content/hospital_admin_css/hospital_info.css
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0');
+
+:root {
+    --geo-primary: #176b87;
+    --geo-primary-dark: #0f526a;
+    --geo-primary-soft: #eaf6fa;
+
+    --geo-accent: #2b8ca8;
+    --geo-success: #16845b;
+    --geo-success-soft: #eaf8f1;
+
+    --geo-warning: #b7791f;
+    --geo-warning-soft: #fff7e8;
+
+    --geo-danger: #c0392b;
+    --geo-danger-soft: #fff0ee;
+
+    --geo-text: #172b35;
+    --geo-text-soft: #52636c;
+    --geo-muted: #7a8990;
+
+    --geo-border: #dce6ea;
+    --geo-border-light: #e9eff2;
+
+    --geo-card: #ffffff;
+
+    --geo-radius-sm: 8px;
+    --geo-radius-md: 14px;
+    --geo-radius-lg: 20px;
+
+    --geo-shadow-sm: 0 2px 8px rgba(23, 55, 66, 0.05);
+    --geo-shadow-md: 0 8px 24px rgba(23, 55, 66, 0.08);
+}
+
+/* ---------------------------------------------------------
+   MATERIAL SYMBOLS
+   --------------------------------------------------------- */
+
+.material-symbols-rounded,
+.material-symbols-outlined {
+    font-family: "Material Symbols Rounded" !important;
+    font-weight: normal;
+    font-style: normal;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------------------------------------------------
+   PAGE WRAPPER
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] {
+    animation: geoFadeIn 0.35s ease-out;
+}
+
+@keyframes geoFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------------------------------------------------------
+   LEFT CARD
+   --------------------------------------------------------- */
+
+div[class*="st-key-geo_info_card"] {
+    padding: 22px 22px 18px;
+
+    background: var(--geo-card);
+
+    border: 1px solid var(--geo-border);
+
+    border-radius: var(--geo-radius-lg);
+
+    box-shadow: var(--geo-shadow-sm);
+
+    min-height: 560px;
+}
+
+/* ---------------------------------------------------------
+   LOGO
+   --------------------------------------------------------- */
+
+.geo-logo-wrap {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 72px;
+    height: 72px;
+
+    margin-bottom: 14px;
+
+    border-radius: 14px;
+
+    background: #ffffff;
+
+    border: 1px solid var(--geo-border-light);
+
+    overflow: hidden;
+
+    box-shadow: 0 2px 6px rgba(23, 55, 66, 0.06);
+}
+
+.geo-logo {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.geo-logo-fallback {
+    background: var(--geo-primary-soft);
+
+    border-color: rgba(23, 107, 135, 0.12);
+
+    color: var(--geo-primary);
+
+    font-size: 34px;
+
+    line-height: 1;
+}
+
+/* ---------------------------------------------------------
+   NAME / TYPE / BADGE
+   --------------------------------------------------------- */
+
+.geo-type {
+    margin: 0 0 2px;
+
+    color: var(--geo-primary);
+
+    font-size: 0.68rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.14em;
+
+    text-transform: uppercase;
+}
+
+.geo-name {
+    margin: 0 0 10px;
+
+    color: var(--geo-text);
+
+    font-size: 1.3rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.02em;
+
+    line-height: 1.25;
+}
+
+.geo-badge-row {
+    margin-bottom: 16px;
+}
+
+/* ---------------------------------------------------------
+   CONTACT ROWS
+   --------------------------------------------------------- */
+
+.geo-contact {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+
+    padding: 14px 0;
+
+    border-top: 1px solid var(--geo-border-light);
+
+    border-bottom: 1px solid var(--geo-border-light);
+}
+
+.geo-contact-row {
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 10px;
+
+    color: var(--geo-text-soft);
+
+    font-size: 0.82rem;
+
+    line-height: 1.5;
+}
+
+.geo-contact-row .material-symbols-rounded {
+    font-size: 18px;
+
+    color: var(--geo-muted);
+
+    margin-top: 1px;
+
+    flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------
+   SECTION LABELS
+   --------------------------------------------------------- */
+
+.geo-section-label {
+    margin: 18px 0 10px;
+
+    color: var(--geo-muted);
+
+    font-size: 0.68rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.14em;
+
+    text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------
+   ACTIVITY STATS
+   --------------------------------------------------------- */
+
+.geo-stats {
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 10px;
+}
+
+.geo-stat {
+    padding: 12px 14px;
+
+    background: #f8fafb;
+
+    border: 1px solid var(--geo-border-light);
+
+    border-radius: 10px;
+}
+
+.geo-stat-value {
+    color: var(--geo-text);
+
+    font-size: 1.3rem;
+
+    font-weight: 850;
+
+    letter-spacing: -0.02em;
+
+    line-height: 1.1;
+}
+
+.geo-stat-label {
+    margin-top: 4px;
+
+    color: var(--geo-muted);
+
+    font-size: 0.68rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.04em;
+
+    text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------
+   SUBSCRIPTION SUMMARY
+   --------------------------------------------------------- */
+
+.geo-sub-card {
+    padding: 12px 14px;
+
+    background: var(--geo-primary-soft);
+
+    border: 1px solid rgba(23, 107, 135, 0.14);
+
+    border-radius: 10px;
+}
+
+.geo-sub-plan {
+    color: var(--geo-primary);
+
+    font-size: 0.95rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.01em;
+}
+
+.geo-sub-meta {
+    margin-top: 3px;
+
+    color: var(--geo-text-soft);
+
+    font-size: 0.78rem;
+
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------
+   RIGHT MAP PANEL
+   --------------------------------------------------------- */
+
+div[class*="st-key-geo_map_panel"] {
+    padding: 14px;
+
+    background: var(--geo-card);
+
+    border: 1px solid var(--geo-border);
+
+    border-radius: var(--geo-radius-lg);
+
+    box-shadow: var(--geo-shadow-sm);
+
+    min-height: 560px;
+}
+
+/* Style the folium container inside the panel */
+
+div[class*="st-key-geo_map_panel"] iframe {
+    border-radius: 10px;
+}
+
+/* ---------------------------------------------------------
+   RESPONSIVE
+   --------------------------------------------------------- */
+
+@media (max-width: 900px) {
+
+    div[class*="st-key-geo_info_card"],
+    div[class*="st-key-geo_map_panel"] {
+        min-height: auto;
+
+        margin-bottom: 16px;
+    }
+}
+
+/* ---------------------------------------------------------
+   REDUCED MOTION
+   --------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}

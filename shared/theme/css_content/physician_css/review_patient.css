@@ -1,0 +1,533 @@
+/* =========================================================
+   LUNGSIGHT — PHYSICIAN
+   Review Patient (X-Ray Review Report)
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+
+/* ----------------------------------------------------------
+   Tokens
+   ---------------------------------------------------------- */
+
+:root {
+    --rx-film:         #F2F6F7;
+    --rx-white:        #FFFFFF;
+    --rx-ink:          #12283A;
+    --rx-slate:        #5A6F7F;
+    --rx-mist:         #DDE8EB;
+
+    --rx-teal:         #0F7C88;
+    --rx-teal-soft:    #E8F4F6;
+
+    --rx-green:        #2E8B6A;
+    --rx-green-soft:   #EAF6F1;
+
+    --rx-amber:        #B45309;
+    --rx-amber-soft:   #FEF3C7;
+
+    --rx-red:          #B91C1C;
+    --rx-red-soft:     #FEE2E2;
+
+    --rx-font-display: 'Fraunces', Georgia, serif;
+    --rx-font-body:    'Manrope', system-ui, -apple-system, sans-serif;
+}
+
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    vertical-align: middle;
+}
+
+
+/* ----------------------------------------------------------
+   Page container
+   ---------------------------------------------------------- */
+
+.st-key-physician_review_patient_root,
+.st-key-physician_review_patient_page {
+    font-family: var(--rx-font-body);
+    color: var(--rx-ink);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+
+/* ----------------------------------------------------------
+   Report header
+   ---------------------------------------------------------- */
+
+.rx-report-header {
+    margin: 0.5rem 0 1.25rem;
+}
+
+.rx-report-title {
+    margin: 0;
+    font-family: var(--rx-font-display);
+    font-size: 1.65rem;
+    font-weight: 600;
+    color: var(--rx-ink);
+    letter-spacing: -0.01em;
+}
+
+.rx-report-sub {
+    margin: 0.2rem 0 0;
+    font-size: 0.82rem;
+    color: var(--rx-slate);
+    font-family: ui-monospace, monospace;
+}
+
+
+/* ----------------------------------------------------------
+   Section title tweak inside review page
+   ---------------------------------------------------------- */
+
+.st-key-physician_review_patient_root .sa-section-title,
+.st-key-physician_review_patient_root h3 {
+    font-family: var(--rx-font-body);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+
+/* ----------------------------------------------------------
+   Image labels
+   ---------------------------------------------------------- */
+
+.rx-img-label {
+    margin: 0 0 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--rx-slate);
+}
+
+
+/* ----------------------------------------------------------
+   X-ray frame + heatmap (equal height)
+   ---------------------------------------------------------- */
+
+.st-key-rx_xray_frame {
+    padding: 12px;
+    background: var(--rx-film);
+    border: 1px solid var(--rx-mist);
+    border-radius: 12px;
+    margin: 0 0 1rem;
+
+    height: 300px;
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.st-key-rx_xray_frame [data-testid="stImage"] {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.st-key-rx_xray_frame img {
+    border-radius: 8px;
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.rx-heatmap-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+
+    padding: 1.25rem 1rem;
+
+    height: 300px;
+    box-sizing: border-box;
+
+    background:
+        repeating-linear-gradient(
+            45deg,
+            #F7FAFB,
+            #F7FAFB 12px,
+            #F2F6F7 12px,
+            #F2F6F7 24px
+        );
+
+    border: 2px dashed var(--rx-mist);
+    border-radius: 12px;
+
+    text-align: center;
+    margin: 0 0 1rem;
+}
+
+.rx-heatmap-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--rx-teal-soft);
+    color: var(--rx-teal);
+    font-size: 24px;
+    line-height: 1;
+}
+
+.rx-heatmap-title {
+    margin: 0.25rem 0 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--rx-ink);
+}
+
+.rx-heatmap-text {
+    margin: 0;
+    max-width: 240px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--rx-slate);
+}
+
+
+/* ----------------------------------------------------------
+   No X-Ray notice
+   ---------------------------------------------------------- */
+
+.rx-no-xray {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+
+    padding: 1.75rem 1.25rem;
+
+    background: var(--rx-film);
+    border: 1px dashed var(--rx-mist);
+    border-radius: 12px;
+
+    text-align: center;
+    margin: 0.4rem 0 0.85rem;
+}
+
+.rx-no-xray-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--rx-white);
+    color: var(--rx-slate);
+    font-size: 22px;
+    line-height: 1;
+}
+
+.rx-no-xray-title {
+    margin: 0.35rem 0 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--rx-ink);
+}
+
+.rx-no-xray-text {
+    margin: 0;
+    max-width: 300px;
+    font-size: 0.76rem;
+    line-height: 1.5;
+    color: var(--rx-slate);
+}
+
+
+/* ----------------------------------------------------------
+   Clinical context card
+   ---------------------------------------------------------- */
+
+.rx-context-card {
+    padding: 1rem 1.15rem;
+    background: var(--rx-white);
+    border: 1px solid var(--rx-mist);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(18, 40, 58, 0.04);
+    margin: 0 0 1rem;
+}
+
+.rx-context-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--rx-film);
+    font-size: 0.82rem;
+}
+
+.rx-context-row:last-child {
+    border-bottom: none;
+}
+
+.rx-context-row span {
+    color: var(--rx-slate);
+    font-weight: 500;
+    flex-shrink: 0;
+    max-width: 40%;
+}
+
+.rx-context-row b {
+    color: var(--rx-ink);
+    font-weight: 500;
+    text-align: right;
+    word-break: break-word;
+    line-height: 1.5;
+}
+
+
+/* ----------------------------------------------------------
+   Panel title (used above the AI card)
+   ---------------------------------------------------------- */
+
+.rx-panel-title-row {
+    margin-bottom: 0.4rem;
+}
+
+.rx-panel-title {
+    margin: 0;
+    font-family: var(--rx-font-body);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--rx-ink);
+}
+
+
+/* ----------------------------------------------------------
+   AI Result card
+   ---------------------------------------------------------- */
+
+.rx-ai-card {
+    padding: 1.1rem 1.25rem;
+    background: var(--rx-white);
+    border: 1px solid var(--rx-mist);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(18, 40, 58, 0.04);
+    margin-bottom: 1rem;
+}
+
+.rx-ai-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--rx-film);
+    font-size: 0.85rem;
+}
+
+.rx-ai-row:last-child {
+    border-bottom: none;
+}
+
+.rx-ai-row span {
+    color: var(--rx-slate);
+    font-weight: 500;
+}
+
+.rx-ai-row b {
+    color: var(--rx-ink);
+    font-weight: 700;
+    text-align: right;
+}
+
+.rx-ai-row-block {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.rx-ai-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.rx-ai-label span {
+    color: var(--rx-slate);
+}
+
+.rx-ai-label b {
+    color: var(--rx-teal);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.rx-conf-bar {
+    width: 100%;
+    height: 7px;
+    background: var(--rx-film);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.rx-conf-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--rx-teal), #2BB6C4);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+
+/* AI findings narrative inside the AI card */
+
+.rx-ai-findings {
+    margin-top: 0.75rem;
+    padding: 0.85rem 1rem;
+    background: var(--rx-film);
+    border-left: 3px solid var(--rx-teal);
+    border-radius: 10px;
+}
+
+.rx-ai-findings-empty {
+    border-left-color: var(--rx-mist);
+    background: var(--rx-film);
+}
+
+.rx-ai-findings-label {
+    margin: 0 0 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--rx-slate);
+}
+
+.rx-ai-findings-text {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--rx-ink);
+}
+
+
+/* ----------------------------------------------------------
+   Form divider
+   ---------------------------------------------------------- */
+
+.rx-form-divider {
+    margin: 1rem 0 0.5rem;
+    height: 1px;
+    background: var(--rx-film);
+}
+
+
+/* ----------------------------------------------------------
+   Follow-Up card
+   ---------------------------------------------------------- */
+
+.rx-fu-card {
+    padding: 1rem 1.15rem;
+    border-radius: 12px;
+    margin: 0.4rem 0 0.75rem;
+    border: 1px solid var(--rx-mist);
+}
+
+.rx-fu-card--empty {
+    background: var(--rx-film);
+    border-style: dashed;
+}
+
+.rx-fu-card--scheduled {
+    background: var(--rx-green-soft);
+    border-color: #86EFAC;
+    border-left: 4px solid var(--rx-green);
+}
+
+.rx-fu-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.rx-fu-icon {
+    font-size: 20px !important;
+    line-height: 1;
+    color: var(--rx-teal);
+}
+
+.rx-fu-card--scheduled .rx-fu-icon {
+    color: var(--rx-green);
+}
+
+.rx-fu-title {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--rx-ink);
+}
+
+.rx-fu-when {
+    margin: 0.2rem 0 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--rx-ink);
+}
+
+.rx-fu-notes {
+    margin: 0.35rem 0 0;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--rx-slate);
+}
+
+.rx-fu-text {
+    margin: 0.2rem 0 0;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--rx-slate);
+}
+
+
+/* ----------------------------------------------------------
+   Follow-Up card container (keyed wrapper)
+   ---------------------------------------------------------- */
+
+[class*="st-key-review_fu_card_"] {
+    margin-bottom: 0.5rem;
+}
+
+
+/* ----------------------------------------------------------
+   Responsive
+   ---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    .st-key-rx_xray_frame,
+    .rx-heatmap-placeholder {
+        height: 240px;
+    }
+
+    .rx-context-row,
+    .rx-ai-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .rx-context-row b,
+    .rx-ai-row b {
+        text-align: left;
+    }
+}
