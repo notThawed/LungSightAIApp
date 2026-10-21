@@ -20,9 +20,12 @@ from dotenv import load_dotenv
 # Streamlit Cloud will use st.secrets instead.
 # ============================================================
 
-load_dotenv(
-    Path(__file__).parent / ".env"
-)
+# backend/supabase_client.py -> backend/ -> project root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Load the .env file from the project root.
+# Existing system environment variables take precedence.
+load_dotenv(PROJECT_ROOT / ".env")
 
 
 # ============================================================
