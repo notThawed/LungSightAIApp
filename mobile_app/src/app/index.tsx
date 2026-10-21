@@ -1,25 +1,9 @@
 
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Alert } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../lib/supabase";
-
-const COLORS = {
-  primary: "#1769AA",
-  background: "#F5F8FC",
-  white: "#FFFFFF",
-  text: "#163A5C",
-  secondary: "#64748B",
-  border: "#E1E8F0",
-};
+import { StateView } from "../components/ui";
 
 type DashboardRoute = "/physician" | "/rad_tech" | "/staff";
 
@@ -165,118 +149,22 @@ export default function Index() {
   // Loading screen while checking the session and role.
   if (loading) {
     return (
-      <SafeAreaView style={styles.centered}>
-        <ActivityIndicator
-          size="large"
-          color={COLORS.primary}
-        />
-        <Text style={styles.loadingText}>
-          Checking your account...
-        </Text>
-      </SafeAreaView>
+      <StateView
+        kind="loading"
+        title="Checking your account"
+        message="Verifying your session and role."
+      />
     );
   }
 
   // Show an error if the account cannot access a dashboard.
   return (
-    <SafeAreaView style={styles.centered}>
-      <View style={styles.errorCard}>
-        <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>!</Text>
-        </View>
-
-        <Text style={styles.title}>
-          Unable to Open Dashboard
-        </Text>
-
-        <Text style={styles.message}>
-          {errorMessage ||
-            "Your account cannot access this dashboard."}
-        </Text>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleSignOut}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>
-            Sign Out
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    <StateView
+      kind="error"
+      title="Unable to open your dashboard"
+      message={errorMessage || "Your account cannot access this dashboard."}
+      actionLabel="Sign out"
+      onAction={() => void handleSignOut()}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-
-  errorCard: {
-    width: "100%",
-    maxWidth: 420,
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 24,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-
-  iconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#FDECEC",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
-  },
-
-  iconText: {
-    color: "#B42318",
-    fontSize: 34,
-    fontWeight: "700",
-  },
-
-  title: {
-    color: COLORS.text,
-    fontSize: 21,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-
-  message: {
-    color: COLORS.secondary,
-    fontSize: 14,
-    lineHeight: 21,
-    textAlign: "center",
-    marginTop: 12,
-  },
-
-  button: {
-    width: "100%",
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: COLORS.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 24,
-  },
-
-  buttonText: {
-    color: COLORS.white,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-
-  loadingText: {
-    color: COLORS.secondary,
-    marginTop: 12,
-  },
-});

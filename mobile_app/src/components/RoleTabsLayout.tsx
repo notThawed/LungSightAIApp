@@ -1,14 +1,24 @@
-
 import { Tabs } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+
+import { C, FontFamily } from "../constants/theme";
 
 export default function RoleTabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#2563eb",
-        tabBarInactiveTintColor: "#64748b",
+        tabBarActiveTintColor: C.primary,
+        tabBarInactiveTintColor: C.muted,
+        tabBarStyle: {
+          backgroundColor: C.surface,
+          borderTopColor: C.border,
+        },
+        tabBarLabelStyle: {
+          fontFamily: FontFamily.semibold,
+          fontSize: 12,
+        },
+        sceneStyle: { backgroundColor: C.background },
       }}
     >
       <Tabs.Screen
@@ -16,7 +26,7 @@ export default function RoleTabsLayout() {
         options={{
           title: "Dashboard",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+            <Ionicons name="grid-outline" size={size} color={color} />
           ),
         }}
       />
@@ -24,7 +34,7 @@ export default function RoleTabsLayout() {
       <Tabs.Screen
         name="geospatial"
         options={{
-          title: "Geospatial",
+          title: "Map",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map-outline" size={size} color={color} />
           ),
@@ -43,7 +53,7 @@ export default function RoleTabsLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+            <Ionicons name="person-circle-outline" size={size} color={color} />
           ),
         }}
       />

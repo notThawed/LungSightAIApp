@@ -1,56 +1,56 @@
-# Welcome to your Expo app 👋
+# LungSightAI Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+The mobile companion to the LungSightAI web workspace, for **Radiologists,
+Radiologic Technologists and Staff**. Hospital Admin and Superadmin accounts
+are rejected at sign-in, because administration happens on the web app.
 
-## Get started
+Built with Expo SDK 57, React Native 0.86, Expo Router and TypeScript. It
+shares the design tokens in [`../shared/theme/tokens.json`](../shared/theme/tokens.json)
+with the web app; see [`../docs/DESIGN_SYSTEM.md`](../docs/DESIGN_SYSTEM.md).
 
-1. Install dependencies
+## Screens
 
-   ```bash
-   npm install
-   ```
+| Route | Screen | Data |
+|---|---|---|
+| `/login` | Email + password sign-in | `supabase.auth.signInWithPassword` |
+| `/` | Session and role gate; routes by role | `user_profiles`, `roles` |
+| `/physician`, `/rad_tech`, `/staff` | Role dashboard with live counts (same metrics as the web dashboards) | `examinations`, `follow_ups` (count-only queries) |
+| `…/geospatial` | Map of active partner hospitals (list-only on web) | `hospitals` |
+| `…/profile` | View and edit personal information, sign out | `user_profiles` |
+| `…/notifications` | Placeholder (not implemented yet) | — |
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Setup
 
 ```bash
-npm run reset-project
+cp .env.example .env     # EXPO_PUBLIC_SUPABASE_URL + EXPO_PUBLIC_SUPABASE_KEY (anon key only)
+npm install
+npx expo start           # a = Android, i = iOS, or scan the QR code with Expo Go
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+`EXPO_PUBLIC_*` variables are embedded in the app bundle. **Never use the
+service-role key here.** All data access goes through Supabase Row Level
+Security with the signed-in user's session.
 
-### Other setup steps
+## Checks
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+npm run lint                        # ESLint (must report 0 problems)
+npx tsc --noEmit                    # type-check (must report 0 errors)
+npx expo export --platform android  # bundle the native app without a device
+npm run web                         # browser preview
+```
 
-## Learn more
+Add dependencies with `npx expo install <package>`, so the versions match the
+SDK.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Code layout
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+src/app/                 Expo Router routes (thin wrappers)
+src/components/ui.tsx    Shared UI kit: Screen, BrandBar, Card, Button, TextField, Pill,
+                         StatCard, Note, DetailRow, StateView, EmptyState
+src/components/          Dashboard, Profile, Geospatial (+ .web.tsx fallback), Notifications
+src/constants/theme.ts   Design tokens (mirror of shared/theme/tokens.json)
+src/constants/ai.ts      AI disclaimer wording (mirror of shared/ai_labels.py)
+src/lib/                 supabase client, user profile, dashboard metrics, hospitals
+```

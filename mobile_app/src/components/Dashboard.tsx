@@ -1,20 +1,24 @@
-
-import { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { router } from "expo-router";
+import { useCallback, useEffect, useState, type ComponentProps } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { router, type Href } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { supabase } from "../lib/supabase";
 import { getCurrentUserProfile, UserProfile } from "../lib/user";
+import { getDashboardMetrics, type DashboardMetric, type MetricKey } from "../lib/dashboard";
+import { AI_DISCLAIMER } from "../constants/ai";
+import { C, Spacing, Type } from "../constants/theme";
+import {
+  BrandBar,
+  IconButton,
+  Note,
+  Pill,
+  Screen,
+  SectionTitle,
+  StatCard,
+  StateView,
+  type Tone,
+} from "./ui";
 
 type DashboardRole = "staff" | "radiologist" | "radiologic_technologist";
 
@@ -22,451 +26,211 @@ interface DashboardProps {
   role?: DashboardRole;
 }
 
+/** Roles that may use the mobile companion app. */
+const MOBILE_ROLES: UserProfile["role"][] = [
+  "radiologist",
+  "radiologic_technologist",
+  "staff",
+];
+
+const ROLE_INFO: Record<
+  DashboardRole,
+  { label: string; icon: ComponentProps<typeof Ionicons>["name"]; notifications: Href }
+> = {
+  radiologist: { label: "Radiologist", icon: "medkit-outline", notifications: "/physician/notifications" },
+  radiologic_technologist: { label: "Radiologic Technologist", icon: "scan-outline", notifications: "/rad_tech/notifications" },
+  staff: { label: "Staff", icon: "people-outline", notifications: "/staff/notifications" },
+};
+
+/** Same icon/tone per metric as the web dashboard (METRIC_ICONS). */
+const METRIC_STYLE: Record<MetricKey, { icon: ComponentProps<typeof Ionicons>["name"]; tone: Tone }> = {
+  pending_exams: { icon: "hourglass-outline", tone: "warning" },
+  xray_ready: { icon: "scan-outline", tone: "info" },
+  awaiting_xray: { icon: "time-outline", tone: "primary" },
+  completed_exams: { icon: "checkmark-done-outline", tone: "success" },
+  followups_today: { icon: "calendar-outline", tone: "primary" },
+  followups_upcoming: { icon: "calendar-number-outline", tone: "info" },
+  followups_missed: { icon: "calendar-clear-outline", tone: "danger" },
+};
+
+/**
+ * Load the signed-in user and their metrics. Returns null (after signing
+ * out) when the role is not allowed on mobile — admin roles use the web app.
+ */
+async function fetchDashboardData(): Promise<{
+  profile: UserProfile;
+  metrics: DashboardMetric[];
+} | null> {
+  const profile = await getCurrentUserProfile();
+
+  if (!MOBILE_ROLES.includes(profile.role)) {
+    await supabase.auth.signOut();
+    router.replace("/login");
+    return null;
+  }
+
+  const metrics = profile.hospitalId
+    ? await getDashboardMetrics(profile.role, profile.hospitalId)
+    : [];
+
+  return { profile, metrics };
+}
+
 export default function Dashboard({ role }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
+  const [loadError, setLoadError] = useState("");
 
-  const activeRole = role ?? user?.role;
+  // Callers set `loading` / `refreshing` before calling. State is only
+  // updated in promise callbacks, so this is safe to start from an effect.
+  const loadDashboard = useCallback(
+    () =>
+      fetchDashboardData()
+        .then((data) => {
+          if (!data) return;
 
-  const loadDashboard = useCallback(async (isRefresh = false) => {
-    // Only show the full-screen loader on the initial load.
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    try {
-      const profile = await getCurrentUserProfile();
-
-      // Preserve the mobile role restriction.
-      if (
-        profile.role !== "radiologist" &&
-        profile.role !== "radiologic_technologist"
-      ) {
-        await supabase.auth.signOut();
-        router.replace("/login");
-        return;
-      }
-
-      setUser(profile);
-    } catch (error) {
-      console.error("Dashboard error:", error);
-
-      if (isRefresh) {
-        Alert.alert(
-          "Refresh failed",
-          "Unable to refresh your dashboard. Please check your connection and try again."
-        );
-      } else {
-        Alert.alert("Error", "Unable to load your dashboard.");
-        router.replace("/login");
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+          setUser(data.profile);
+          setMetrics(data.metrics);
+          setLoadError("");
+        })
+        .catch((error) => {
+          console.error("Dashboard error:", error);
+          setLoadError(
+            error instanceof Error ? error.message : "Unable to load your dashboard."
+          );
+        })
+        .finally(() => {
+          setLoading(false);
+          setRefreshing(false);
+        }),
+    []
+  );
 
   useEffect(() => {
     void loadDashboard();
   }, [loadDashboard]);
 
-  const onRefresh = useCallback(() => {
-    void loadDashboard(true);
-  }, [loadDashboard]);
+  if (loading) {
+    return <StateView kind="loading" title="Loading your dashboard" />;
+  }
 
-  const handleNotifications = () => {
-    const isPhysician = (activeRole ?? "radiologist") === "radiologist";
-
-    router.push(
-      isPhysician
-        ? "/physician/notifications"
-        : "/rad_tech/notifications"
-    );
-  };
-
-  if (loading || !user) {
+  if (!user) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Loading LungSight...</Text>
-      </View>
+      <StateView
+        kind="error"
+        title="Unable to load your dashboard"
+        message={loadError || "Check your connection and try again."}
+        actionLabel="Try again"
+        onAction={() => {
+          setLoading(true);
+          void loadDashboard();
+        }}
+        secondaryLabel="Back to sign in"
+        onSecondary={() => router.replace("/login")}
+      />
     );
   }
 
-  const isPhysician = user.role === "radiologist";
-  const displayName = isPhysician
-    ? `Dr. ${user.fullName}`
-    : user.fullName;
+  const activeRole = (role ?? user.role) as DashboardRole;
+  const info = ROLE_INFO[activeRole] ?? ROLE_INFO.staff;
+  const displayName =
+    user.role === "radiologist" ? `Dr. ${user.fullName}` : user.fullName;
+  const someUnavailable = metrics.some((metric) => metric.value === null);
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={["#2563eb"]}
-          tintColor="#2563eb"
-          progressBackgroundColor="#ffffff"
-        />
-      }
+    <Screen
+      refreshing={refreshing}
+      onRefresh={() => {
+        setRefreshing(true);
+        void loadDashboard();
+      }}
     >
-      <View style={styles.header}>
-        <View style={styles.brandRow}>
-          <View style={styles.brandIcon}>
-            <Ionicons
-              name="pulse-outline"
-              size={23}
-              color="#ffffff"
-            />
-          </View>
-
-          <View>
-            <Text style={styles.brand}>
-              LungSight <Text style={styles.brandAI}>AI</Text>
-            </Text>
-            <Text style={styles.brandSubtitle}>
-              Clinical dashboard
-            </Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Open notifications"
-          style={styles.bellButton}
-          onPress={handleNotifications}
-        >
-          <Ionicons
-            name="notifications-outline"
-            size={23}
-            color="#0f172a"
+      <BrandBar
+        right={
+          <IconButton
+            icon="notifications-outline"
+            label="Open notifications"
+            onPress={() => router.push(info.notifications)}
           />
-        </TouchableOpacity>
-      </View>
+        }
+      />
 
-      <View style={styles.welcomeBlock}>
-        <Text style={styles.welcomeEyebrow}>WELCOME BACK</Text>
-        <Text style={styles.welcome}>Hello, {displayName}</Text>
-
-        <View style={styles.hospitalRow}>
-          <Ionicons
-            name="business-outline"
-            size={16}
-            color="#64748b"
-          />
-          <Text style={styles.hospital}>
+      <View style={styles.welcome}>
+        <Text style={Type.label}>WELCOME BACK</Text>
+        <Text style={Type.display}>{displayName}</Text>
+        <View style={styles.metaRow}>
+          <Ionicons name="business-outline" size={16} color={C.muted} />
+          <Text style={[Type.body, styles.hospital]} numberOfLines={1}>
             {user.hospitalName || "Hospital not assigned"}
           </Text>
         </View>
+        <Pill label={info.label} icon={info.icon} tone="primary" />
       </View>
 
-      <View style={styles.roleBadge}>
-        <Ionicons
-          name={isPhysician ? "medkit-outline" : "scan-outline"}
-          size={15}
-          color="#1d4ed8"
-        />
-        <Text style={styles.roleText}>
-          {isPhysician
-            ? "Radiologist / Physician"
-            : "Radiologic Technologist"}
-        </Text>
-      </View>
+      <SectionTitle
+        title="Overview"
+        caption="Live counts for your hospital. Pull down to refresh."
+      />
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Overview</Text>
-        <Text style={styles.demoLabel}>PLACEHOLDER</Text>
-      </View>
+      {loadError ? (
+        <Note tone="danger" icon="alert-circle-outline">
+          Refresh failed: {loadError}
+        </Note>
+      ) : null}
 
-      <Text style={styles.sectionSubtitle}>
-        Your clinical activity at a glance.
-      </Text>
-
-      <View style={styles.statsGrid}>
-        <StatCard
-          icon="calendar-outline"
-          label={
-            isPhysician ? "Today's Cases" : "Today's Examinations"
-          }
-          value="—"
-          hint="Not connected yet"
-        />
-        <StatCard
-          icon="time-outline"
-          label={
-            isPhysician ? "Pending Results" : "Pending Uploads"
-          }
-          value="—"
-          hint="Not connected yet"
-        />
-        <StatCard
-          icon="checkmark-circle-outline"
-          label={isPhysician ? "Reviewed" : "Processing"}
-          value="—"
-          hint="Not connected yet"
-        />
-        <StatCard
-          icon="alert-circle-outline"
-          label={isPhysician ? "High Risk" : "Completed"}
-          value="—"
-          hint="Not connected yet"
-        />
-      </View>
-
-      <View style={styles.infoCard}>
-        <View style={styles.infoIcon}>
-          <Ionicons
-            name="shield-checkmark-outline"
-            size={22}
-            color="#2563eb"
-          />
+      {!user.hospitalId ? (
+        <Note tone="warning" icon="information-circle-outline">
+          Your account is not linked to a hospital, so there is no workload to show.
+        </Note>
+      ) : (
+        <View style={styles.statsGrid}>
+          {metrics.map((metric) => (
+            <StatCard
+              key={metric.key}
+              icon={METRIC_STYLE[metric.key].icon}
+              tone={METRIC_STYLE[metric.key].tone}
+              label={metric.label}
+              value={metric.value === null ? "—" : metric.value.toLocaleString()}
+              hint={metric.hint}
+            />
+          ))}
         </View>
+      )}
 
-        <View style={styles.infoTextWrap}>
-          <Text style={styles.infoTitle}>
-            Clinical decision support
-          </Text>
-          <Text style={styles.infoText}>
-            LungSight supports healthcare professionals. AI results
-            should be reviewed by qualified clinical staff.
-          </Text>
-        </View>
-      </View>
-    </ScrollView>
-  );
-}
+      {someUnavailable ? (
+        <Note tone="warning" icon="cloud-offline-outline">
+          Some numbers could not be loaded and are shown as “—”. Pull down to try again.
+        </Note>
+      ) : null}
 
-function StatCard({
-  icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  label: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <View style={styles.statCard}>
-      <View style={styles.statIcon}>
-        <Ionicons name={icon} size={20} color="#2563eb" />
-      </View>
-      <Text style={styles.statTitle}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statHint}>{hint}</Text>
-    </View>
+      {activeRole !== "staff" ? (
+        <Note tone="info" icon="shield-checkmark-outline">
+          {AI_DISCLAIMER}
+        </Note>
+      ) : null}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f8fafc",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 15,
-    color: "#64748b",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
-  content: {
-    padding: 20,
-    paddingTop: 56,
-    paddingBottom: 28,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  brandIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 13,
-    backgroundColor: "#2563eb",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brand: {
-    fontSize: 19,
-    fontWeight: "800",
-    color: "#0f172a",
-  },
-  brandAI: {
-    color: "#2563eb",
-  },
-  brandSubtitle: {
-    fontSize: 12,
-    color: "#64748b",
-    marginTop: 2,
-  },
-  bellButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  welcomeBlock: {
-    marginTop: 30,
-  },
-  welcomeEyebrow: {
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-    color: "#2563eb",
-  },
   welcome: {
-    fontSize: 25,
-    lineHeight: 32,
-    fontWeight: "800",
-    color: "#0f172a",
-    marginTop: 6,
+    gap: Spacing[1],
+    marginTop: Spacing[2],
   },
-  hospitalRow: {
+  metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    marginTop: 8,
+    gap: 6,
+    marginBottom: Spacing[2],
   },
   hospital: {
-    fontSize: 14,
-    color: "#64748b",
     flexShrink: 1,
-  },
-  roleBadge: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    marginTop: 17,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#dbeafe",
-  },
-  roleText: {
-    color: "#1d4ed8",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 30,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#0f172a",
-  },
-  demoLabel: {
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1,
-    color: "#64748b",
-    backgroundColor: "#e2e8f0",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: "#64748b",
-    marginTop: 5,
-    marginBottom: 15,
   },
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  statCard: {
-    width: "48.3%",
-    minHeight: 155,
-    backgroundColor: "#ffffff",
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: "#edf2f7",
-    padding: 15,
-    marginBottom: 12,
-  },
-  statIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: "#eff6ff",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  statTitle: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: "#64748b",
-    minHeight: 34,
-  },
-  statValue: {
-    fontSize: 25,
-    fontWeight: "800",
-    color: "#0f172a",
-    marginTop: 5,
-  },
-  statHint: {
-    fontSize: 10,
-    color: "#94a3b8",
-    marginTop: 3,
-  },
-  infoCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    backgroundColor: "#eff6ff",
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 9,
-  },
-  infoIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  infoTextWrap: {
-    flex: 1,
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#1e3a8a",
-  },
-  infoText: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: "#475569",
-    marginTop: 5,
+    gap: Spacing[3],
   },
 });

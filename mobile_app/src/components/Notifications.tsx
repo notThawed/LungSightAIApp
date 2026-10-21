@@ -1,12 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { router } from "expo-router";
 
 import { getCurrentUserProfile } from "../lib/user";
+import { Button, EmptyState, PageHeader, Screen, StateView } from "./ui";
 
 export default function Notifications() {
   const [loading, setLoading] = useState(true);
@@ -43,116 +39,40 @@ export default function Notifications() {
   }, []);
 
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>
-          Loading notifications...
-        </Text>
-      </View>
-    );
+    return <StateView kind="loading" title="Loading notifications" />;
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorTitle}>
-          Unable to Load Notifications
-        </Text>
-
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
+      <StateView
+        kind="error"
+        title="Unable to load notifications"
+        message={error}
+        actionLabel="Go back"
+        onAction={() => router.back()}
+      />
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Notifications</Text>
+    <Screen>
+      <PageHeader
+        title="Notifications"
+        caption="Updates about your LungSightAI activity."
+      />
 
-      <Text style={styles.subtitle}>
-        Stay updated on your LungSight activities.
-      </Text>
+      <EmptyState
+        icon="notifications-off-outline"
+        title="No notifications yet"
+        message="Notifications are not available on mobile yet. Check your dashboard for current workload."
+      />
 
-      <View style={styles.card}>
-        <Text style={styles.emptyTitle}>
-          No notifications yet
-        </Text>
-
-        <Text style={styles.emptyText}>
-          New updates and alerts will appear here when
-          notification functionality is implemented.
-        </Text>
-      </View>
-    </View>
+      <Button
+        label="Back to dashboard"
+        icon="arrow-back"
+        variant="secondary"
+        onPress={() => router.back()}
+      />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-    backgroundColor: "#f8fafc",
-  },
-
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: "#64748b",
-  },
-
-  container: {
-    flex: 1,
-    padding: 24,
-    paddingTop: 60,
-    backgroundColor: "#f8fafc",
-  },
-
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#0f172a",
-  },
-
-  subtitle: {
-    marginTop: 8,
-    fontSize: 15,
-    color: "#64748b",
-  },
-
-  card: {
-    marginTop: 28,
-    padding: 24,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
-    elevation: 2,
-  },
-
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#0f172a",
-  },
-
-  emptyText: {
-    marginTop: 10,
-    fontSize: 14,
-    lineHeight: 21,
-    color: "#64748b",
-    textAlign: "center",
-  },
-
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#b91c1c",
-    marginBottom: 8,
-  },
-
-  errorText: {
-    color: "#64748b",
-    textAlign: "center",
-  },
-});

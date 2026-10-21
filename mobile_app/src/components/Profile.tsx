@@ -1,20 +1,28 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { router } from "expo-router";
 
 import { getCurrentUserProfile, type UserProfile } from "../lib/user";
 import { supabase } from "../lib/supabase";
+import { C, FontFamily, Radius, Spacing, TouchTarget, Type } from "../constants/theme";
+import {
+  Button,
+  Card,
+  DetailRow,
+  PageHeader,
+  Pill,
+  Screen,
+  StateView,
+  TextField,
+} from "./ui";
 
 type EditableProfile = {
   user_fname: string;
@@ -58,7 +66,6 @@ export default function Profile() {
 
     if (authError) throw authError;
     if (!authUser) throw new Error("You are not logged in.");
-    console.log("Authenticated user ID:", authUser.id);
 
     const { data, error } = await supabase
       .from("user_profiles")
@@ -267,40 +274,32 @@ export default function Profile() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={styles.loadingText}>Loading profile...</Text>
-      </View>
-    );
+    return <StateView kind="loading" title="Loading your profile" />;
   }
 
   if (!user) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Unable to display your profile.</Text>
-        <Pressable
-          style={styles.primaryButton}
-          onPress={async () => {
-            try {
-              setLoading(true);
-              await loadProfile();
-            } catch (error) {
-              Alert.alert(
-                "Profile Error",
-                error instanceof Error ? error.message : "Unable to load profile."
-              );
-            } finally {
-              setLoading(false);
-            }
-          }}
-        >
-          <Text style={styles.primaryButtonText}>Try Again</Text>
-        </Pressable>
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Log Out</Text>
-        </Pressable>
-      </View>
+      <StateView
+        kind="error"
+        title="Unable to display your profile"
+        message="Check your connection and try again."
+        actionLabel="Try again"
+        onAction={async () => {
+          try {
+            setLoading(true);
+            await loadProfile();
+          } catch (error) {
+            Alert.alert(
+              "Profile Error",
+              error instanceof Error ? error.message : "Unable to load profile."
+            );
+          } finally {
+            setLoading(false);
+          }
+        }}
+        secondaryLabel="Log out"
+        onSecondary={handleLogout}
+      />
     );
   }
 
@@ -312,431 +311,255 @@ export default function Profile() {
     superadmin: "Superadmin",
   };
 
+  const displayName =
+    [form.user_fname, form.user_lname].filter(Boolean).join(" ") || user.fullName;
+
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
+      style={styles.flex}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {(form.user_fname.charAt(0) || "U").toUpperCase()}
-            </Text>
-          </View>
-          <Text style={styles.title}>My Profile</Text>
-          <Text style={styles.subtitle}>Manage your personal information</Text>
-        </View>
+      <Screen>
+        <PageHeader title="Profile" caption="Your account and personal information." />
 
-        <View style={styles.card}>
+        <Card style={styles.identity}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initialsOf(displayName)}</Text>
+          </View>
+          <View style={styles.identityText}>
+            <Text style={Type.heading} numberOfLines={1}>
+              {displayName}
+            </Text>
+            <Text style={Type.caption} numberOfLines={1}>
+              {user.email}
+            </Text>
+            <Pill label={roleLabels[user.role] ?? user.role} tone="primary" />
+          </View>
+        </Card>
+
+        <Card>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
+            <Text style={Type.title}>Personal information</Text>
             {!editing && (
-              <Pressable
-                style={styles.editButton}
+              <Button
+                label="Edit"
+                icon="create-outline"
+                variant="secondary"
                 onPress={() => setEditing(true)}
-              >
-                <Text style={styles.editButtonText}>Edit Profile</Text>
-              </Pressable>
+                style={styles.editButton}
+              />
             )}
           </View>
 
           {editing ? (
             <>
-              <Field
-                label="First Name *"
+              <TextField
+                label="First name *"
                 value={form.user_fname}
                 onChangeText={(value) => updateField("user_fname", value)}
+                autoCapitalize="words"
               />
-              <Field
-                label="Middle Name"
+              <TextField
+                label="Middle name"
                 value={form.user_mname}
                 onChangeText={(value) => updateField("user_mname", value)}
+                autoCapitalize="words"
               />
-              <Field
-                label="Last Name *"
+              <TextField
+                label="Last name *"
                 value={form.user_lname}
                 onChangeText={(value) => updateField("user_lname", value)}
+                autoCapitalize="words"
               />
-              <Field
+              <TextField
                 label="Birthdate (YYYY-MM-DD)"
                 value={form.user_birthdate}
                 onChangeText={(value) => updateField("user_birthdate", value)}
                 placeholder="2004-08-25"
+                keyboardType="numbers-and-punctuation"
               />
 
-              <Text style={styles.fieldLabel}>Sex</Text>
-              <View style={styles.sexOptions}>
-                {["Male", "Female"].map((option) => (
-                  <Pressable
-                    key={option}
-                    style={[
-                      styles.sexOption,
-                      form.user_sex === option && styles.sexOptionSelected,
-                    ]}
-                    onPress={() =>
-                      updateField(
-                        "user_sex",
-                        form.user_sex === option ? "" : option
-                      )
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.sexOptionText,
-                        form.user_sex === option &&
-                          styles.sexOptionTextSelected,
-                      ]}
-                    >
-                      {option}
-                    </Text>
-                  </Pressable>
-                ))}
+              <View style={styles.choiceGroup}>
+                <Text style={styles.choiceLabel}>Sex</Text>
+                <View style={styles.choiceRow}>
+                  {["Male", "Female"].map((option) => {
+                    const selected = form.user_sex === option;
+
+                    return (
+                      <Pressable
+                        key={option}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        style={[styles.choice, selected && styles.choiceSelected]}
+                        onPress={() =>
+                          updateField("user_sex", selected ? "" : option)
+                        }
+                      >
+                        <Text
+                          style={[
+                            Type.bodyStrong,
+                            selected && styles.choiceTextSelected,
+                          ]}
+                        >
+                          {option}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
 
-              <Field
-                label="Contact Number"
+              <TextField
+                label="Contact number"
                 value={form.user_contact_number}
-                onChangeText={(value) =>
-                  updateField("user_contact_number", value)
-                }
+                onChangeText={(value) => updateField("user_contact_number", value)}
                 keyboardType="phone-pad"
               />
-              <Field
+              <TextField
                 label="Address"
                 value={form.user_address}
                 onChangeText={(value) => updateField("user_address", value)}
                 multiline
               />
-              <Field
+              <TextField
                 label="Department"
                 value={form.user_department}
                 onChangeText={(value) => updateField("user_department", value)}
               />
 
               <View style={styles.actionRow}>
-                <Pressable
-                  style={[styles.secondaryButton, styles.actionButton]}
+                <Button
+                  label="Cancel"
+                  variant="secondary"
                   onPress={handleCancel}
                   disabled={saving}
-                >
-                  <Text style={styles.secondaryButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.primaryButton, styles.actionButton]}
+                  style={styles.actionButton}
+                />
+                <Button
+                  label="Save changes"
                   onPress={() => void handleSave()}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>Save Changes</Text>
-                  )}
-                </Pressable>
+                  loading={saving}
+                  style={styles.actionButton}
+                />
               </View>
             </>
           ) : (
-            <>
-              <Detail label="First Name" value={form.user_fname} />
-              <Detail label="Middle Name" value={form.user_mname} />
-              <Detail label="Last Name" value={form.user_lname} />
-              <Detail label="Birthdate" value={form.user_birthdate} />
-              <Detail label="Sex" value={form.user_sex} />
-              <Detail label="Contact Number" value={form.user_contact_number} />
-              <Detail label="Address" value={form.user_address} />
-              <Detail label="Department" value={form.user_department} />
-            </>
+            <View>
+              <DetailRow label="First name" value={form.user_fname} />
+              <DetailRow label="Middle name" value={form.user_mname} />
+              <DetailRow label="Last name" value={form.user_lname} />
+              <DetailRow label="Birthdate" value={form.user_birthdate} />
+              <DetailRow label="Sex" value={form.user_sex} />
+              <DetailRow label="Contact number" value={form.user_contact_number} />
+              <DetailRow label="Address" value={form.user_address} />
+              <DetailRow label="Department" value={form.user_department} />
+            </View>
           )}
-        </View>
+        </Card>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Account Information</Text>
-          <Detail label="Email Address" value={user.email} />
-          <Detail label="Role" value={roleLabels[user.role] ?? user.role} />
-          <Detail label="Hospital" value={user.hospitalName || "Not assigned"} />
-        </View>
+        <Card>
+          <Text style={Type.title}>Account</Text>
+          <View>
+            <DetailRow label="Email address" value={user.email} />
+            <DetailRow label="Role" value={roleLabels[user.role] ?? user.role} />
+            <DetailRow label="Hospital" value={user.hospitalName || "Not assigned"} />
+          </View>
+          <Text style={Type.caption}>
+            Password and profile picture changes are available on the LungSightAI web app.
+          </Text>
+        </Card>
 
-        <Pressable
-          style={[styles.logoutButton, loggingOut && styles.disabledButton]}
+        <Button
+          label="Log out"
+          icon="log-out-outline"
+          variant="danger"
           onPress={handleLogout}
-          disabled={loggingOut}
-        >
-          {loggingOut ? (
-            <ActivityIndicator color="#DC2626" />
-          ) : (
-            <Text style={styles.logoutButtonText}>Log Out</Text>
-          )}
-        </Pressable>
-
-        <Text style={styles.footer}>LungSight · Profile Settings</Text>
-      </ScrollView>
+          loading={loggingOut}
+        />
+      </Screen>
     </KeyboardAvoidingView>
   );
 }
 
-type FieldProps = {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder?: string;
-  keyboardType?: "default" | "phone-pad";
-  multiline?: boolean;
-};
+function initialsOf(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
 
-function Field({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType = "default",
-  multiline = false,
-}: FieldProps) {
-  return (
-    <View style={styles.fieldContainer}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        style={[styles.input, multiline && styles.multilineInput]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder ?? `Enter ${label.toLowerCase()}`}
-        placeholderTextColor="#9CA3AF"
-        keyboardType={keyboardType}
-        multiline={multiline}
-        textAlignVertical={multiline ? "top" : "center"}
-        autoCapitalize="sentences"
-      />
-    </View>
-  );
-}
+  if (words.length === 0) return "U";
+  if (words.length === 1) return words[0][0].toUpperCase();
 
-function Detail({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null | undefined;
-}) {
-  return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value?.trim() || "Not provided"}</Text>
-    </View>
-  );
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  flex: {
     flex: 1,
-    backgroundColor: "#F3F6FB",
+    backgroundColor: C.background,
   },
-  content: {
-    padding: 20,
-    paddingBottom: 36,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
+  identity: {
+    flexDirection: "row",
     alignItems: "center",
-    padding: 24,
-    backgroundColor: "#F3F6FB",
-  },
-  loadingText: {
-    marginTop: 12,
-    color: "#64748B",
-    fontSize: 14,
-  },
-  errorText: {
-    color: "#B91C1C",
-    fontSize: 15,
-    marginBottom: 16,
-  },
-  header: {
-    alignItems: "center",
-    marginTop: 12,
-    marginBottom: 24,
+    gap: Spacing[4],
   },
   avatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: "#DBEAFE",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: C.primarySoft,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
   },
   avatarText: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: "#1D4ED8",
+    fontFamily: FontFamily.bold,
+    fontSize: 20,
+    color: C.primary,
   },
-  title: {
-    fontSize: 25,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    marginTop: 5,
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E5EAF2",
+  identityText: {
+    flex: 1,
+    gap: 4,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 12,
   },
   editButton: {
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    minHeight: 40,
+    paddingHorizontal: Spacing[3],
   },
-  editButtonText: {
-    color: "#1D4ED8",
-    fontSize: 13,
-    fontWeight: "600",
+  choiceGroup: {
+    gap: 6,
   },
-  detailRow: {
-    paddingVertical: 11,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+  choiceLabel: {
+    ...Type.label,
+    color: C.textSoft,
   },
-  detailLabel: {
-    fontSize: 12,
-    color: "#64748B",
-    marginBottom: 5,
-  },
-  detailValue: {
-    fontSize: 15,
-    color: "#0F172A",
-    fontWeight: "500",
-  },
-  fieldContainer: {
-    marginBottom: 15,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: 7,
-  },
-  input: {
-    minHeight: 46,
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: "#0F172A",
-    backgroundColor: "#FFFFFF",
-    fontSize: 14,
-  },
-  multilineInput: {
-    minHeight: 90,
-  },
-  sexOptions: {
+  choiceRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 16,
+    gap: Spacing[2],
   },
-  sexOption: {
+  choice: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    minHeight: TouchTarget,
+    borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: C.border,
+    backgroundColor: C.surface,
     alignItems: "center",
+    justifyContent: "center",
   },
-  sexOptionSelected: {
-    borderColor: "#2563EB",
-    backgroundColor: "#EFF6FF",
+  choiceSelected: {
+    borderColor: C.primary,
+    backgroundColor: C.primarySoft,
   },
-  sexOptionText: {
-    color: "#475569",
-    fontWeight: "500",
-  },
-  sexOptionTextSelected: {
-    color: "#1D4ED8",
-    fontWeight: "700",
+  choiceTextSelected: {
+    color: C.primary,
   },
   actionRow: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 8,
+    gap: Spacing[3],
+    marginTop: Spacing[2],
   },
   actionButton: {
     flex: 1,
-  },
-  primaryButton: {
-    minHeight: 46,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: "#2563EB",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  secondaryButton: {
-    minHeight: 46,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryButtonText: {
-    color: "#334155",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  logoutButton: {
-    minHeight: 48,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DC2626",
-    borderRadius: 10,
-    paddingVertical: 13,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    marginBottom: 12,
-  },
-  logoutButtonText: {
-    color: "#DC2626",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  footer: {
-    color: "#94A3B8",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 8,
   },
 });
