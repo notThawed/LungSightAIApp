@@ -602,21 +602,13 @@ def get_subscription_state(hospital_id):
 
 def get_days_until_expiry(hospital_id):
     """
-    Returns the number of days until the subscription's end_date.
-
-    Possible return values:
-      positive int  - days remaining before end_date
-      0             - end_date is today (still active, expires tomorrow)
-      negative int  - days past end_date (in grace or expired)
-      None          - no subscription found, or no end_date set
+    Returns the number of days remaining.
+    During grace period, returns 0 to 7 (days left).
     """
-
     if not hospital_id:
-
         return None
 
     try:
-
         response = (
             admin_supabase
             .table("hospital_subscriptions")
@@ -625,30 +617,37 @@ def get_days_until_expiry(hospital_id):
             .single()
             .execute()
         )
-
         subscription = response.data
-
         if not subscription:
-
             return None
 
         end_date_str = subscription.get("end_date")
-
         if not end_date_str:
-
             return None
 
-        end_date = date.fromisoformat(end_date_str)
-
+        # 1. Force the DB string into a pure date object (ignoring time)
+        end_date = datetime.strptime(str(end_date_str)[:10], "%Y-%m-%d").date()
+        
+        # 2. Force today into a pure date object (ignoring time)
         today = date.today()
 
-        return (end_date - today).days
+        # 3. Calculate days passed
+        days_passed = (today - end_date).days
+
+        # 4. If we are past expiration, calculate days left in grace period
+        if days_passed > 0:
+            days_left = GRACE_PERIOD_DAYS - days_passed
+            return max(0, days_left) # Clamp to 0 if fully expired
+            
+        # 5. If we are before expiration, return days remaining
+        return -days_passed
 
     except Exception as e:
-
         print(f"Error getting days until expiry: {e}")
-
         return None
+
+
+
 
 def get_subscription_context(hospital_id):
     """

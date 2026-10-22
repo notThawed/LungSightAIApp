@@ -590,10 +590,6 @@ def show_grace_banner(
     can_renew=False,
 ):
 
-    # --------------------------------------------------------
-    # Renewal sub-flow screens
-    # --------------------------------------------------------
-
     if st.session_state.get(SESSION_RENEWAL_SUCCESS):
         show_renewal_success_screen()
         return
@@ -612,35 +608,31 @@ def show_grace_banner(
         )
         return
 
-    # --------------------------------------------------------
-    # Dismissed?
-    # --------------------------------------------------------
-
     if _is_banner_dismissed():
         return
 
-    # --------------------------------------------------------
-    # Inline notification
-    # --------------------------------------------------------
-
     _inject_css()
 
-    day_word = "day" if days_left == 1 else "days"
+    # NEW DISPLAY LOGIC
+    if days_left == 0:
+        time_text = "<b>Final day of grace period.</b>"
+    elif days_left == 1:
+        time_text = "<b>1 day</b> left in grace period."
+    else:
+        time_text = f"<b>{days_left} days</b> left in grace period."
+
+    message = (
+        f"Your subscription expired on "
+        f"<b>{end_date}</b> &mdash; {time_text}"
+    )
 
     if can_renew:
-
         _render_inline_notification(
             tone="grace",
             icon="warning",
-            message=(
-                f"Your subscription expired on "
-                f"<b>{end_date}</b> &mdash; "
-                f"<b>{days_left} {day_word}</b> left in grace period."
-            ),
+            message=message,
         )
-
     else:
-
         st.markdown(
             f"<div class='rn-banner-grace-static'>"
             f"<span class='material-symbols-rounded' "
@@ -650,6 +642,8 @@ def show_grace_banner(
             f"</div>",
             unsafe_allow_html=True,
         )
+
+
 
 
 # ============================================================
