@@ -1,3 +1,8 @@
+"""
+COVID vs Viral classification — ResNet-50.
+Supports PNG, JPG, and DICOM (.dcm) input.
+"""
+
 import io
 from pathlib import Path
 
@@ -6,29 +11,36 @@ import torch.nn as nn
 from torchvision import models, transforms
 from PIL import Image
 
+from backend.ai.image_loader import load_image
+
+
 # --------------------------------------------------
 # PATHS
 # --------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-MODEL_PATH = PROJECT_ROOT / "models" / "covid_classification.pt"  # <-- Your new .pt
+MODEL_PATH = PROJECT_ROOT / "models" / "covid_classification.pt"
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 IMG_SIZE = 256
+CALIBRATION_T = 1.3479
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
+# Order MUST match training folder sort:
+#   "covid-19 pneumonia" (index 0)
+#   "viral pneumonia"     (index 1)
 CLASS_NAMES = [
-    "viral_pneumonia",
     "covid_pneumonia",
+    "viral_pneumonia",
 ]
 
 _model = None
 
 
 # --------------------------------------------------
-# MODEL HEAD — must match your training script
+# MODEL HEAD — matches ResNet-50 training
 # --------------------------------------------------
 
 def _make_head(in_features, num_classes, hidden=256):
@@ -68,7 +80,7 @@ def _load_model():
 
 def _build_transform():
     return transforms.Compose([
-        transforms.Resize(int(IMG_SIZE * 1.05)),
+        transforms.Resize(int(IMG_SIZE * 1.14)),
         transforms.CenterCrop(IMG_SIZE),
         transforms.ToTensor(),
         transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
@@ -79,20 +91,14 @@ def predict_covid_type(image_input):
     model = _load_model()
     transform = _build_transform()
 
-    if isinstance(image_input, (str, Path)):
-        img = Image.open(image_input).convert("RGB")
-    elif isinstance(image_input, bytes):
-        img = Image.open(io.BytesIO(image_input)).convert("RGB")
-    elif isinstance(image_input, Image.Image):
-        img = image_input.convert("RGB")
-    else:
-        raise TypeError(f"Unsupported image type: {type(image_input)}")
+    img = load_image(image_input)
 
     tensor = transform(img).unsqueeze(0).to(DEVICE)
 
     with torch.no_grad():
         outputs = model(tensor)
-        probs = torch.softmax(outputs, dim=1)[0]
+        calibrated_logits = outputs / CALIBRATION_T
+        probs = torch.softmax(calibrated_logits, dim=1)[0]
 
     probabilities = probs.cpu().tolist()
     pred_idx = int(torch.argmax(probs).item())
@@ -101,6 +107,7 @@ def predict_covid_type(image_input):
         "label": CLASS_NAMES[pred_idx],
         "confidence": float(probabilities[pred_idx]),
         "probabilities": {
-            name: float(prob) for name, prob in zip(CLASS_NAMES, probabilities)
+            name: float(prob)
+            for name, prob in zip(CLASS_NAMES, probabilities)
         },
     }
