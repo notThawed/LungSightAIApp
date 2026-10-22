@@ -4,3 +4,4 @@ __pycache__/
 .env
 data/database.db
 datasets/
+Microsoft/Windows/PowerShell/ModuleAnalysisCache

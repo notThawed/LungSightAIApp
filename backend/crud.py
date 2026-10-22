@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from backend.supabase_client import admin_supabase
+from backend.fetches import generate_patient_id
 
 
 # ==========================================
@@ -344,6 +345,7 @@ def create_patient(
     try:
 
         patient_data = {
+            "patient_code": generate_patient_id(),
             "first_name": first_name,
             "middle_name": middle_name,
             "last_name": last_name,

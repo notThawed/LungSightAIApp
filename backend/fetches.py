@@ -621,6 +621,8 @@ def get_examinations_by_patient(patient_id):
             follow_up_notes,
             follow_up_sequence,
             status,
+            curb65_score,          
+            severity_status,       
             created_by,
             reviewed_by,
             reviewed_at,
@@ -633,6 +635,7 @@ def get_examinations_by_patient(patient_id):
     )
 
     return response.data or []
+
 
 
 

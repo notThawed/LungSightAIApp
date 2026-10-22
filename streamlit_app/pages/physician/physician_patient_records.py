@@ -841,6 +841,77 @@ def render_risk_card(ai_findings, ai_conf, pneumonia_type=None):
     )
 
 
+def render_severity_card(exam):
+    """
+    Renders the dual severity card (CURB-65 + Physician Manual).
+    """
+    curb_score = exam.get("curb65_score")
+    phys_sev = exam.get("severity_status")
+
+    # ---------- CURB-65 ----------
+    if curb_score is not None:
+        if curb_score <= 1:
+            curb_tone = "green"
+            curb_label = "Low Risk"
+        elif curb_score == 2:
+            curb_tone = "amber"
+            curb_label = "Moderate Risk"
+        else:
+            curb_tone = "red"
+            curb_label = "High Risk"
+
+        curb_html = (
+            f"<div class='pr-hero-row'>"
+            f"<span>Calculated Score</span>"
+            f"<div>{pill(f'Score: {curb_score} - {curb_label}', curb_tone)}</div>"
+            f"</div>"
+        )
+    else:
+        curb_html = (
+            "<div class='pr-hero-row'>"
+            "<span>Calculated Score</span>"
+            "<b>Not assessed</b>"
+            "</div>"
+        )
+
+    # ---------- Physician Manual ----------
+    if phys_sev and phys_sev != "Not Assessed":
+        if "Low" in phys_sev:
+            phys_tone = "green"
+        elif "Moderate" in phys_sev:
+            phys_tone = "amber"
+        elif "High" in phys_sev:
+            phys_tone = "red"
+        else:
+            phys_tone = "slate"
+
+        phys_html = (
+            f"<div class='pr-hero-row'>"
+            f"<span>Clinical Judgment</span>"
+            f"<div>{pill(phys_sev, phys_tone)}</div>"
+            f"</div>"
+        )
+    else:
+        phys_html = (
+            "<div class='pr-hero-row'>"
+            "<span>Clinical Judgment</span>"
+            "<b>Not assessed</b>"
+            "</div>"
+        )
+
+    st.markdown(
+        "<div class='pr-hero-card'>"
+        "<p class='pr-hero-eyebrow'>Severity Assessment</p>"
+        "<p class='pr-hero-name' style='font-size:0.9rem; color:#5A6F7F; margin-bottom:0.75rem; font-weight:500;'>"
+        "<p class='pr-sub-label' style='color:#0F7C88; font-weight:700; font-size:0.75rem; text-transform:uppercase; margin-top:0.5rem;'>CURB-65 (Calculated)</p>"
+        f"{curb_html}"
+        "<p class='pr-sub-label' style='color:#B45309; font-weight:700; font-size:0.75rem; text-transform:uppercase; margin-top:1rem;'>Physician Manual (Clinical)</p>"
+        f"{phys_html}"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def render_examination_details_card(exam):
 
     exam_date = exam.get("examination_date") or exam.get("created_at")
@@ -1149,6 +1220,8 @@ def render_examination_report(patient, exam):
             render_patient_info_card(patient, exam)
 
             render_risk_card(ai_findings, ai_conf, pneumonia_type)
+
+            render_severity_card(exam)
 
             render_examination_details_card(exam)
 

@@ -993,7 +993,6 @@ def render_ai_result_card(ai):
 # ============================================================
 
 def render_physician_form(examination, ai):
-
     exam_id = examination.get("examination_id")
 
     section_title("Physician X-Ray Interpretation")
@@ -1014,10 +1013,7 @@ def render_physician_form(examination, ai):
         help="Provide your clinical interpretation.",
     )
 
-    st.markdown(
-        "<p class='rx-form-divider'></p>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("<p class='rx-form-divider'></p>", unsafe_allow_html=True)
 
     section_title("Final Assessment")
 
@@ -1035,25 +1031,45 @@ def render_physician_form(examination, ai):
         key=f"review_{exam_id}_plans",
     )
 
-    st.markdown(
-        "<p class='rx-form-divider'></p>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("<p class='rx-form-divider'></p>", unsafe_allow_html=True)
 
-    # NEW LOGIC: Only show CURB-65 if pneumonia is confirmed
+    # ==========================================
+    # SEVERITY ASSESSMENT SECTION
+    # ==========================================
+    section_title("Severity Assessment")
+    
     ai_findings = (ai or {}).get("ai_findings")
     is_negative = str(ai_findings).strip().lower() == "negative"
 
-    if not is_negative:
-        curb_score = render_curb65()
-    else:
-        curb_score = None  # Not applicable
-        st.info("ℹ️ CURB-65 is not applicable because the AI detected no pneumonia.")
+    col_curb, col_phys = st.columns(2)
 
-    st.markdown(
-        "<p class='rx-form-divider'></p>",
-        unsafe_allow_html=True,
-    )
+    with col_curb:
+        if not is_negative:
+            curb_score, curb_severity = render_curb65()
+        else:
+            curb_score = None
+            curb_severity = None
+            st.info("ℹ️ CURB-65 not applicable (No pneumonia detected).")
+
+    with col_phys:
+        st.markdown("**Physician Manual Severity**")
+        st.caption("Override or confirm the severity based on your clinical judgment.")
+        
+        severity_options = ["Not Assessed", "Low Risk", "Moderate Risk", "High Risk"]
+        
+        # Pre-select if previously saved
+        existing_sev = examination.get("severity_status") or "Not Assessed"
+        sev_index = severity_options.index(existing_sev) if existing_sev in severity_options else 0
+        
+        physician_severity = st.selectbox(
+            "Manual Severity",
+            severity_options,
+            index=sev_index,
+            key=f"review_{exam_id}_severity",
+            label_visibility="collapsed"
+        )
+
+    st.markdown("<p class='rx-form-divider'></p>", unsafe_allow_html=True)
 
     section_title("Disposition")
 
@@ -1071,12 +1087,11 @@ def render_physician_form(examination, ai):
         key=f"review_{exam_id}_disposition",
     )
 
-    # NEW LOGIC: Smart recommendation based on CURB-65 (Only if score exists)
-    if curb_score is not None:
-        if curb_score >= 2 and disposition == "Treated and Sent Home":
-            st.error("⚠️ **Warning:** CURB-65 score is ≥ 2. Clinical guidelines strongly recommend hospital admission. Please document your clinical justification in Disposition Notes if sending home.")
-        elif curb_score >= 3 and disposition == "Admission":
-            st.info("ℹ️ **Note:** CURB-65 score is ≥ 3. Consider assessing for ICU admission if clinically indicated.")
+    # Smart recommendation based on CURB-65
+    if curb_score is not None and curb_score >= 2 and disposition == "Treated and Sent Home":
+        st.error("⚠️ **Warning:** CURB-65 score is ≥ 2. Clinical guidelines strongly recommend hospital admission.")
+    elif curb_score is not None and curb_score >= 3 and disposition == "Admission":
+        st.info("ℹ️ **Note:** CURB-65 score is ≥ 3. Consider assessing for ICU admission if clinically indicated.")
 
     disposition_notes = st.text_area(
         "Disposition Notes",
@@ -1092,8 +1107,11 @@ def render_physician_form(examination, ai):
         "plans": plans,
         "disposition": disposition,
         "disposition_notes": disposition_notes,
-        "curb65_score": curb_score,  # This will be None if AI was negative
+        "curb65_score": curb_score,
+        "curb65_status": curb_severity,       # NEW
+        "severity_status": physician_severity, # NEW
     }
+
 
 
 
@@ -1429,7 +1447,8 @@ def render_report_actions(
             disposition_notes=(
                 form_values["disposition_notes"].strip() or None
             ),
-            curb65_score=form_values["curb65_score"], # NEW: Save the score
+            curb65_score=form_values["curb65_score"],
+            severity_status=form_values["severity_status"], # NEW
         )
 
         # 3. Save training candidate (ONLY IF PATIENT CONSENTED)

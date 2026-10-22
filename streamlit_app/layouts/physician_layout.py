@@ -61,9 +61,7 @@ def show_physician_layout():
         review_patient.show()
 
     elif page == "Patient Records":
-        # gi ilisan nako like gi usa nako ba pero wala nako gi delete ang file para pang comparison
-        # physician_patient_records.show()
-        manage_medical_records.show()
+        physician_patient_records.show()
 
     elif page == "Follow-Ups":
 
