@@ -1,3 +1,7 @@
+"""
+Bacterial vs Viral classification — DenseNet-121.
+Supports PNG, JPG, and DICOM (.dcm) input.
+"""
 
 import io
 from pathlib import Path
@@ -6,6 +10,8 @@ import torch
 import torch.nn as nn
 from torchvision import models, transforms
 from PIL import Image
+
+from backend.ai.image_loader import load_image
 
 
 # --------------------------------------------------
@@ -18,6 +24,7 @@ MODEL_PATH = PROJECT_ROOT / "models" / "densenet_121_classification.pt"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 IMG_SIZE = 256
+CALIBRATION_T = 1.3183
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
@@ -95,34 +102,17 @@ def _build_transform():
 # --------------------------------------------------
 
 def predict_type(image_input):
-    """
-    Predict bacterial vs viral pneumonia.
-
-    image_input may be image bytes, a file path,
-    or a PIL Image.
-
-    Returns class label, confidence, and probabilities.
-    """
-
     model = _load_model()
     transform = _build_transform()
 
-    if isinstance(image_input, (str, Path)):
-        img = Image.open(image_input).convert("RGB")
-    elif isinstance(image_input, bytes):
-        img = Image.open(io.BytesIO(image_input)).convert("RGB")
-    elif isinstance(image_input, Image.Image):
-        img = image_input.convert("RGB")
-    else:
-        raise TypeError(
-            f"Unsupported image type: {type(image_input)}"
-        )
+    img = load_image(image_input)
 
     tensor = transform(img).unsqueeze(0).to(DEVICE)
 
     with torch.no_grad():
         outputs = model(tensor)
-        probs = torch.softmax(outputs, dim=1)[0]
+        calibrated_logits = outputs / CALIBRATION_T
+        probs = torch.softmax(calibrated_logits, dim=1)[0]
 
     probabilities = probs.cpu().tolist()
     pred_idx = int(torch.argmax(probs).item())

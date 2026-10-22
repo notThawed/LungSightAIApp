@@ -22,7 +22,6 @@ from backend.crud import (
 
 from backend.backend_utils.subscription_usage import can_analyze_xray
 
-
 from backend.ai.pneumonia_model import (
     predict,
     generate_gradcam,
@@ -32,6 +31,7 @@ from backend.ai.pneumonia_type_model import predict_type
 from backend.ai.covid_type_model import predict_covid_type
 
 from backend.ai.ood_validator import is_chest_xray
+from backend.ai.image_loader import load_image, is_dicom
 
 from streamlit_app.components.ui import (
     page_header,
@@ -60,12 +60,13 @@ RADTECH_ROLES = [ROLE_RADTECH]
 
 AI_MODEL_VERSION = "pneumonia_resnet50_v1"
 CLASSIFICATION_MODEL_VERSION = "pneumonia_densenet121_v1"
-COVID_MODEL_VERSION = "covid_densenet121_v1"
+COVID_MODEL_VERSION = "covid_resnet50_v1"
 
-# Session keys for the modal analysis flow
-ANALYSIS_STATE_KEY = "rx_analysis_state"        # None | "running" | "complete"
-ANALYSIS_RESULT_KEY = "radtech_analysis_result" # final result dict
-OVERRIDE_OOD_KEY = "radtech_override_ood"       # <-- NEW: bool
+CONFIDENCE_THRESHOLD = 0.65
+
+ANALYSIS_STATE_KEY = "rx_analysis_state"
+ANALYSIS_RESULT_KEY = "radtech_analysis_result"
+OVERRIDE_OOD_KEY = "radtech_override_ood"
 
 
 # ============================================================
@@ -116,7 +117,7 @@ def clear_active_examination():
     st.session_state.pop("radtech_active_patient", None)
     st.session_state.pop(ANALYSIS_RESULT_KEY, None)
     st.session_state.pop(ANALYSIS_STATE_KEY, None)
-    st.session_state.pop(OVERRIDE_OOD_KEY, None) # <-- NEW
+    st.session_state.pop(OVERRIDE_OOD_KEY, None)
 
 
 def go_back_to_queue():
@@ -133,7 +134,7 @@ def reset_analysis_state():
     """Clear the analysis flow state."""
     st.session_state[ANALYSIS_STATE_KEY] = None
     st.session_state.pop(ANALYSIS_RESULT_KEY, None)
-    st.session_state.pop(OVERRIDE_OOD_KEY, None) # <-- NEW
+    st.session_state.pop(OVERRIDE_OOD_KEY, None)
 
 
 # ============================================================
@@ -245,7 +246,7 @@ def _progress_steps_html(current_step):
 
 
 # ============================================================
-# DIALOG — OOD Warning (Override)  <-- NEW
+# DIALOG — OOD Warning (Override)
 # ============================================================
 
 @st.dialog("⚠️ Image Validation Warning", width="small")
@@ -268,16 +269,9 @@ def show_ood_warning_dialog(uploaded_file, active_exam, active_patient, request)
             
     with col2:
         if st.button("Force Proceed", type="primary", width="stretch", icon=":material/warning:"):
-            # 1. Set the override flag
             st.session_state[OVERRIDE_OOD_KEY] = True
-            
-            # 2. Tell the app to open the progress dialog again
             st.session_state[ANALYSIS_STATE_KEY] = "running"
-            
-            # 3. Close the warning dialog
             st.session_state["show_ood_warning"] = False
-            
-            # 4. Rerun to start the scan
             st.rerun()
 
 
@@ -292,10 +286,6 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
     image_bytes = uploaded_file.getvalue()
     is_overridden = st.session_state.get(OVERRIDE_OOD_KEY, False)
 
-    # --------------------------------------------------------
-    # Step 0 — Preprocessing (OOD validation)
-    # --------------------------------------------------------
-
     status.markdown(
         _progress_steps_html(0),
         unsafe_allow_html=True,
@@ -305,13 +295,10 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
     print("🔬 STARTING ANALYSIS PIPELINE")
     print("="*60)
 
-    # IF NOT OVERRIDDEN, RUN THE OOD CHECK
     if not is_overridden:
         if not is_chest_xray(image_bytes):
             print("❌ OOD VALIDATOR: Image rejected. Triggering warning dialog.")
             st.session_state[ANALYSIS_STATE_KEY] = None
-            # We can't call the dialog directly from inside this one cleanly, 
-            # so we set a flag to trigger it in the main page.
             st.session_state["show_ood_warning"] = True
             st.rerun()
             return
@@ -348,6 +335,7 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
             print(f"⚠️ GRAD-CAM FAILED: {exc}")
 
         label = str(result.get("label", "")).strip().lower()
+        confidence = result.get("confidence", 0.0)
 
         if label not in ("positive", "negative"):
             raise ValueError(
@@ -358,9 +346,21 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
         result["pneumonia_type"] = None
         result["classification_confidence"] = None
         result["classification_model_version"] = None
-        result["covid_type"] = None
-        result["covid_confidence"] = None
-        result["covid_model_version"] = None
+
+        # --- CONFIDENCE GATE: STEP 1 ---
+        if confidence < CONFIDENCE_THRESHOLD:
+            print(f"⚠️ LOW CONFIDENCE ({confidence:.2f}). Flagging as inconclusive.")
+            result["label"] = "inconclusive"
+            
+            status.markdown(_progress_steps_html(4), unsafe_allow_html=True)
+            time.sleep(0.4)
+            st.session_state[ANALYSIS_RESULT_KEY] = result
+            st.session_state["gradcam_result"] = gradcam_result
+            st.session_state["gradcam_error"] = gradcam_error
+            st.session_state.pop(OVERRIDE_OOD_KEY, None)
+            st.session_state[ANALYSIS_STATE_KEY] = "complete"
+            st.rerun()
+            return
 
     except Exception as error:
         print(f"❌ RESNET-50 FAILED: {error}")
@@ -384,25 +384,32 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
             print(f"🦠 DENSENET-121 (Type): {type_result.get('label')} "
                   f"(confidence: {type_result.get('confidence'):.4f})")
 
-            type_label = str(
-                type_result.get("label", "")
-            ).strip().lower()
+            type_label = str(type_result.get("label", "")).strip().lower()
+            type_conf = float(type_result.get("confidence", 0.0))
 
-            if type_label not in (
-                "bacterial_pneumonia",
-                "viral_pneumonia",
-            ):
+            if type_label not in ("bacterial_pneumonia", "viral_pneumonia"):
                 raise ValueError(
                     f"Unexpected DenseNet-121 prediction label: {type_label!r}"
                 )
 
             result["pneumonia_type"] = type_label
-            result["classification_confidence"] = float(
-                type_result["confidence"]
-            )
-            result["classification_model_version"] = (
-                CLASSIFICATION_MODEL_VERSION
-            )
+            result["classification_confidence"] = type_conf
+            result["classification_model_version"] = CLASSIFICATION_MODEL_VERSION
+
+            # --- CONFIDENCE GATE: STEP 2 ---
+            if type_conf < CONFIDENCE_THRESHOLD:
+                print(f"⚠️ LOW TYPE CONFIDENCE ({type_conf:.2f}). Flagging type as inconclusive.")
+                result["pneumonia_type"] = "inconclusive"
+                
+                status.markdown(_progress_steps_html(4), unsafe_allow_html=True)
+                time.sleep(0.4)
+                st.session_state[ANALYSIS_RESULT_KEY] = result
+                st.session_state["gradcam_result"] = gradcam_result
+                st.session_state["gradcam_error"] = gradcam_error
+                st.session_state.pop(OVERRIDE_OOD_KEY, None)
+                st.session_state[ANALYSIS_STATE_KEY] = "complete"
+                st.rerun()
+                return
 
         except Exception as error:
             print(f"❌ DENSENET-121 (Type) FAILED: {error}")
@@ -426,23 +433,22 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
                 print(f"🦠 COVID MODEL: {covid_result.get('label')} "
                       f"(confidence: {covid_result.get('confidence'):.4f})")
 
-                covid_label = str(
-                    covid_result.get("label", "")
-                ).strip().lower()
+                covid_label = str(covid_result.get("label", "")).strip().lower()
+                covid_conf = float(covid_result.get("confidence", 0.0))
 
-                if covid_label not in (
-                    "viral_pneumonia",
-                    "covid_pneumonia",
-                ):
+                if covid_label not in ("viral_pneumonia", "covid_pneumonia"):
                     raise ValueError(
                         f"Unexpected COVID model label: {covid_label!r}"
                     )
 
-                result["covid_type"] = covid_label
-                result["covid_confidence"] = float(
-                    covid_result["confidence"]
-                )
-                result["covid_model_version"] = COVID_MODEL_VERSION
+                result["pneumonia_type"] = covid_label
+                result["classification_confidence"] = covid_conf
+                result["classification_model_version"] = COVID_MODEL_VERSION
+
+                # --- CONFIDENCE GATE: STEP 3 ---
+                if covid_conf < CONFIDENCE_THRESHOLD:
+                    print(f"⚠️ LOW COVID CONFIDENCE ({covid_conf:.2f}). Flagging as inconclusive.")
+                    result["pneumonia_type"] = "inconclusive"
 
             except Exception as error:
                 print(f"⚠️ COVID MODEL FAILED (non-fatal): {error}")
@@ -467,14 +473,12 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
     print("✅ PIPELINE COMPLETE")
     print(f"   Findings:      {result.get('label')}")
     print(f"   Pneumonia:     {result.get('pneumonia_type')}")
-    print(f"   COVID Status:  {result.get('covid_type')}")
     print("="*60 + "\n")
 
     st.session_state[ANALYSIS_RESULT_KEY] = result
     st.session_state["gradcam_result"] = gradcam_result
     st.session_state["gradcam_error"] = gradcam_error
 
-    # Clear the override flag once done
     st.session_state.pop(OVERRIDE_OOD_KEY, None) 
 
     st.session_state[ANALYSIS_STATE_KEY] = "complete"
@@ -536,17 +540,19 @@ def render_submission_summary(request, patient, uploaded_file, result):
         unsafe_allow_html=True,
     )
 
-    covid_type = result.get("covid_type")
-    if covid_type:
-        covid_label = covid_type.replace("_", " ").title()
-        covid_conf = result.get("covid_confidence")
-        covid_display = (
-            f"{covid_label} ({covid_conf*100:.1f}%)"
-            if covid_conf is not None
-            else covid_label
-        )
+    pneu_type = result.get("pneumonia_type")
+    if pneu_type == "inconclusive":
+        pneu_display = "⚠️ Inconclusive"
+    elif pneu_type:
+        pneu_display = pneu_type.replace("_", " ").title()
     else:
-        covid_display = "—"
+        pneu_display = "—"
+
+    main_label = result.get("label", "—")
+    if main_label == "inconclusive":
+        main_display = "⚠️ Inconclusive (Low Confidence)"
+    else:
+        main_display = main_label.title()
 
     st.markdown(
         "<div class='rx-summary-card'>"
@@ -588,17 +594,12 @@ def render_submission_summary(request, patient, uploaded_file, result):
 
         "<div class='rx-summary-row'>"
         "<span>AI Findings</span>"
-        f"<b>{result.get('label', '—').title()}</b>"
+        f"<b>{main_display}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
         "<span>Pneumonia Type</span>"
-        f"<b>{result.get('pneumonia_type', '—').replace('_', ' ').title() if result.get('pneumonia_type') else '—'}</b>"
-        "</div>"
-
-        "<div class='rx-summary-row'>"
-        "<span>COVID vs Viral</span>"
-        f"<b>{covid_display}</b>"
+        f"<b>{pneu_display}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
@@ -659,13 +660,26 @@ def render_submission_summary(request, patient, uploaded_file, result):
 # ============================================================
 
 def save_analysis(uploaded_file, result, examination, request, patient):
-
     user_id = current_user_id()
+
+    import io
+
+    file_bytes = uploaded_file.getvalue()
+    file_name = uploaded_file.name
+
+    if is_dicom(file_bytes):
+        print(f"🗂️ DICOM detected: {file_name}. Converting to PNG...")
+        img = load_image(file_bytes)
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        file_bytes = buffer.getvalue()
+        file_name = file_name.rsplit(".", 1)[0] + ".png"
+        print(f"✅ Converted to PNG: {file_name}")
 
     upload_result = upload_xray_image(
         request_id=request["request_id"],
-        file_bytes=uploaded_file.getvalue(),
-        filename=uploaded_file.name,
+        file_bytes=file_bytes,
+        filename=file_name,
         uploaded_by=user_id,
     )
 
@@ -693,9 +707,6 @@ def save_analysis(uploaded_file, result, examination, request, patient):
         pneumonia_type=result.get("pneumonia_type"),
         classification_confidence=result.get("classification_confidence"),
         classification_model_version=result.get("classification_model_version"),
-        covid_type=result.get("covid_type"),
-        covid_confidence=result.get("covid_confidence"),
-        covid_model_version=result.get("covid_model_version"),
     )
 
     if not saved_result:
@@ -840,7 +851,7 @@ def show():
 
             uploaded_file = st.file_uploader(
                 "Select X-ray image",
-                type=["png", "jpg", "jpeg"],
+                type=["png", "jpg", "jpeg", "dcm"],
                 key="rx_upload",
                 label_visibility="collapsed",
             )
@@ -848,13 +859,24 @@ def show():
             if uploaded_file is None:
                 st.markdown(
                     "<p class='rx-dropzone-sub'>"
-                    "Supports JPEG, PNG formats"
+                    "Supports JPEG, PNG, and DICOM (.dcm) formats"
                     "</p>",
                     unsafe_allow_html=True,
                 )
             else:
                 with st.container(key="rx_preview"):
-                    st.image(uploaded_file, width="stretch")
+                    raw_bytes = uploaded_file.getvalue()
+
+                    if is_dicom(raw_bytes):
+                        print(f"🗂️ DICOM preview: rendering {uploaded_file.name} as PNG")
+                        preview_img = load_image(raw_bytes)
+                        st.image(
+                            preview_img,
+                            caption=f"DICOM preview: {uploaded_file.name}",
+                            width="stretch",
+                        )
+                    else:
+                        st.image(uploaded_file, width="stretch")
 
     with right:
         with st.container(key="rx_panel_output"):
@@ -878,12 +900,10 @@ def show():
     # DIALOG DISPATCHER
     # ========================================================
 
-    # 1. OOD WARNING DIALOG
     if st.session_state.get("show_ood_warning"):
         st.session_state["show_ood_warning"] = False
         show_ood_warning_dialog(uploaded_file, active_exam, active_patient, request)
 
-    # 2. ANALYSIS PROGRESS DIALOG
     analysis_state = st.session_state.get(ANALYSIS_STATE_KEY)
 
     if analysis_state == "running" and uploaded_file:
@@ -894,7 +914,6 @@ def show():
             request,
         )
 
-    # 3. ANALYSIS COMPLETE DIALOG
     elif analysis_state == "complete":
         show_analysis_complete_dialog()
 
@@ -934,7 +953,7 @@ def show():
 
         if analyze_clicked:
             st.session_state[ANALYSIS_STATE_KEY] = "running"
-            st.session_state.pop(OVERRIDE_OOD_KEY, None) # Reset override on new analysis
+            st.session_state.pop(OVERRIDE_OOD_KEY, None)
             st.rerun()
 
         return
