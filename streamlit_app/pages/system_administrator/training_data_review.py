@@ -170,6 +170,14 @@ def ai_label_from_row(row):
     return "No AI Result"
 
 
+def get_confirmed_label_from_row(row):
+    """Helper to extract the confirmed_label from the nested examination."""
+    exam = row.get("examinations") or {}
+    if isinstance(exam, list):
+        exam = exam[0] if exam else {}
+    return exam.get("confirmed_label")
+
+
 # ============================================================
 # NAVIGATION
 # ============================================================
@@ -209,9 +217,12 @@ def render_candidate_row(row):
     doctor = row.get("confirming_user") or {}
 
     ai_label = ai_label_from_row(row)
+    
+    # Get label from the nested examination
+    confirmed_label_key = get_confirmed_label_from_row(row)
     doctor_label = LABEL_DISPLAY.get(
-        row.get("confirmed_label"),
-        row.get("confirmed_label") or "—",
+        confirmed_label_key,
+        confirmed_label_key or "—",
     )
 
     is_override = (
@@ -576,9 +587,10 @@ def render_ai_card(row):
 def render_doctor_card(row):
     section_title("Doctor Confirmation")
 
+    confirmed_label_key = get_confirmed_label_from_row(row)
     doctor_label = LABEL_DISPLAY.get(
-        row.get("confirmed_label"),
-        row.get("confirmed_label") or "—",
+        confirmed_label_key,
+        confirmed_label_key or "—",
     )
 
     ai_label = ai_label_from_row(row)

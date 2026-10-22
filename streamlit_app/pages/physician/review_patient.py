@@ -989,6 +989,96 @@ def render_ai_result_card(ai):
 
 
 # ============================================================
+# REPORT — CONFIRMED DIAGNOSIS (formerly Training Data Confirmation)
+# ============================================================
+
+def render_confirmed_diagnosis(ai):
+    """
+    Render the confirmed diagnosis section.
+    Returns a dict with label, notes, overrode_ai, ai_predicted.
+    """
+
+    ai_findings = (ai or {}).get("ai_findings")
+    ai_predicted_key = _ai_predicted_key(ai)
+
+    if ai_predicted_key:
+        ai_label_text = dict(CONFIRMED_LABEL_OPTIONS)[ai_predicted_key]
+        risk_label, risk_tone = risk_label_from_findings(ai_findings)
+
+        st.markdown(
+            "<div class='rx-training-ai-preview'>"
+            "<span class='rx-training-ai-label'>"
+            "AI predicted: </span>"
+            f"<b>{ai_label_text}</b> "
+            f"<div>{pill(risk_label, risk_tone)}</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            "<div class='rx-training-ai-preview rx-training-ai-preview--empty'>"
+            "<span class='rx-training-ai-label'>"
+            "AI prediction</span>"
+            "<b>Not available for this image</b>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    label_keys = [key for key, _ in CONFIRMED_LABEL_OPTIONS]
+    label_names = [name for _, name in CONFIRMED_LABEL_OPTIONS]
+
+    default_index = (
+        label_keys.index(ai_predicted_key)
+        if ai_predicted_key in label_keys
+        else 0
+    )
+
+    confirmed_index = st.selectbox(
+        "Your confirmed diagnosis *",
+        options=range(len(label_keys)),
+        format_func=lambda i: label_names[i],
+        index=default_index,
+        key="review_training_label",
+    )
+
+    confirmed_key = label_keys[confirmed_index]
+
+    overrode_ai = (
+        ai_predicted_key is not None
+        and confirmed_key != ai_predicted_key
+    )
+
+    if overrode_ai:
+        ai_text = dict(CONFIRMED_LABEL_OPTIONS)[ai_predicted_key]
+        chosen_text = dict(CONFIRMED_LABEL_OPTIONS)[confirmed_key]
+
+        st.warning(
+            f"⚠️ You are overriding the AI. "
+            f"AI said **{ai_text}**, you confirmed "
+            f"**{chosen_text}**. This case will be flagged "
+            f"for ML review."
+        )
+
+    notes = st.text_area(
+        "Notes (optional)",
+        value="",
+        height=80,
+        key="review_training_notes",
+        placeholder=(
+            "Why did you choose this label? "
+            "Especially helpful if you overrode the AI."
+        ),
+    )
+
+    return {
+        "label": confirmed_key,
+        "notes": notes.strip() or None,
+        "overrode_ai": overrode_ai,
+        "ai_predicted": ai_predicted_key,
+    }
+
+
+# ============================================================
 # REPORT — PHYSICIAN FORM
 # ============================================================
 
@@ -1030,6 +1120,14 @@ def render_physician_form(examination, ai):
         height=100,
         key=f"review_{exam_id}_plans",
     )
+
+    st.markdown("<p class='rx-form-divider'></p>", unsafe_allow_html=True)
+
+    # ==========================================
+    # CONFIRMED DIAGNOSIS (formerly Training Data)
+    # ==========================================
+    section_title("Confirmed Diagnosis")
+    training_values = render_confirmed_diagnosis(ai)
 
     st.markdown("<p class='rx-form-divider'></p>", unsafe_allow_html=True)
 
@@ -1108,11 +1206,10 @@ def render_physician_form(examination, ai):
         "disposition": disposition,
         "disposition_notes": disposition_notes,
         "curb65_score": curb_score,
-        "curb65_status": curb_severity,       # NEW
-        "severity_status": physician_severity, # NEW
+        "curb65_status": curb_severity,
+        "severity_status": physician_severity,
+        "training_values": training_values, # Return training_values from inside the form
     }
-
-
 
 
 # ============================================================
@@ -1201,140 +1298,6 @@ def render_followup_card(examination):
 
 
 # ============================================================
-# REPORT — TRAINING DATA CONFIRMATION
-# ============================================================
-
-def render_training_confirmation(ai):
-    """
-    Render the training-data confirmation section.
-
-    Returns a dict:
-        {
-            "label":       str,          -- confirmed_label key
-            "notes":       str | None,
-            "overrode_ai": bool,
-            "ai_predicted": str | None,
-        }
-    """
-
-    section_title("Training Data Confirmation")
-
-    st.caption(
-        "Confirm the final diagnosis to help improve the AI model. "
-        "This is separate from the clinical record."
-    )
-
-    # ----------------------------------------------
-    # Show what the AI predicted
-    # ----------------------------------------------
-
-    ai_findings = (ai or {}).get("ai_findings")
-
-    ai_predicted_key = _ai_predicted_key(ai)
-
-    if ai_predicted_key:
-
-        ai_label_text = dict(CONFIRMED_LABEL_OPTIONS)[
-            ai_predicted_key
-        ]
-
-        risk_label, risk_tone = risk_label_from_findings(
-            ai_findings
-        )
-
-        st.markdown(
-            "<div class='rx-training-ai-preview'>"
-            "<span class='rx-training-ai-label'>"
-            "AI predicted</span>"
-            f"<b>{ai_label_text}</b> "
-            f"<div>{pill(risk_label, risk_tone)}</div>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-    else:
-
-        st.markdown(
-            "<div class='rx-training-ai-preview rx-training-ai-preview--empty'>"
-            "<span class='rx-training-ai-label'>"
-            "AI prediction</span>"
-            "<b>Not available for this image</b>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-    # ----------------------------------------------
-    # Confirmed diagnosis dropdown
-    # ----------------------------------------------
-
-    label_keys = [key for key, _ in CONFIRMED_LABEL_OPTIONS]
-    label_names = [name for _, name in CONFIRMED_LABEL_OPTIONS]
-
-    default_index = (
-        label_keys.index(ai_predicted_key)
-        if ai_predicted_key in label_keys
-        else 0
-    )
-
-    confirmed_index = st.selectbox(
-        "Your confirmed diagnosis *",
-        options=range(len(label_keys)),
-        format_func=lambda i: label_names[i],
-        index=default_index,
-        key="review_training_label",
-    )
-
-    confirmed_key = label_keys[confirmed_index]
-
-    # ----------------------------------------------
-    # Warn if overriding the AI
-    # ----------------------------------------------
-
-    overrode_ai = (
-        ai_predicted_key is not None
-        and confirmed_key != ai_predicted_key
-    )
-
-    if overrode_ai:
-
-        ai_text = dict(CONFIRMED_LABEL_OPTIONS)[
-            ai_predicted_key
-        ]
-        chosen_text = dict(CONFIRMED_LABEL_OPTIONS)[
-            confirmed_key
-        ]
-
-        st.warning(
-            f"⚠️ You are overriding the AI. "
-            f"AI said **{ai_text}**, you confirmed "
-            f"**{chosen_text}**. This case will be flagged "
-            f"for ML review."
-        )
-
-    # ----------------------------------------------
-    # Optional notes
-    # ----------------------------------------------
-
-    notes = st.text_area(
-        "Notes (optional)",
-        value="",
-        height=80,
-        key="review_training_notes",
-        placeholder=(
-            "Why did you choose this label? "
-            "Especially helpful if you overrode the AI."
-        ),
-    )
-
-    return {
-        "label": confirmed_key,
-        "notes": notes.strip() or None,
-        "overrode_ai": overrode_ai,
-        "ai_predicted": ai_predicted_key,
-    }
-
-
-# ============================================================
 # REPORT — ACTION BUTTONS
 # ============================================================
 
@@ -1344,7 +1307,6 @@ def render_report_actions(
     form_values,
     request,
     ai=None,
-    training_values=None,
 ):
 
     exam_id = examination.get("examination_id")
@@ -1391,43 +1353,23 @@ def render_report_actions(
         st.error("X-Ray request not found.")
         return
 
+    training_values = form_values.get("training_values")
     if not training_values or not training_values.get("label"):
         st.error("Confirmed diagnosis is required.")
         return
 
     # ==========================================
-    # Gather image info (for the candidate row)
+    # Gather image info
     # ==========================================
-
     image_id = None
-
     try:
-        imgs = (
-            get_xray_images_by_request(request["request_id"])
-            or []
-        )
+        imgs = get_xray_images_by_request(request["request_id"]) or []
         if imgs:
             image_id = imgs[0].get("image_id")
     except Exception:
         image_id = None
 
-    # ==========================================
-    # Save everything
-    # ==========================================
-        # ==========================================
-    # DEBUGGING SECTION
-    # ==========================================
-    print("\n" + "="*40)
-    print("🚀 SAVE BUTTON CLICKED")
-    print(f"Patient ID: {patient.get('patient_id')}")
-    print(f"Consent Granted?: {patient.get('ai_consent_granted')}")
-    print(f"Image ID: {image_id}")
-    print(f"Training Label: {training_values.get('label')}")
-    print("="*40 + "\n")
-    # ==========================================
-
     try:
-
         # 1. Save X-ray review
         save_xray_review(
             request_id=request["request_id"],
@@ -1448,21 +1390,13 @@ def render_report_actions(
                 form_values["disposition_notes"].strip() or None
             ),
             curb65_score=form_values["curb65_score"],
-            severity_status=form_values["severity_status"], # NEW
+            severity_status=form_values["severity_status"],
         )
 
-        # 3. Save training candidate (ONLY IF PATIENT CONSENTED)
+        # 3. Save training candidate
         if image_id:
-            
             consented = patient.get("ai_consent_granted", False)
-            
-            print(f"🤔 Is patient consented? {consented}")
-
-            if not consented:
-                print(f"🚫 SKIPPING candidate: Patient {patient.get('patient_id')} did not consent.")
-            else:
-                print(f"✅ ATTEMPTING to save candidate for patient {patient.get('patient_id')}...")
-                
+            if consented:
                 ai_payload = ai or {}
 
                 result = save_training_candidate(
@@ -1487,15 +1421,6 @@ def render_report_actions(
                     doctor_notes=training_values.get("notes"),
                     confirmed_by=user_id,
                 )
-                
-                # Check what the database function returned
-                print(f"🗄️ DB RESULT: {result}")
-
-        else:
-            print(
-                "Training candidate skipped: "
-                "no image_id found for this examination."
-            )
 
         clear_review_state()
         remember("X-Ray reviewed successfully. Examination completed.")
@@ -1517,8 +1442,6 @@ def render_review_report_page(patient, examination):
         icon=":material/arrow_back:",
     ):
         back_to_list()
-
-    exam_date = examination_datetime(examination)
 
     st.markdown(
         "<div class='rx-report-header'>"
@@ -1564,11 +1487,10 @@ def render_review_report_page(patient, examination):
 
         render_ai_result_card(ai)
 
+        # form_values now includes training_values inside it
         form_values = render_physician_form(examination, ai)
 
         render_followup_card(examination)
-
-        training_values = render_training_confirmation(ai)
 
         render_report_actions(
             examination,
@@ -1576,7 +1498,6 @@ def render_review_report_page(patient, examination):
             form_values,
             request,
             ai=ai,
-            training_values=training_values,
         )
 
 
