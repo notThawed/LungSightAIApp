@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# database setup placeholder
-=======
 import os
 
 from dotenv import load_dotenv
@@ -42,4 +39,3 @@ def get_db():
         yield db
     finally:
         db.close()
->>>>>>> origin/LungSightV2

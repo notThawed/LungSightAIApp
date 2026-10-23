@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-import streamlit as st
-
-from auth.login import show_login
-
-=======
 import sys
 from pathlib import Path
 
@@ -71,31 +65,9 @@ if str(PROJECT_ROOT) not in sys.path:
 # APPLICATION IMPORTS
 # ==================================================
 
-from auth.login import show_login
-
 from shared.theme.streamlit_theme import (
     set_theme,
     apply_theme,
-)
-
-from layouts.physician_layout import show_physician_layout
-from layouts.radtech_layout import show_radtech_layout
-from layouts.system_admin_layout import show_system_admin_layout
-from layouts.staff_layout import show_staff_layout
-from layouts.hospital_admin_layout import show_hospital_admin_layout
-
-from backend.backend_utils.hospital_utils import (
-    is_hospital_setup_completed,
-    is_hospital_active,
-)
-
-from backend.backend_utils.subscription_utils import (
-    get_subscription_context,
-    apply_scheduled_changes,
-)
-
-from pages.hospital_administrator import (
-    setup_wizard,
 )
 
 
@@ -104,10 +76,66 @@ from pages.hospital_administrator import (
 # ==================================================
 
 st.set_page_config(
-    page_title="LungSight",
-    page_icon=":microscope:",
+    page_title="LungSightAI",
+    page_icon=str(PROJECT_ROOT / "shared" / "images" / "LungSight_Mark.png"),
     layout="wide",
 )
+
+# Design tokens must exist before any page CSS (including the
+# login and invite screens) references them. After login the
+# theme is re-applied with the user's saved preference.
+apply_theme()
+
+
+# ==================================================
+# APPLICATION IMPORTS
+# ==================================================
+#
+# backend.supabase_client raises RuntimeError at import time
+# when SUPABASE_URL / SUPABASE_KEY / SUPABASE_SECRET_KEY are
+# missing. Show a readable setup screen instead of a traceback.
+# ==================================================
+
+try:
+
+    from auth.login import show_login
+
+    from layouts.physician_layout import show_physician_layout
+    from layouts.radtech_layout import show_radtech_layout
+    from layouts.system_admin_layout import show_system_admin_layout
+    from layouts.staff_layout import show_staff_layout
+    from layouts.hospital_admin_layout import show_hospital_admin_layout
+
+    from backend.backend_utils.hospital_utils import (
+        is_hospital_setup_completed,
+        is_hospital_active,
+    )
+
+    from backend.backend_utils.subscription_utils import (
+        get_subscription_context,
+        apply_scheduled_changes,
+    )
+
+    from pages.hospital_administrator import (
+        setup_wizard,
+    )
+
+except RuntimeError as config_error:
+
+    hide_streamlit_sidebar()
+
+    st.title("LungSightAI is not configured")
+
+    st.error(str(config_error))
+
+    st.markdown(
+        "Copy `.env.example` to `.env` in the project root and fill in "
+        "your Supabase project values, or add them to "
+        "`.streamlit/secrets.toml` when deploying. "
+        "See the README section *Environment setup*."
+    )
+
+    st.stop()
 
 
 # ==================================================
@@ -210,33 +238,10 @@ def get_cached_subscription_context(user):
 
 if "current_page" not in st.session_state:
     st.session_state.current_page = "Dashboard"
->>>>>>> origin/LungSightV2
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-<<<<<<< HEAD
-
-if not st.session_state.logged_in:
-
-    show_login()
-
-else:
-
-    user = st.session_state.user
-
-    st.success(f"Welcome {user['name']}!")
-
-    st.write(f"Role: {user['role']}")
-
-    if user["role"] == "radtech":
-
-        st.header("Receptionist / RadTech Dashboard")
-
-    elif user["role"] == "physician":
-
-        st.header("Radiologist Dashboard")
-=======
 if "user" not in st.session_state:
     st.session_state.user = None
 
@@ -629,4 +634,3 @@ else:
         "Invalid user role. "
         "Please contact the administrator."
     )
->>>>>>> origin/LungSightV2

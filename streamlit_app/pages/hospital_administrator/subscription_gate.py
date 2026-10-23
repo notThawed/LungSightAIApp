@@ -54,13 +54,13 @@ _NOTIFICATION_CSS = """
 .st-key-renewal_notification_info {
   background: #F5FBFC !important;
   border-color: #CFE7EB !important;
-  border-left: 4px solid #0F7C88 !important;
+  border-left: 4px solid var(--ls-primary) !important;
 }
 
 .st-key-renewal_notification_grace {
   background: #FFFDF5 !important;
   border-color: #FDE7B5 !important;
-  border-left: 4px solid #B45309 !important;
+  border-left: 4px solid var(--ls-warning) !important;
 }
 
 /* Compact buttons inside the banner */
@@ -82,8 +82,8 @@ _NOTIFICATION_CSS = """
 }
 
 .st-key-renewal_notification_info [data-testid="stButton"] button[data-baseweb="button"][kind="primary"] {
-  background: #0F7C88 !important;
-  border-color: #0F7C88 !important;
+  background: var(--ls-primary) !important;
+  border-color: var(--ls-primary) !important;
 }
 
 .st-key-renewal_notification_info [data-testid="stButton"] button[data-baseweb="button"][kind="primary"] p {
@@ -91,8 +91,8 @@ _NOTIFICATION_CSS = """
 }
 
 .st-key-renewal_notification_grace [data-testid="stButton"] button[data-baseweb="button"][kind="primary"] {
-  background: #B45309 !important;
-  border-color: #B45309 !important;
+  background: var(--ls-warning) !important;
+  border-color: var(--ls-warning) !important;
 }
 
 .st-key-renewal_notification_grace [data-testid="stButton"] button[data-baseweb="button"][kind="primary"] p {
@@ -108,7 +108,7 @@ _NOTIFICATION_CSS = """
   padding: 0 !important;
   background: transparent !important;
   border: none !important;
-  color: #5A6F7F !important;
+  color: var(--ls-text-soft) !important;
   font-size: 16px !important;
 }
 
@@ -120,7 +120,7 @@ _NOTIFICATION_CSS = """
 [class*="st-key-renewal_dismiss_"] [data-testid="stButton"] button p {
   font-size: 14px !important;
   font-weight: 500 !important;
-  color: #5A6F7F !important;
+  color: var(--ls-text-soft) !important;
 }
 """
 
@@ -200,7 +200,7 @@ def _render_inline_notification(tone, icon, message):
 
         # Icon
         with icon_col:
-            icon_color = "#0F7C88" if tone == "info" else "#B45309"
+            icon_color = "var(--ls-primary)" if tone == "info" else "var(--ls-warning)"
             st.markdown(
                 f"<span class='material-symbols-rounded' "
                 f"style='font-size:20px; color:{icon_color};'>"
@@ -210,7 +210,7 @@ def _render_inline_notification(tone, icon, message):
 
         # Message
         with msg_col:
-            text_color = "#12283A" if tone == "info" else "#78350F"
+            text_color = "var(--ls-ink)" if tone == "info" else "var(--ls-warning)"
             st.markdown(
                 f"<p style='margin:0; font-size:13.5px; "
                 f"line-height:1.4; color:{text_color};'>"
@@ -260,7 +260,7 @@ def show_renewal_confirmation_screen(
 
     if hospital_name:
         st.markdown(
-            "<p style='text-align:center; color:#5A6F7F; "
+            "<p style='text-align:center; color:var(--ls-text-soft); "
             "margin:0 0 1rem;'>"
             f"{hospital_name}"
             "</p>",
@@ -361,7 +361,7 @@ def show_checkout_link_screen():
             f"<div style='text-align:center; margin:1rem 0;'>"
             f"<a href='{checkout_url}' target='_blank' "
             f"style='display:inline-block; padding:0.6rem 1.2rem; "
-            f"background:#0F7C88; color:#FFFFFF; "
+            f"background:var(--ls-primary); color:#FFFFFF; "
             f"text-decoration:none; border-radius:8px; "
             f"font-weight:600;'>"
             "Open PayMongo Checkout"
@@ -425,7 +425,7 @@ def show_renewal_success_screen():
     st.markdown(
         "<div style='text-align:center; margin-bottom:0.5rem;'>"
         "<span class='material-symbols-rounded' "
-        "style='font-size:56px; color:#2E8B6A;'>"
+        "style='font-size:56px; color:var(--ls-success);'>"
         "check_circle"
         "</span>"
         "</div>",
@@ -501,7 +501,7 @@ def show_expired_screen(
     st.markdown(
         "<div style='text-align:center; padding:2.5rem 1rem 0.5rem;'>"
         "<span class='material-symbols-rounded' "
-        "style='font-size:64px; color:#B45309;'>lock</span>"
+        "style='font-size:64px; color:var(--ls-warning);'>lock</span>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -514,14 +514,14 @@ def show_expired_screen(
 
     if hospital_name:
         st.markdown(
-            "<p style='text-align:center; color:#5A6F7F;'>"
+            "<p style='text-align:center; color:var(--ls-text-soft);'>"
             f"{hospital_name}'s LungSight subscription has expired."
             "</p>",
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            "<p style='text-align:center; color:#5A6F7F;'>"
+            "<p style='text-align:center; color:var(--ls-text-soft);'>"
             "Your hospital's LungSight subscription has expired."
             "</p>",
             unsafe_allow_html=True,
@@ -536,7 +536,7 @@ def show_expired_screen(
 
     if details:
         st.markdown(
-            "<p style='text-align:center; color:#5A6F7F; "
+            "<p style='text-align:center; color:var(--ls-text-soft); "
             "margin-top:0.5rem;'>"
             + " &nbsp;&bull;&nbsp; ".join(details)
             + "</p>",
@@ -544,7 +544,7 @@ def show_expired_screen(
         )
 
     st.markdown(
-        "<p style='text-align:center; color:#5A6F7F; "
+        "<p style='text-align:center; color:var(--ls-text-soft); "
         "line-height:1.55;'>"
         "Access is suspended until the subscription is renewed.<br>"
         "Your data is safe and will be restored immediately "
@@ -644,7 +644,7 @@ def show_grace_banner(
         st.markdown(
             f"<div class='rn-banner-grace-static'>"
             f"<span class='material-symbols-rounded' "
-            f"style='color:#B45309;'>warning</span> "
+            f"style='color:var(--ls-warning);'>warning</span> "
             f"Your subscription expired on <b>{end_date}</b>. "
             f"Please contact your Hospital Administrator to renew."
             f"</div>",
@@ -718,7 +718,7 @@ def show_pre_expiry_banner(
         st.markdown(
             f"<div class='rn-banner-info-static'>"
             f"<span class='material-symbols-rounded' "
-            f"style='color:#0F7C88;'>notifications</span> "
+            f"style='color:var(--ls-primary);'>notifications</span> "
             f"Your subscription expires in <b>{days_left} {day_word}</b> "
             f"(on <b>{end_date}</b>). Please contact your Hospital "
             f"Administrator to renew."

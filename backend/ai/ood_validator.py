@@ -17,6 +17,11 @@ except Exception as e:
     print(f"Warning: Could not load CLIP validator: {e}")
     _clip_model = None
 
+def validator_available() -> bool:
+    """False when CLIP could not be loaded and is_chest_xray() fails open."""
+    return _clip_model is not None
+
+
 def is_chest_xray(image_bytes: bytes, threshold: float = 0.85) -> bool:
     """
     Returns True if the image looks like a chest X-ray, False otherwise.

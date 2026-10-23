@@ -85,9 +85,9 @@
   border-radius: 50%;
 }
 
-.mh-dot-active    { background: #16A34A; }
-.mh-dot-inactive  { background: #DC2626; }
-.mh-dot-verified  { background: #0EA5A4; }
+.mh-dot-active    { background: var(--ls-success); }
+.mh-dot-inactive  { background: var(--ls-danger); }
+.mh-dot-verified  { background: var(--ls-primary); }
 
 
 /* ----------------------------------------------------------
@@ -99,7 +99,7 @@
   padding: 1.1rem 1.25rem 0.85rem;
   border: 1px solid var(--sa-mist);
   border-radius: 14px;
-  background: #FBFDFD;
+  background: var(--ls-surface-soft);
 }
 
 .mh-detail-header {
@@ -133,9 +133,9 @@
   letter-spacing: 0.02em;
 }
 
-.mh-pill-green  { background: #DCFCE7; color: #166534; }
-.mh-pill-red    { background: #FEE2E2; color: #991B1B; }
-.mh-pill-amber  { background: #FEF3C7; color: #92400E; }
+.mh-pill-green  { background: var(--ls-success-soft); color: var(--ls-success); }
+.mh-pill-red    { background: var(--ls-danger-soft); color: var(--ls-danger); }
+.mh-pill-amber  { background: var(--ls-warning-soft); color: var(--ls-warning); }
 
 .mh-detail-subline {
   font-size: 0.8rem;
@@ -217,7 +217,7 @@
 [class*="st-key-sa_hospital_secondary_"] {
   min-height: 2.15rem;
   padding: 0.25rem 1rem 0.45rem;
-  background: #FAFCFC;
+  background: var(--ls-surface-soft);
   border-left: 1px solid var(--sa-mist);
   border-right: 1px solid var(--sa-mist);
   border-bottom: 1px solid var(--sa-mist);

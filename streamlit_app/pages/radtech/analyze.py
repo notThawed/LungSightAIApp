@@ -1,3 +1,5 @@
+from html import escape
+
 import streamlit as st
 import time
 
@@ -31,7 +33,7 @@ from backend.ai.pneumonia_model import (
 
 from backend.ai.pneumonia_type_model import predict_type
 
-from backend.ai.ood_validator import is_chest_xray
+from backend.ai.ood_validator import is_chest_xray, validator_available
 
 from streamlit_app.components.ui import (
     page_header,
@@ -118,7 +120,7 @@ def clear_active_examination():
 
 def go_back_to_queue():
     clear_active_examination()
-    st.session_state.current_page = "X-ray Queus"
+    st.session_state.current_page = "X-ray Queue"
     st.rerun()
 
 
@@ -445,37 +447,37 @@ def render_submission_summary(request, patient, uploaded_file, result):
 
         "<div class='rx-summary-row'>"
         "<span>Request ID</span>"
-        f"<b>{request.get('request_id', '—')}</b>"
+        f"<b>{escape(str(request.get('request_id') or '—'))}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
         "<span>Patient</span>"
-        f"<b>{patient_name(patient)}</b>"
+        f"<b>{escape(patient_name(patient))}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
         "<span>Patient Code</span>"
-        f"<b>{patient_code(patient)}</b>"
+        f"<b>{escape(str(patient_code(patient)))}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
         "<span>Body Part</span>"
-        f"<b>{request.get('body_part') or 'Chest'}</b>"
+        f"<b>{escape(request.get('body_part') or 'Chest')}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
         "<span>Priority</span>"
-        f"<b>{request.get('priority') or 'Routine'}</b>"
+        f"<b>{escape(request.get('priority') or 'Routine')}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
         "<span>Image File</span>"
-        f"<b>{uploaded_file.name}</b>"
+        f"<b>{escape(uploaded_file.name)}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
-        "<span>Image Quality</span>"
-        "<b>Passed</b>"
+        "<span>Chest X-ray check</span>"
+        f"<b>{'Passed' if validator_available() else 'Not run (validator unavailable)'}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
@@ -490,7 +492,7 @@ def render_submission_summary(request, patient, uploaded_file, result):
 
         "<div class='rx-summary-row'>"
         "<span>Submitted By</span>"
-        f"<b>{current_user_name()}</b>"
+        f"<b>{escape(current_user_name())}</b>"
         "</div>"
 
         "</div>",
@@ -512,7 +514,10 @@ def render_submission_summary(request, patient, uploaded_file, result):
 
     st.divider()
 
-    st.markdown("### AI Attention Heatmap")
+    st.markdown(
+        "<p class='rx-panel-title'>AI attention heatmap</p>",
+        unsafe_allow_html=True,
+    )
 
     gradcam_result = st.session_state.get(
         "gradcam_result"
@@ -703,7 +708,7 @@ def show():
         ):
             reset_analysis_state()
             st.session_state.pop("rx_upload", None)
-            st.session_state.current_page = "X-ray Queus"
+            st.session_state.current_page = "X-ray Queue"
             st.rerun()
 
         return

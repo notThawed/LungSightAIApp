@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
-
 /* ==========================================================
    SYSTEM ADMIN - BASE (reusable)
    shared/theme/css_content/system_admin_css/base.css
@@ -15,25 +13,25 @@
    ========================================================== */
 
 :root {
-  --sa-film:       #F2F6F7;
-  --sa-white:      #FFFFFF;
-  --sa-ink:        #12283A;
-  --sa-slate:      #5A6F7F;
-  --sa-mist:       #DDE8EB;
-  --sa-teal:       #0F7C88;
-  --sa-teal-dark:  #0B626C;
-  --sa-teal-soft:  #E8F4F6;
-  --sa-green:      #23745A;
-  --sa-green-soft: #EAF6F1;
-  --sa-amber:      #8A5A00;
-  --sa-amber-soft: #FFF4DC;
-  --sa-red:        #B3402F;
-  --sa-red-soft:   #FDECEA;
-  --sa-blue:       #2A5FA8;
-  --sa-blue-soft:  #E8F1FB;
+  --sa-film:       var(--ls-background);
+  --sa-white:      var(--ls-surface);
+  --sa-ink:        var(--ls-ink);
+  --sa-slate:      var(--ls-text-soft);
+  --sa-mist:       var(--ls-border);
+  --sa-teal:       var(--ls-primary);
+  --sa-teal-dark:  var(--ls-primary-dark);
+  --sa-teal-soft:  var(--ls-primary-soft);
+  --sa-green:      var(--ls-success);
+  --sa-green-soft: var(--ls-success-soft);
+  --sa-amber:      var(--ls-warning);
+  --sa-amber-soft: var(--ls-warning-soft);
+  --sa-red:        var(--ls-danger);
+  --sa-red-soft:   var(--ls-danger-soft);
+  --sa-blue:       var(--ls-info);
+  --sa-blue-soft:  var(--ls-info-soft);
 
-  --sa-font-display: 'Fraunces', Georgia, serif;
-  --sa-font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sa-font-display: var(--ls-font-display);
+  --sa-font-body:    var(--ls-font);
 }
 
 
@@ -82,7 +80,7 @@
    Page header, section titles
    ---------------------------------------------------------- */
 
-.sa-page-title {
+.stApp .sa-page-title {
   margin: 0;
   font-family: var(--sa-font-display);
   font-size: 1.9rem;
@@ -91,20 +89,20 @@
   color: var(--sa-ink);
 }
 
-.sa-page-caption {
+.stApp .sa-page-caption {
   margin: 0.2rem 0 0.4rem;
   font-size: 0.95rem;
   color: var(--sa-slate);
 }
 
-.sa-section-title {
+.stApp .sa-section-title {
   margin: 0.4rem 0 0.1rem;
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--sa-ink);
 }
 
-.sa-section-caption {
+.stApp .sa-section-caption {
   margin: 0 0 0.5rem;
   font-size: 0.85rem;
   color: var(--sa-slate);
@@ -148,15 +146,22 @@
   font-feature-settings: "liga";
 }
 
-.sa-metric-amber .sa-metric-icon { background: var(--sa-amber-soft); color: #A86B00; }
+.sa-metric-amber .sa-metric-icon { background: var(--sa-amber-soft); color: var(--ls-warning); }
 .sa-metric-green .sa-metric-icon { background: var(--sa-green-soft); color: var(--sa-green); }
 .sa-metric-red   .sa-metric-icon { background: var(--sa-red-soft);   color: var(--sa-red); }
 .sa-metric-blue  .sa-metric-icon { background: var(--sa-blue-soft);  color: var(--sa-blue); }
 
 .sa-metric-title {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--sa-slate);
+}
+
+.sa-metric-hint {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--ls-muted);
 }
 
 .sa-metric-value {
@@ -287,7 +292,7 @@
 
 :is(.st-key-sa_page, .st-key-sa_dialog) [data-testid^="stBaseButton-primary"]:disabled {
   background: #C9D8DC !important;
-  border-color: #C9D8DC !important;
+  border-color: var(--ls-border-strong) !important;
 }
 
 /* quiet action */
@@ -318,7 +323,7 @@
 /* destructive buttons (keys that start with delete_ or confirm_delete) */
 [class*="st-key-delete_"] [data-testid^="stBaseButton"]:hover {
   border-color: #E5B5B0 !important;
-  background: #FDF5F4 !important;
+  background: var(--ls-danger-soft) !important;
 }
 
 [class*="st-key-delete_"] [data-testid^="stBaseButton"]:hover :is(p, [data-testid="stIconMaterial"]) {
@@ -354,7 +359,7 @@
 .sa-pill-red   { background: var(--sa-red-soft);   color: var(--sa-red); }
 .sa-pill-blue  { background: var(--sa-blue-soft);  color: var(--sa-blue); }
 .sa-pill-teal  { background: var(--sa-teal-soft);  color: var(--sa-teal-dark); }
-.sa-pill-grey  { background: #EEF2F4;              color: var(--sa-slate); }
+.sa-pill-grey  { background: var(--ls-surface-soft);              color: var(--sa-slate); }
 
 
 /* ----------------------------------------------------------
@@ -386,7 +391,7 @@
 }
 
 [class*="st-key-sa_row_"]:hover {
-  background: #FAFCFC;
+  background: var(--ls-surface-soft);
 }
 
 .sa-th {
@@ -526,8 +531,8 @@
 }
 
 .sa-note-green { background: var(--sa-green-soft); border-color: #CBE8DC; border-left-color: var(--sa-green); }
-.sa-note-red   { background: #FDF3F2; border-color: #F2D3CF; border-left-color: var(--sa-red); }
-.sa-note-amber { background: #FFF9EB; border-color: #F5E4BB; border-left-color: #D9930D; }
+.sa-note-red   { background: var(--ls-danger-soft); border-color: #F2D3CF; border-left-color: var(--sa-red); }
+.sa-note-amber { background: var(--ls-warning-soft); border-color: #F5E4BB; border-left-color: #D9930D; }
 
 .sa-empty {
   padding: 1.5rem 1rem;

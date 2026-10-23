@@ -15,44 +15,8 @@
    ROOT / GLOBAL
    --------------------------------------------------------- */
 
-:root {
-    --ls-primary: #176b87;
-    --ls-primary-dark: #0f526a;
-    --ls-primary-soft: #eaf6fa;
-
-    --ls-accent: #2b8ca8;
-    --ls-success: #16845b;
-    --ls-success-soft: #eaf8f1;
-
-    --ls-warning: #b7791f;
-    --ls-warning-soft: #fff7e8;
-
-    --ls-danger: #c0392b;
-    --ls-danger-soft: #fff0ee;
-
-    --ls-text: #172b35;
-    --ls-text-soft: #52636c;
-    --ls-muted: #7a8990;
-
-    --ls-border: #dce6ea;
-    --ls-border-light: #e9eff2;
-
-    --ls-background: #f7fafb;
-    --ls-card: #ffffff;
-
-    --ls-radius-sm: 8px;
-    --ls-radius-md: 14px;
-    --ls-radius-lg: 20px;
-
-    --ls-shadow-sm:
-        0 2px 8px rgba(23, 55, 66, 0.05);
-
-    --ls-shadow-md:
-        0 8px 24px rgba(23, 55, 66, 0.08);
-
-    --ls-shadow-lg:
-        0 16px 40px rgba(23, 55, 66, 0.11);
-}
+/* Colors, radii and shadows (--ls-*) come from shared/theme/tokens.json
+   via shared/theme/streamlit_theme.py. */
 
 /* ---------------------------------------------------------
    MATERIAL SYMBOLS — SAFETY NET
@@ -347,11 +311,11 @@ div[class*="st-key-ma_page"] {
 }
 
 .ma-pill-grey {
-    background: #f0f3f5;
+    background: var(--ls-surface-soft);
 
-    color: #64748b;
+    color: var(--ls-muted);
 
-    border-color: #dce4e8;
+    border-color: var(--ls-border);
 }
 
 /* ---------------------------------------------------------
@@ -434,7 +398,7 @@ div[class*="st-key-app_card_"]:hover {
 .ma-empty {
     padding: 26px 20px;
 
-    background: #f8fafb;
+    background: var(--ls-surface-soft);
 
     border: 1px dashed var(--ls-border);
 
@@ -522,7 +486,7 @@ div[class*="st-key-app_card_"]:hover {
 
     border-radius: 11px;
 
-    background: #f5f8f9;
+    background: var(--ls-surface-soft);
 
     border: 1px solid var(--ls-border);
 
@@ -555,7 +519,7 @@ div[class*="st-key-app_card_"]:hover {
 
     border-color: rgba(22, 132, 91, 0.18);
 
-    color: #2f5c4b;
+    color: var(--ls-success);
 }
 
 .ma-note-green::before {
@@ -569,7 +533,7 @@ div[class*="st-key-app_card_"]:hover {
 
     border-color: rgba(183, 121, 31, 0.2);
 
-    color: #7a5518;
+    color: var(--ls-warning);
 }
 
 .ma-note-amber::before {
@@ -583,7 +547,7 @@ div[class*="st-key-app_card_"]:hover {
 
     border-color: rgba(192, 57, 43, 0.18);
 
-    color: #8c2b1f;
+    color: var(--ls-danger);
 }
 
 .ma-note-red::before {
@@ -687,12 +651,7 @@ div[class*="st-key-ma_dialog"] {
 .ma-inv {
     padding: 22px 22px 20px;
 
-    background:
-        linear-gradient(
-            135deg,
-            #ffffff 0%,
-            #f7fbfc 100%
-        );
+    background: var(--ls-surface);
 
     border: 1px solid var(--ls-border);
 
@@ -856,7 +815,7 @@ div[class*="st-key-ma_dialog"] {
 }
 
 .ma-inv-line-head {
-    background: #f5f8f9;
+    background: var(--ls-surface-soft);
 }
 
 .ma-inv-line-head span {
@@ -934,12 +893,7 @@ div[data-testid="stDialog"] button:hover {
 }
 
 div[data-testid="stDialog"] button[kind="primary"] {
-    background:
-        linear-gradient(
-            135deg,
-            var(--ls-primary),
-            var(--ls-accent)
-        ) !important;
+    background: var(--ls-primary) !important;
 
     border: none !important;
 
@@ -947,12 +901,7 @@ div[data-testid="stDialog"] button[kind="primary"] {
 }
 
 div[data-testid="stDialog"] button[kind="primary"]:hover {
-    background:
-        linear-gradient(
-            135deg,
-            var(--ls-primary-dark),
-            var(--ls-primary)
-        ) !important;
+    background: var(--ls-primary-dark) !important;
 }
 
 /* ---------------------------------------------------------

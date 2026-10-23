@@ -1,8 +1,13 @@
-import streamlit as st
+from shared.assets import load_css
+from streamlit_app.components.ui import not_available_page
 
 
 def show():
 
-    st.title("Configure System Settings")
+    load_css()
 
-    st.info("System settings coming soon...")
+    not_available_page(
+        "System settings",
+        "System-wide configuration for LungSightAI.",
+        "System settings are not available yet.",
+    )

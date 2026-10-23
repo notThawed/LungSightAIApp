@@ -23,6 +23,9 @@ Session keys (prefixed with mmr_ to isolate from physician page):
 """
 
 import streamlit as st
+
+from shared.ai_labels import ai_result_label
+from shared.ai_labels import pneumonia_type_label as shared_type_label
 import streamlit.components.v1 as components
 
 from datetime import datetime, date
@@ -212,26 +215,12 @@ def format_time_only(value):
 # ============================================================
 
 def risk_from_ai_findings(ai_findings):
-    if not ai_findings:
-        return ("No AI Result", "slate")
-
-    normalized = str(ai_findings).strip().lower()
-
-    if normalized == "positive":
-        return ("High Risk", "red")
-
-    if normalized == "negative":
-        return ("Low Risk", "green")
-
-    return (str(ai_findings).title(), "slate")
+    return ai_result_label(ai_findings)
 
 
 def pneumonia_type_label(pneumonia_type):
-    if pneumonia_type == "bacterial_pneumonia":
-        return ("Bacterial Pneumonia", "red")
-    if pneumonia_type == "viral_pneumonia":
-        return ("Viral Pneumonia", "amber")
-    return ("Not applicable", "slate")
+    label, tone = shared_type_label(pneumonia_type)
+    return (label, tone) if label != "—" else ("Not applicable", "slate")
 
 
 def confidence_percent(value):
@@ -1216,7 +1205,7 @@ def render_risk_card(ai_findings, ai_conf, pneumonia_type=None):
         conf_block = (
             "<div class='pr-hero-row pr-hero-row-block'>"
             "<div class='pr-conf-label'>"
-            "<span>AI Confidence</span>"
+            "<span>Model confidence</span>"
             f"<b>{conf_pct:.1f}%</b>"
             "</div>"
             "<div class='pr-conf-bar'>"
@@ -1227,19 +1216,19 @@ def render_risk_card(ai_findings, ai_conf, pneumonia_type=None):
     else:
         conf_block = (
             "<div class='pr-hero-row'>"
-            "<span>AI Confidence</span><b>—</b>"
+            "<span>Model confidence</span><b>—</b>"
             "</div>"
         )
 
     st.markdown(
         "<div class='pr-hero-card'>"
-        "<p class='pr-hero-eyebrow'>Risk Assessment</p>"
+        "<p class='pr-hero-eyebrow'>AI screening</p>"
         "<div class='pr-hero-row'>"
-        "<span>Risk Level</span>"
+        "<span>AI result</span>"
         f"<div>{pill(risk_label, risk_tone)}</div>"
         "</div>"
         "<div class='pr-hero-row'>"
-        "<span>Pneumonia Type</span>"
+        "<span>AI pneumonia type</span>"
         f"<div>{pill(type_label, type_tone)}</div>"
         "</div>"
         f"{conf_block}"
@@ -1467,7 +1456,7 @@ def render_ai_summary(ai, ai_findings, pneumonia_type, ai_conf):
 
     conf_line = (
         "<br><span class='pr-ai-summary-meta'>"
-        f"Confidence: <b>{conf_pct:.1f}%</b>"
+        f"Model confidence: <b>{conf_pct:.1f}%</b>"
         "</span>"
         if conf_pct is not None
         else ""

@@ -12,7 +12,14 @@ def show_hospital_admin_layout():
     page = show_hospital_admin_sidebar()
 
     page_info = {
-        "Dashboard": "Track your patient workload, case highlights, and current diagnostic activity."
+        "Dashboard": "Examination activity across your hospital.",
+        "My Hospital": "Your hospital's details, address and logo.",
+        "Manage Users": "Invite and manage hospital staff accounts and roles.",
+        "Manage Patients": "Register and manage patients of your hospital.",
+        "Manage Examinations": "Review examinations and their status.",
+        "Subscription Usage": "Plan limits and how much of them your hospital has used.",
+        "Subscription Settings": "Change, renew or cancel your hospital's subscription.",
+        "Profile": "Update your profile, password and preferences.",
     }
     show_top_navbar(page_name=page, page_info=page_info.get(page, "Page information is not available."))
 

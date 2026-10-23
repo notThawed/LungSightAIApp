@@ -164,14 +164,17 @@ def page_header(title, caption, action_label=None, action_key=None, action_icon=
     return False
 
 
-def metric_card(title, value, icon, tone=""):
+def metric_card(title, value, icon, tone="", hint=""):
     """icon is a Material icon name, e.g. 'groups'. tone: amber, green, red, blue."""
+    hint_html = f"<div class='sa-metric-hint'>{safe(hint)}</div>" if hint else ""
+
     st.markdown(
         f"<div class='sa-metric sa-metric-{tone}'>"
         f"<span class='sa-metric-icon'>{icon}</span>"
         "<div>"
         f"<div class='sa-metric-title'>{title}</div>"
         f"<div class='sa-metric-value'>{value}</div>"
+        f"{hint_html}"
         "</div></div>",
         unsafe_allow_html=True,
     )
@@ -390,3 +393,12 @@ def follow_up_entry_header(scheduled_at, status, tone="grey"):
         "</div>",
         unsafe_allow_html=True,
     )
+
+def not_available_page(title, caption, message):
+    """
+    Consistent placeholder for a page whose feature is not built yet.
+    Shows an honest empty state rather than sample data.
+    """
+    with st.container(key="sa_page"):
+        page_header(title, caption)
+        empty_state(message)

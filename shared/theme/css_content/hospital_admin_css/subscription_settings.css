@@ -2,7 +2,6 @@
    HOSPITAL ADMIN — SUBSCRIPTION SETTINGS
    ========================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 
@@ -34,30 +33,30 @@
    ---------------------------------------------------------- */
 
 :root {
-  --ss-film:       #F2F6F7;
-  --ss-white:      #FFFFFF;
-  --ss-ink:        #12283A;
-  --ss-slate:      #5A6F7F;
-  --ss-mist:       #DDE8EB;
-  --ss-teal:       #0F7C88;
-  --ss-teal-soft:  #E8F4F6;
-  --ss-green:      #2E8B6A;
-  --ss-green-soft: #EAF6F1;
-  --ss-amber:      #B45309;
-  --ss-amber-soft: #FEF3C7;
-  --ss-red:        #B91C1C;
-  --ss-red-soft:   #FEE2E2;
+  --ss-film:       var(--ls-background);
+  --ss-white:      var(--ls-surface);
+  --ss-ink:        var(--ls-ink);
+  --ss-slate:      var(--ls-text-soft);
+  --ss-mist:       var(--ls-border);
+  --ss-teal:       var(--ls-primary);
+  --ss-teal-soft:  var(--ls-primary-soft);
+  --ss-green:      var(--ls-success);
+  --ss-green-soft: var(--ls-success-soft);
+  --ss-amber:      var(--ls-warning);
+  --ss-amber-soft: var(--ls-warning-soft);
+  --ss-red:        var(--ls-danger);
+  --ss-red-soft:   var(--ls-danger-soft);
 
-  --ss-navy:       #102D40;
+  --ss-navy:       var(--ls-navy);
   --ss-navy-2:     #183F55;
   --ss-navy-3:     #1D4156;
 
-  --ss-font-display: 'Fraunces', Georgia, serif;
-  --ss-font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ss-font-display: var(--ls-font-display);
+  --ss-font-body:    var(--ls-font);
 
-  --ss-radius-sm: 8px;
-  --ss-radius-md: 12px;
-  --ss-radius-lg: 16px;
+  --ss-radius-sm: var(--ls-radius-sm);
+  --ss-radius-md: var(--ls-radius-md);
+  --ss-radius-lg: var(--ls-radius-lg);
 }
 
 
@@ -541,7 +540,7 @@
 .st-key-ss_page .ss-dialog-note-amber {
   background: var(--ss-amber-soft);
   border: 1px solid #FCD34D;
-  color: #78350F;
+  color: var(--ls-warning);
 }
 
 .st-key-ss_page .ss-dialog-note-amber .material-symbols-rounded {
@@ -551,7 +550,7 @@
 .st-key-ss_page .ss-dialog-note-green {
   background: var(--ss-green-soft);
   border: 1px solid #86EFAC;
-  color: #14532D;
+  color: var(--ls-success);
 }
 
 .st-key-ss_page .ss-dialog-note-green .material-symbols-rounded {
@@ -560,8 +559,8 @@
 
 .st-key-ss_page .ss-dialog-note-blue {
   background: var(--ss-teal-soft);
-  border: 1px solid #A7D8DE;
-  color: #0B626C;
+  border: 1px solid var(--ls-border-strong);
+  color: var(--ls-primary-dark);
 }
 
 .st-key-ss_page .ss-dialog-note-blue .material-symbols-rounded {

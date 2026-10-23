@@ -1,9 +1,28 @@
+# Python
 venv/
+.venv/
 __pycache__/
 *.pyc
+.ruff_cache/
+.pytest_cache/
+
+# Secrets - never commit real credentials
 .env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Local data - patient X-rays exported for retraining must never be committed
 data/database.db
-<<<<<<< HEAD
-=======
 datasets/
->>>>>>> origin/LungSightV2
+hybrid_negative_positive/
+international_classification/
+
+# Node / Expo
+node_modules/
+
+# Supabase CLI local state
+supabase/.temp/
+
+# Build artifacts
+*.zip

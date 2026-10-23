@@ -1,37 +1,28 @@
-@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap");
-
-
 /* ============================================================
    LUNGSIGHT SIDEBAR
    ============================================================ */
 
 :root {
-    --sb-bg: #ffffff;
+    --sb-bg: var(--ls-surface);
 
-    --sb-ink: #12283a;
-    --sb-text: #3f5566;
-    --sb-muted: #6b7f8e;
+    --sb-ink: var(--ls-ink);
+    --sb-text: var(--ls-text-soft);
+    --sb-muted: var(--ls-muted);
 
-    --sb-border: #dde8eb;
+    --sb-border: var(--ls-border);
 
-    --sb-hover-bg: #f4f8f9;
-    --sb-hover-border: #bcd3d8;
+    --sb-hover-bg: var(--ls-surface-soft);
+    --sb-hover-border: var(--ls-border-strong);
 
-    --sb-accent: #0f7c88;
-    --sb-accent-dark: #0b626c;
-    --sb-accent-bg: #e8f4f6;
+    --sb-accent: var(--ls-primary);
+    --sb-accent-dark: var(--ls-primary-dark);
+    --sb-accent-bg: var(--ls-primary-soft);
 
     --sb-font-display:
-        "Barlow Condensed",
-        Arial,
-        sans-serif;
+        var(--ls-font-display);
 
     --sb-font-body:
-        "Manrope",
-        system-ui,
-        -apple-system,
-        "Segoe UI",
-        sans-serif;
+        var(--ls-font);
 }
 
 
@@ -191,15 +182,19 @@
 .st-key-sidebar_header .ls-sidebar-brand {
     font-family: var(--sb-font-display);
 
-    font-size: 1.75rem;
+    font-size: 1.35rem;
 
-    font-weight: 700;
+    font-weight: 800;
 
     line-height: 1;
 
-    letter-spacing: 0.045em;
+    letter-spacing: -0.01em;
 
     color: var(--sb-ink);
+}
+
+.st-key-sidebar_header .ls-sidebar-brand-ai {
+    color: var(--sb-accent);
 }
 
 
@@ -723,14 +718,14 @@ button[data-testid="stBaseButton-primary"]
 [class*="st-key-logout_"] button:hover {
     border-color: #e5b5b0 !important;
 
-    background: #fdf5f4 !important;
+    background: var(--ls-danger-soft) !important;
 }
 
 
 [class*="st-key-logout_"] button:hover p,
 [class*="st-key-logout_"] button:hover
 [data-testid="stIconMaterial"] {
-    color: #b3402f;
+    color: var(--ls-danger);
 }
 
 
@@ -773,7 +768,7 @@ button[data-testid="stBaseButton-primary"]
 
     .st-key-sidebar_header
     .ls-sidebar-brand {
-        font-size: 1.65rem;
+        font-size: 1.25rem;
     }
 
 

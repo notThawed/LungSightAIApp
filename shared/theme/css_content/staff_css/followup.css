@@ -3,21 +3,20 @@
    Follow-Ups
    ========================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 :root {
-    --sf-film:      #F2F6F7;
-    --sf-white:     #FFFFFF;
-    --sf-ink:       #12283A;
-    --sf-slate:     #5A6F7F;
-    --sf-mist:      #DDE8EB;
-    --sf-teal:      #0F7C88;
-    --sf-teal-soft: #E8F4F6;
-    --sf-green:     #2E8B6A;
-    --sf-amber:     #B45309;
-    --sf-red:       #B91C1C;
-    --sf-font-body: 'Manrope', system-ui, sans-serif;
+    --sf-film:      var(--ls-background);
+    --sf-white:     var(--ls-surface);
+    --sf-ink:       var(--ls-ink);
+    --sf-slate:     var(--ls-text-soft);
+    --sf-mist:      var(--ls-border);
+    --sf-teal:      var(--ls-primary);
+    --sf-teal-soft: var(--ls-primary-soft);
+    --sf-green:     var(--ls-success);
+    --sf-amber:     var(--ls-warning);
+    --sf-red:       var(--ls-danger);
+    --sf-font-body: var(--ls-font);
 }
 
 .st-key-staff_followups_root {
@@ -87,7 +86,7 @@
 
 .sf-detail-title {
     margin: 0;
-    font-family: 'Fraunces', Georgia, serif;
+    font-family: var(--ls-font-display);
     font-size: 1.55rem;
     font-weight: 600;
     color: var(--sf-ink);
@@ -124,7 +123,7 @@
 
 .sf-card-title {
     margin: 0 0 0.75rem;
-    font-family: 'Fraunces', Georgia, serif;
+    font-family: var(--ls-font-display);
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--sf-ink);

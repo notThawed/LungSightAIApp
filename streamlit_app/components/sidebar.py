@@ -3,6 +3,8 @@ import html
 
 import streamlit as st
 
+from shared.assets import image_data_uri
+
 
 # ============================================================
 # PATHS
@@ -54,9 +56,9 @@ RADTECH_NAV = [
                 "assignment",
             ),
             (
-                "X-ray Queus",
-                "X-ray Queus",
-                "assignment",
+                "X-ray Queue",
+                "X-ray queue",
+                "pending_actions",
             ),
 
         ],
@@ -108,7 +110,7 @@ PHYSICIAN_NAV = [
             (
                 "Follow-Ups",
                 "Follow-ups",
-                "assignment",
+                "event_available",
             ),
         ],
     },
@@ -132,17 +134,17 @@ ADMIN_NAV = [
         "items": [
             (
                 "Manage Patients",
-                "Manage Patients",
+                "Manage patients",
                 "group",
             ),
             (
                 "Manage Examinations",
-                "Manage Examinations",
+                "Manage examinations",
                 "assignment",
             ),
             (
                 "Medical Records",
-                "Manage Medical Records",
+                "Manage medical records",
                 "description",
             ),
         ],
@@ -153,22 +155,22 @@ ADMIN_NAV = [
         "items": [
             (
                 "User Management",
-                "Manage System Users",
+                "Manage system users",
                 "manage_accounts",
             ),
             (
                 "Manage Hospitals",
-                "Manage Hospitals",
+                "Manage hospitals",
                 "local_hospital",
             ),
             (
                 "Manage Client Applications",
-                "Manage Client Applications",
+                "Manage client applications",
                 "inbox",
             ),
             (
                 "Manage Subscriptions",
-                "Manage Subscriptions",
+                "Manage subscriptions",
                 "credit_card",
             ),
         ],
@@ -186,12 +188,12 @@ ADMIN_NAV = [
     },
 
     {
-        "section": "AI TRAINING",
+        "section": "AI Training",
         "items": [
             (
                 "Training",
-                "Data Training",
-                "settings",
+                "Training data review",
+                "model_training",
             ),
         ],
     },
@@ -226,12 +228,12 @@ STAFF_NAV = [
         "items": [
             (
                 "Register Patient",
-                "Register Patient",
+                "Register patient",
                 "person_add",
             ),
             (
                 "Patient Records",
-                "Patient Records",
+                "Patient records",
                 "folder_shared",
             ),
         ],
@@ -266,8 +268,8 @@ HOSPITAL_ADMIN_NAV = [
             ),
             (
                 "My Hospital",
-                "My Hospital info",
-                "dashboard",
+                "My hospital",
+                "local_hospital",
             ),
         ],
     },
@@ -277,17 +279,17 @@ HOSPITAL_ADMIN_NAV = [
         "items": [
             (
                 "Manage Users",
-                "Manage Users",
+                "Manage users",
                 "manage_accounts",
             ),
             (
                 "Manage Patients",
-                "Manage Patients",
+                "Manage patients",
                 "group",
             ),
             (
                 "Manage Examinations",
-                "Manage Examinations",
+                "Manage examinations",
                 "assignment",
             ),
         ],
@@ -298,12 +300,12 @@ HOSPITAL_ADMIN_NAV = [
         "items": [
             (
                 "Subscription Usage",
-                "Subscription Usage",
+                "Subscription usage",
                 "data_usage",
             ),
             (
                 "Subscription Settings",
-                "Subscription Settings",
+                "Subscription settings",
                 "payments",
             ),
         ],
@@ -459,7 +461,7 @@ def show_header(role_label):
         or ""
     )
 
-    # ---- logo: the hospital's logo, or a hospital icon as a fallback ----
+    # ---- logo: the hospital's logo, or the LungSight mark as a fallback ----
 
     if hospital_logo_url:
 
@@ -472,9 +474,9 @@ def show_header(role_label):
     else:
 
         logo_html = (
-            '<div class="ls-sidebar-logo ls-sidebar-logo-fallback">'
-            '<span class="ls-sidebar-icon">settings</span>'
-            "</div>"
+            '<img class="ls-sidebar-logo" '
+            f'src="{image_data_uri("LungSight_Mark.png")}" '
+            'alt="LungSightAI">'
         )
 
     # ---- everything is written as one HTML string (no blank lines) ----
@@ -486,7 +488,7 @@ def show_header(role_label):
         st.markdown(
             '<div class="ls-sidebar-brandbar">'
             f"{logo_html}"
-            '<div class="ls-sidebar-brand">LungSight</div>'
+            '<div class="ls-sidebar-brand">LungSight<span class="ls-sidebar-brand-ai">AI</span></div>'
             "</div>"
             '<div class="ls-sidebar-usercard">'
             f'<div class="ls-sidebar-avatar">{safe_text(get_initials(user_name))}</div>'
@@ -562,7 +564,7 @@ def show_account(role_key):
     ):
 
         nav_button(
-            "Manage Profile",
+            "Manage profile",
             "Profile",
             "account_circle",
             key=f"profile_{role_key}",
@@ -575,8 +577,9 @@ def show_account(role_key):
             width="stretch",
         ):
 
-            st.session_state.logged_in = False
-            st.session_state.user = None
+            from auth.auth_manager import logout
+
+            logout()
             st.session_state.current_page = "Dashboard"
 
             st.rerun()
@@ -633,7 +636,7 @@ def show_radtech_sidebar():
 
     return show_sidebar(
         "radtech",
-        "Radiology Technologist",
+        "Radiologic Technologist",
         RADTECH_NAV,
     )
 
@@ -642,7 +645,7 @@ def show_physician_sidebar():
 
     return show_sidebar(
         "physician",
-        "Physician",
+        "Radiologist",
         PHYSICIAN_NAV,
     )
 
@@ -651,7 +654,7 @@ def show_admin_sidebar():
 
     return show_sidebar(
         "admin",
-        "Administrator",
+        "System Administrator",
         ADMIN_NAV,
     )
 

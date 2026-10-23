@@ -1,123 +1,60 @@
-@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap");
-
 /* ============================================================
-   LUNGSIGHT NAVBAR
-   ============================================================ */
-
-:root {
-	--ls-nav-bg: #ffffff;
-	--ls-nav-border: rgba(30, 41, 59, 0.08);
-	--ls-nav-ink: #0f172a;
-	--ls-nav-muted: #64748b;
-	--ls-nav-accent: #0f7c88;
-	--ls-nav-accent-soft: #e8f4f6;
-}
-
-/* ============================================================
-   NAVBAR CONTAINER
+   LUNGSIGHT TOP BAR
+   Left: current page + description. Right: user, role, hospital.
+   Colors and fonts come from the --ls-* design tokens.
    ============================================================ */
 
 .st-key-top_navbar {
 	position: sticky;
-	top: 1rem;
+	top: 0;
 	z-index: 100;
-	margin-top: 1rem;
-	margin-bottom: 0.75rem;
-	padding: 1.5rem 2rem;
-	border-radius: 0;
-	background: var(--ls-nav-bg);
-	box-shadow: none;
-	width: 100%;
-	max-width: 100%;
-	left: 0;
-	right: 0;
+
+	margin: 0 0 1rem;
+	padding: 0.85rem 1.25rem;
+
+	background: var(--ls-surface);
+	border-bottom: 1px solid var(--ls-border);
 }
 
 /* Remove default Streamlit padding at the top */
 div[data-testid="stMainBlockContainer"] {
 	padding-top: 0 !important;
-	padding-left: 1rem !important;
-	padding-right: 1rem !important;
+	padding-left: 1.5rem !important;
+	padding-right: 1.5rem !important;
 }
 
-/* Remove top padding from the main app */
 section[data-testid="stAppViewBlockContainer"] {
 	padding-top: 0 !important;
 }
 
-/* Make the container take full width */
-.st-key-top_navbar [data-testid="stVerticalBlock"] {
-	width: 100% !important;
-	max-width: 100% !important;
-}
-
-/* Ensure columns are full width */
+.st-key-top_navbar [data-testid="stVerticalBlock"],
 .st-key-top_navbar .stColumns {
 	width: 100% !important;
 	max-width: 100% !important;
 }
 
 /* ============================================================
-   LEFT SIDE
+   LEFT — PAGE CONTEXT
    ============================================================ */
 
-.ls-nav-left-wrap {
-	display: flex;
-	align-items: center;
-	gap: 0.65rem;
+.ls-nav-context {
+	min-width: 0;
 }
 
-/* LungSight logo */
-
-.ls-nav-brand-logo {
-	width: 2.25rem;
-	height: 2.25rem;
-
-	object-fit: contain;
-
-	border-radius: 50%;
-}
-
-/* LungSight name */
-
-.ls-nav-appname {
-	font-family: "Barlow Condensed", sans-serif;
-
-	font-size: 1.45rem;
+.ls-nav-page {
+	font-family: var(--ls-font-display);
+	font-size: 1.05rem;
 	font-weight: 700;
-
-	line-height: 1;
-
-	letter-spacing: 0.05em;
-	text-transform: uppercase;
-
-	color: var(--ls-nav-ink);
+	line-height: 1.3;
+	color: var(--ls-ink);
 }
 
-/* ============================================================
-   CENTER — HOSPITAL NAME
-   ============================================================ */
+.ls-nav-info {
+	margin-top: 0.1rem;
 
-.ls-nav-hospital-wrap {
-	display: flex;
-
-	align-items: center;
-	justify-content: center;
-
-	width: 100%;
-
-	text-align: center;
-}
-
-.ls-nav-hospital-name {
-	font-family: "Manrope", sans-serif;
-
-	font-size: 1rem;
-	font-weight: 700;
-
-	line-height: 1.2;
-
-	color: var(--ls-nav-ink);
+	font-size: 0.82rem;
+	line-height: 1.35;
+	color: var(--ls-muted);
 
 	white-space: nowrap;
 	overflow: hidden;
@@ -125,105 +62,102 @@ section[data-testid="stAppViewBlockContainer"] {
 }
 
 /* ============================================================
-   RIGHT — USER PROFILE
+   RIGHT — USER
    ============================================================ */
 
 .ls-nav-profile-wrap {
 	display: flex;
-
 	align-items: center;
 	justify-content: flex-end;
-
 	gap: 0.65rem;
-
 	width: 100%;
 }
 
-/* ============================================================
-   PROFILE IMAGE
-   ============================================================ */
-
-.ls-nav-avatar-image,
-.ls-nav-avatar-fallback {
-	width: 2.45rem;
-	height: 2.45rem;
-
-	flex-shrink: 0;
-
-	border-radius: 50%;
-
-	border: 1px solid rgba(15, 124, 136, 0.25);
-
-	object-fit: cover;
-}
-
-/* Fallback initials */
-
-.ls-nav-avatar-fallback {
-	display: flex;
-
-	align-items: center;
-	justify-content: center;
-
-	background: var(--ls-nav-accent-soft);
-
-	color: var(--ls-nav-accent);
-
-	font-family: "Barlow Condensed", sans-serif;
-
-	font-size: 0.95rem;
-	font-weight: 700;
-
-	letter-spacing: 0.05em;
-}
-
-/* ============================================================
-   USER TEXT
-   ============================================================ */
-
 .ls-nav-user-text {
 	display: flex;
-
 	flex-direction: column;
-
 	align-items: flex-end;
-
 	min-width: 0;
-
 	text-align: right;
 }
 
 .ls-nav-user-name {
-	font-family: "Manrope", sans-serif;
+	max-width: 240px;
 
-	font-size: 0.86rem;
+	font-size: 0.88rem;
 	font-weight: 700;
-
-	line-height: 1.2;
-
-	color: var(--ls-nav-ink);
+	line-height: 1.25;
+	color: var(--ls-ink);
 
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-
-	max-width: 180px;
 }
 
 .ls-nav-user-role {
-	margin-top: 0.12rem;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 0.15rem 0.5rem;
 
-	font-family: "Manrope", sans-serif;
+	margin-top: 0.1rem;
 
-	font-size: 0.67rem;
+	font-size: 0.75rem;
 	font-weight: 600;
+	color: var(--ls-text-soft);
+}
 
-	line-height: 1.1;
+.ls-nav-hospital {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.2rem;
 
-	letter-spacing: 0.05em;
-	text-transform: uppercase;
+	max-width: 220px;
 
-	color: var(--ls-nav-muted);
+	color: var(--ls-muted);
+	font-weight: 500;
+
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ls-nav-icon {
+	font-family: "Material Symbols Rounded";
+	font-feature-settings: "liga";
+	-webkit-font-feature-settings: "liga";
+	font-size: 0.95rem;
+	line-height: 1;
+	color: var(--ls-primary);
+}
+
+/* ============================================================
+   AVATAR
+   ============================================================ */
+
+.ls-nav-avatar-image,
+.ls-nav-avatar-fallback {
+	width: 2.4rem;
+	height: 2.4rem;
+	flex-shrink: 0;
+
+	border-radius: 50%;
+	border: 1px solid var(--ls-border-strong);
+
+	object-fit: cover;
+}
+
+.ls-nav-avatar-fallback {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	background: var(--ls-primary-soft);
+	color: var(--ls-primary);
+
+	font-size: 0.9rem;
+	font-weight: 700;
 }
 
 /* ============================================================
@@ -236,51 +170,8 @@ section[data-testid="stAppViewBlockContainer"] {
 		padding: 0.7rem 1rem;
 	}
 
-	.ls-nav-appname {
-		font-size: 1.25rem;
-	}
-
-	.ls-nav-brand-logo {
-		width: 2rem;
-		height: 2rem;
-	}
-
-	.ls-nav-hospital-name {
-		font-size: 0.9rem;
-	}
-
-	.ls-nav-avatar-image,
-	.ls-nav-avatar-fallback {
-		width: 2.1rem;
-		height: 2.1rem;
-	}
-
-	.ls-nav-user-name {
-		font-size: 0.78rem;
-		max-width: 140px;
-	}
-
-	.ls-nav-user-role {
-		font-size: 0.6rem;
-	}
-}
-
-@media (max-width: 650px) {
-
-	.ls-nav-appname {
+	.ls-nav-info,
+	.ls-nav-hospital {
 		display: none;
-	}
-
-	.ls-nav-hospital-name {
-		font-size: 0.82rem;
-		max-width: 180px;
-	}
-
-	.ls-nav-user-name {
-		max-width: 100px;
-	}
-
-	.ls-nav-user-role {
-		font-size: 0.55rem;
 	}
 }

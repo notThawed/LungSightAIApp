@@ -1,38 +1,3 @@
-<<<<<<< HEAD
-# auth/login.py
-
-import streamlit as st
-from auth.auth_manager import authenticate
-
-
-def show_login():
-
-    st.title("🫁 LungSight")
-
-    st.subheader("AI-Powered Chest X-Ray Analysis")
-
-    email = st.text_input("Email")
-
-    password = st.text_input(
-        "Password",
-        type="password"
-    )
-
-    if st.button("Login"):
-
-        user = authenticate(email, password)
-
-        if user:
-
-            st.session_state.logged_in = True
-            st.session_state.user = user
-
-            st.rerun()
-
-        else:
-
-            st.error("Invalid email or password.")
-=======
 from pathlib import Path
 import base64
 
@@ -210,7 +175,12 @@ def show_login_form():
                 placeholder="Enter your password",
             )
 
-            submitted = st.form_submit_button("Sign in", type="primary")
+            submitted = st.form_submit_button(
+                "Sign in",
+                type="primary",
+                icon=":material/login:",
+                width="stretch",
+            )
 
         if submitted:
             check_login(email, password)
@@ -462,4 +432,3 @@ def show_login():
 
     # ABOUT US
     show_footer()
->>>>>>> origin/LungSightV2

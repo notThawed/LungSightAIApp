@@ -1,18 +1,30 @@
-# Streamlit configuration file to force light theme
-# Place this at .streamlit/config.toml in your project root
+# LungSightAI — Streamlit configuration.
+# Theme values mirror shared/theme/tokens.json (light theme) so native
+# Streamlit widgets (buttons, inputs, tables, alerts) match the custom CSS.
+# tests/unit/test_design_tokens.py checks that they stay in sync.
 
 [theme]
 base = "light"
-# Optional: set additional theme colors if you want custom look
-# primaryColor = "#1f77b4"
-# backgroundColor = "#FFFFFF"
-# secondaryBackgroundColor = "#F0F2F6"
-# font = "sans serif"
+primaryColor = "#0F7C88"
+backgroundColor = "#F4F7F8"
+secondaryBackgroundColor = "#F4F8F9"
+textColor = "#12283A"
+borderColor = "#DDE8EB"
+linkColor = "#0B626C"
+redColor = "#B91C1C"
+orangeColor = "#B45309"
+greenColor = "#23745A"
+blueColor = "#2A5FA8"
+font = "Manrope:https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap, sans-serif"
+headingFont = "Manrope:https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap, sans-serif"
+baseFontSize = 15
+baseRadius = "8px"
+buttonRadius = "8px"
+showWidgetBorder = true
 
 [server]
 enableStaticServing = true
 
 [client]
 showSidebarNavigation = false
-toolbarMode = "minimal" 
-
+toolbarMode = "minimal"

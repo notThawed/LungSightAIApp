@@ -14,44 +14,8 @@
    ROOT / GLOBAL
    --------------------------------------------------------- */
 
-:root {
-    --ls-primary: #176b87;
-    --ls-primary-dark: #0f526a;
-    --ls-primary-soft: #eaf6fa;
-
-    --ls-accent: #2b8ca8;
-    --ls-success: #16845b;
-    --ls-success-soft: #eaf8f1;
-
-    --ls-warning: #b7791f;
-    --ls-warning-soft: #fff7e8;
-
-    --ls-danger: #c0392b;
-    --ls-danger-soft: #fff0ee;
-
-    --ls-text: #172b35;
-    --ls-text-soft: #52636c;
-    --ls-muted: #7a8990;
-
-    --ls-border: #dce6ea;
-    --ls-border-light: #e9eff2;
-
-    --ls-background: #f7fafb;
-    --ls-card: #ffffff;
-
-    --ls-radius-sm: 8px;
-    --ls-radius-md: 14px;
-    --ls-radius-lg: 20px;
-
-    --ls-shadow-sm:
-        0 2px 8px rgba(23, 55, 66, 0.05);
-
-    --ls-shadow-md:
-        0 8px 24px rgba(23, 55, 66, 0.08);
-
-    --ls-shadow-lg:
-        0 16px 40px rgba(23, 55, 66, 0.11);
-}
+/* Colors, radii and shadows (--ls-*) come from shared/theme/tokens.json
+   via shared/theme/streamlit_theme.py. */
 
 /* ---------------------------------------------------------
    MATERIAL SYMBOLS - SAFETY NET
@@ -130,17 +94,7 @@ div[data-testid="stDialog"] > div {
 
     margin-bottom: 18px;
 
-    background:
-        radial-gradient(
-            circle at 100% 0%,
-            rgba(43, 140, 168, 0.12),
-            transparent 32%
-        ),
-        linear-gradient(
-            145deg,
-            #ffffff 0%,
-            #f7fbfc 100%
-        );
+    background: var(--ls-surface);
 
     border: 1px solid var(--ls-border);
 
@@ -535,12 +489,7 @@ div[data-testid="stDialog"] > div {
 
     margin: 18px 0;
 
-    background:
-        linear-gradient(
-            135deg,
-            #ffffff 0%,
-            #f2f9fb 100%
-        );
+    background: var(--ls-surface);
 
     border: 1px solid rgba(23, 107, 135, 0.2);
 
@@ -887,12 +836,7 @@ div[data-testid="stDialog"] > div {
 .ls-bar-fill {
     height: 100%;
 
-    background:
-        linear-gradient(
-            90deg,
-            var(--ls-primary),
-            var(--ls-accent)
-        );
+    background: var(--ls-primary);
 
     border-radius: 99px;
 
@@ -969,9 +913,9 @@ div[data-testid="stDialog"] > div {
 /* Todo */
 
 .ls-step-todo .ls-dot {
-    background: #f0f3f5;
+    background: var(--ls-surface-soft);
 
-    border: 1px solid #dce4e8;
+    border: 1px solid var(--ls-border);
 
     color: #9aa8ae;
 }
@@ -1027,12 +971,7 @@ div[data-testid="stDialog"] > div {
 div[data-testid="st-key-plan_summary"] {
     padding: 20px;
 
-    background:
-        linear-gradient(
-            145deg,
-            #ffffff,
-            #f7fbfc
-        );
+    background: var(--ls-surface);
 
     border: 1px solid var(--ls-border);
 
@@ -1221,7 +1160,7 @@ div[data-testid="st-key-plan_summary"] {
 
     border-radius: 11px;
 
-    background: #f5f8f9;
+    background: var(--ls-surface-soft);
 
     border: 1px solid var(--ls-border);
 
@@ -1252,7 +1191,7 @@ div[data-testid="st-key-plan_summary"] {
 
     border-color: rgba(22, 132, 91, 0.18);
 
-    color: #356957;
+    color: var(--ls-success);
 }
 
 .ls-note-success::before {
@@ -1362,12 +1301,7 @@ div[data-testid="stDialog"] button:hover {
 /* Primary button */
 
 div[data-testid="stDialog"] button[kind="primary"] {
-    background:
-        linear-gradient(
-            135deg,
-            var(--ls-primary),
-            var(--ls-accent)
-        ) !important;
+    background: var(--ls-primary) !important;
 
     border: none !important;
 
@@ -1375,12 +1309,7 @@ div[data-testid="stDialog"] button[kind="primary"] {
 }
 
 div[data-testid="stDialog"] button[kind="primary"]:hover {
-    background:
-        linear-gradient(
-            135deg,
-            var(--ls-primary-dark),
-            var(--ls-primary)
-        ) !important;
+    background: var(--ls-primary-dark) !important;
 }
 
 /* ---------------------------------------------------------
@@ -1418,7 +1347,7 @@ div[data-testid="stDialog"] textarea:focus {
 div[data-testid="stDialog"] [data-testid="stCheckbox"] {
     padding: 9px 11px;
 
-    background: #f8fafb;
+    background: var(--ls-surface-soft);
 
     border: 1px solid var(--ls-border-light);
 

@@ -3,7 +3,6 @@
    Patient Records + Analysis Report
    ========================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 
@@ -12,26 +11,26 @@
    ---------------------------------------------------------- */
 
 :root {
-    --pr-film:         #F2F6F7;
-    --pr-white:        #FFFFFF;
-    --pr-ink:          #12283A;
-    --pr-slate:        #5A6F7F;
-    --pr-mist:         #DDE8EB;
+    --pr-film:         var(--ls-background);
+    --pr-white:        var(--ls-surface);
+    --pr-ink:          var(--ls-ink);
+    --pr-slate:        var(--ls-text-soft);
+    --pr-mist:         var(--ls-border);
 
-    --pr-teal:         #0F7C88;
-    --pr-teal-soft:    #E8F4F6;
+    --pr-teal:         var(--ls-primary);
+    --pr-teal-soft:    var(--ls-primary-soft);
 
-    --pr-green:        #2E8B6A;
-    --pr-green-soft:   #EAF6F1;
+    --pr-green:        var(--ls-success);
+    --pr-green-soft:   var(--ls-success-soft);
 
-    --pr-amber:        #B45309;
-    --pr-amber-soft:   #FEF3C7;
+    --pr-amber:        var(--ls-warning);
+    --pr-amber-soft:   var(--ls-warning-soft);
 
-    --pr-red:          #B91C1C;
-    --pr-red-soft:     #FEE2E2;
+    --pr-red:          var(--ls-danger);
+    --pr-red-soft:     var(--ls-danger-soft);
 
-    --pr-font-display: 'Fraunces', Georgia, serif;
-    --pr-font-body:    'Manrope', system-ui, -apple-system, sans-serif;
+    --pr-font-display: var(--ls-font-display);
+    --pr-font-body:    var(--ls-font);
 }
 
 .material-symbols-rounded {
@@ -396,7 +395,7 @@
 
 .pr-conf-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--pr-teal), #2BB6C4);
+    background: var(--ls-primary);
     border-radius: 999px;
     transition: width 0.4s ease;
 }
@@ -469,10 +468,10 @@
     background:
         repeating-linear-gradient(
             45deg,
-            #F7FAFB,
-            #F7FAFB 12px,
-            #F2F6F7 12px,
-            #F2F6F7 24px
+            var(--ls-background),
+            var(--ls-background) 12px,
+            var(--ls-background) 12px,
+            var(--ls-background) 24px
         );
 
     border: 2px dashed var(--pr-mist);

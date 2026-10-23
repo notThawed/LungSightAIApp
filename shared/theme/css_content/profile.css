@@ -7,34 +7,28 @@
    ========================================================== */
 
 :root {
-    --ap-film: #F2F6F7;
-    --ap-white: #FFFFFF;
+    --ap-film: var(--ls-background);
+    --ap-white: var(--ls-surface);
 
-    --ap-ink: #12283A;
-    --ap-slate: #5A6F7F;
-    --ap-mist: #DDE8EB;
+    --ap-ink: var(--ls-ink);
+    --ap-slate: var(--ls-text-soft);
+    --ap-mist: var(--ls-border);
 
-    --ap-teal: #0F7C88;
-    --ap-teal-dark: #0B626C;
-    --ap-teal-soft: #E8F4F6;
+    --ap-teal: var(--ls-primary);
+    --ap-teal-dark: var(--ls-primary-dark);
+    --ap-teal-soft: var(--ls-primary-soft);
 
-    --ap-green: #2E8B6A;
-    --ap-green-soft: #EAF6F1;
+    --ap-green: var(--ls-success);
+    --ap-green-soft: var(--ls-success-soft);
 
-    --ap-red: #C0392B;
-    --ap-red-soft: #FBEAE8;
+    --ap-red: var(--ls-danger);
+    --ap-red-soft: var(--ls-danger-soft);
 
     --ap-font-display:
-        'Fraunces',
-        Georgia,
-        serif;
+        var(--ls-font-display);
 
     --ap-font-body:
-        'Manrope',
-        system-ui,
-        -apple-system,
-        'Segoe UI',
-        sans-serif;
+        var(--ls-font);
 }
 
 

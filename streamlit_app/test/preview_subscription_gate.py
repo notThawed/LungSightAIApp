@@ -17,12 +17,16 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import streamlit as st
 
 from pages.hospital_administrator import subscription_gate
+from shared.theme.streamlit_theme import apply_theme
 
 
 st.set_page_config(
     page_title="Subscription Gate Preview",
     layout="wide",
 )
+
+# Page CSS references the --ls-* design tokens, which app.py normally injects.
+apply_theme()
 
 
 st.title("Subscription Gate — Preview")

@@ -3,12 +3,16 @@ Quick standalone test for the pneumonia model.
 Run from project root:  python test_model.py
 """
 
+import sys
+from pathlib import Path
+
 from backend.ai.pneumonia_model import predict
 
 # ------------------------------------------------------------
-# Put the path to a test X-ray image here
+# Image to test: first command-line argument, or the sample
+# test_image.jpeg in the project root.
 # ------------------------------------------------------------
-IMAGE_PATH = r"C:\Users\ryume\Desktop\LungSightAIApp-LungSightV2\test_image.jpeg"   # ← CHANGE THIS
+IMAGE_PATH = sys.argv[1] if len(sys.argv) > 1 else Path(__file__).parent / "test_image.jpeg"
 
 
 if __name__ == "__main__":

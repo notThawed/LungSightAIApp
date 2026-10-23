@@ -1,25 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
-
-
 /* ============================================================
    LUNGSIGHT LOGIN PAGE
    ============================================================ */
 
 :root {
-    --film: #F2F6F7;
-    --white: #FFFFFF;
-    --ink: #12283A;
-    --slate: #5A6F7F;
-    --mist: #DDE8EB;
+    --film: var(--ls-background);
+    --white: var(--ls-surface);
+    --ink: var(--ls-ink);
+    --slate: var(--ls-text-soft);
+    --mist: var(--ls-border);
 
-    --teal: #0F7C88;
-    --teal-dark: #0B626C;
+    --teal: var(--ls-primary);
+    --teal-dark: var(--ls-primary-dark);
 
-    --navy: #0A2436;
-    --ap-ink: #102D40;
+    --navy: var(--ls-navy);
+    --ap-ink: var(--ls-navy);
 
-    --font-display: 'Fraunces', Georgia, serif;
-    --font-body: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-display: var(--ls-font-display);
+    --font-body: var(--ls-font);
 }
 
 
@@ -311,7 +308,7 @@ footer,
         radial-gradient(
             circle at 50% 40%,
             #FFFFFF 0%,
-            #EDF4F5 58%,
+            var(--ls-surface-soft) 58%,
             #DDE9EC 100%
         );
 
@@ -403,7 +400,7 @@ footer,
 
     border-radius: 8px;
 
-    background: #E6F2F3;
+    background: var(--ls-primary-soft);
     color: var(--teal);
 }
 

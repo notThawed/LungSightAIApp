@@ -65,6 +65,13 @@ from streamlit_app.components.ui import (
 from streamlit_app.components.curb65_widget import render_curb65
 
 from shared.assets import load_css
+from shared.ai_labels import (
+    AI_DISCLAIMER,
+    CONFIDENCE_HELP,
+    ai_findings_narrative,
+    ai_result_label,
+    pneumonia_type_label,
+)
 
 
 # ============================================================
@@ -182,34 +189,7 @@ def examination_datetime(examination):
 # ============================================================
 
 def risk_label_from_findings(ai_findings):
-    if not ai_findings:
-        return ("No AI Result", "slate")
-
-    normalized = str(ai_findings).strip().lower()
-
-    if normalized == "positive":
-        return ("HIGH", "red")
-
-    if normalized == "negative":
-        return ("LOW", "green")
-
-    return (str(ai_findings).title(), "slate")
-
-
-def pneumonia_type_label(pneumonia_type, ai_findings=None):
-    if pneumonia_type == "bacterial_pneumonia":
-        return ("Bacterial Pneumonia", "red")
-    if pneumonia_type == "viral_pneumonia":
-        return ("Viral Pneumonia", "amber")
-
-    if ai_findings:
-        normalized = str(ai_findings).strip().lower()
-        if normalized == "negative":
-            return ("Not applicable", "slate")
-        if normalized == "positive":
-            return ("Type Not Classified", "amber")
-
-    return ("—", "slate")
+    return ai_result_label(ai_findings)
 
 
 def confidence_percent(value):
@@ -223,36 +203,6 @@ def confidence_percent(value):
     except (TypeError, ValueError):
         return None
 
-
-def ai_findings_narrative(ai_findings, pneumonia_type):
-    if not ai_findings:
-        return None
-
-    normalized = str(ai_findings).strip().lower()
-
-    if normalized == "positive":
-        if pneumonia_type == "bacterial_pneumonia":
-            return (
-                "Bilateral consolidation detected. Findings "
-                "consistent with <b>bacterial pneumonia</b>."
-            )
-        if pneumonia_type == "viral_pneumonia":
-            return (
-                "Bilateral opacity patterns detected. Findings "
-                "consistent with <b>viral pneumonia</b>."
-            )
-        return (
-            "Patterns consistent with <b>pneumonia</b> detected. "
-            "Recommend clinical correlation."
-        )
-
-    if normalized == "negative":
-        return (
-            "No patterns consistent with pneumonia were detected. "
-            "Continue standard clinical evaluation."
-        )
-
-    return None
 
 
 def _ai_predicted_key(ai):
@@ -926,7 +876,7 @@ def render_ai_result_card(ai):
         conf_block = (
             "<div class='rx-ai-row rx-ai-row-block'>"
             "<div class='rx-ai-label'>"
-            "<span>AI Confidence</span>"
+            "<span>Model confidence</span>"
             f"<b>{conf_pct:.1f}%</b>"
             "</div>"
             "<div class='rx-conf-bar'>"
@@ -937,14 +887,14 @@ def render_ai_result_card(ai):
     else:
         conf_block = (
             "<div class='rx-ai-row'>"
-            "<span>AI Confidence</span><b>—</b>"
+            "<span>Model confidence</span><b>—</b>"
             "</div>"
         )
 
     if class_conf_pct is not None:
         class_conf_block = (
             "<div class='rx-ai-row'>"
-            "<span>Classification Conf.</span>"
+            "<span>Type confidence</span>"
             f"<b>{class_conf_pct:.1f}%</b>"
             "</div>"
         )
@@ -954,7 +904,7 @@ def render_ai_result_card(ai):
     if narrative:
         findings_block = (
             "<div class='rx-ai-findings'>"
-            "<p class='rx-ai-findings-label'>AI Findings</p>"
+            "<p class='rx-ai-findings-label'>What the AI reported</p>"
             f"<p class='rx-ai-findings-text'>{narrative}</p>"
             "</div>"
         )
@@ -969,22 +919,24 @@ def render_ai_result_card(ai):
 
     st.markdown(
         "<div class='rx-panel-title-row'>"
-        "<p class='rx-panel-title'>AI Analysis Result</p>"
+        "<p class='rx-panel-title'>AI screening result</p>"
         "</div>"
         "<div class='rx-ai-card'>"
         "<div class='rx-ai-row'>"
-        "<span>Risk Level</span>"
+        "<span>AI result</span>"
         f"<div>{pill(risk_label, risk_tone)}</div>"
         "</div>"
         "<div class='rx-ai-row'>"
-        "<span>Pneumonia Type</span>"
+        "<span>AI pneumonia type</span>"
         f"<div>{pill(type_label, type_tone)}</div>"
         "</div>"
         f"{conf_block}"
         f"{class_conf_block}"
         f"{findings_block}"
+        f"<p class='rx-ai-disclaimer'>{AI_DISCLAIMER}</p>"
         "</div>",
         unsafe_allow_html=True,
+        help=CONFIDENCE_HELP,
     )
 
 
@@ -1048,7 +1000,7 @@ def render_physician_form(examination, ai):
         curb_score = render_curb65()
     else:
         curb_score = None  # Not applicable
-        st.info("ℹ️ CURB-65 is not applicable because the AI detected no pneumonia.")
+        st.info("CURB-65 is hidden because the AI result was negative.", icon=":material/info:")
 
     st.markdown(
         "<p class='rx-form-divider'></p>",

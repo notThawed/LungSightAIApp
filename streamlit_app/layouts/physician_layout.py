@@ -3,7 +3,8 @@ import streamlit as st
 from components.sidebar import show_physician_sidebar
 from components.navbar import show_top_navbar
 
-from pages.physician import dashboard, patient_queue, review_patient, physician_patient_records, profile, followups
+from pages.physician import dashboard, patient_queue, review_patient, followups
+from pages import profile
 from pages.hospital_administrator import subscription_gate
 from pages.system_administrator import manage_medical_records
 
@@ -42,7 +43,8 @@ def show_physician_layout():
         "Patient Queue": "Review incoming patients awaiting analysis, interpretation, or follow-up.",
         "Review Patient": "Open detailed clinical context and imaging to assess individual patient cases.",
         "Patient Records": "Access longitudinal records, notes, and prior imaging history.",
-        "Profile": "Update your profile and physician-specific account preferences.",
+        "Follow-Ups": "Track scheduled, missed and completed patient follow-ups.",
+        "Profile": "Update your profile, password and preferences.",
     }
     show_top_navbar(page_name=page, page_info=page_info.get(page, "Page information is not available."))
 

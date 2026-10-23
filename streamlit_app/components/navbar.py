@@ -1,5 +1,4 @@
 from pathlib import Path
-import base64
 import html
 
 import streamlit as st
@@ -11,12 +10,6 @@ import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-LOGO_PATH = (
-    PROJECT_ROOT
-    / "shared"
-    / "images"
-    / "LungSight Logo.png"
-)
 
 NAVBAR_CSS_PATH = (
     PROJECT_ROOT
@@ -55,27 +48,11 @@ def _role_label(
 ) -> str:
 
     role_labels = {
-
-        "radtech":
-            "RadTech",
-
-        "Radiology Technologist":
-            "Radiology Technologist",
-
-        "physician":
-            "Physician",
-
-        "Hospital Admin":
-            "Hospital Admin",
-
-        "Hospital administrator":
-            "Hospital Admin",
-
-        "Administrator":
-            "Administrator",
-
-        "Staff":
-            "Staff",
+        "Radiologist": "Radiologist",
+        "Radiologic Technologist": "Radiologic Technologist",
+        "Staff": "Staff",
+        "Hospital Admin": "Hospital Admin",
+        "Superadmin": "System Administrator",
     }
 
     return role_labels.get(
@@ -175,24 +152,6 @@ def _avatar_html(
 
 
 # ============================================================
-# LUNGSIGHT LOGO
-# ============================================================
-
-def _logo_data_uri() -> str:
-
-    if not LOGO_PATH.exists():
-        return ""
-
-    encoded = base64.b64encode(
-        LOGO_PATH.read_bytes()
-    ).decode("utf-8")
-
-    return (
-        f"data:image/png;base64,{encoded}"
-    )
-
-
-# ============================================================
 # TOP NAVBAR
 # ============================================================
 
@@ -225,8 +184,8 @@ def show_top_navbar(
     )
 
     hospital_name = _safe_text(
-        user.get("hospital_name"),
-        "-",
+        user.get("hospital_name")
+        or ("LungSightAI system" if user.get("role") == "Superadmin" else ""),
     )
 
     # --------------------------------------------------------
@@ -237,88 +196,47 @@ def show_top_navbar(
         user
     )
 
-    # --------------------------------------------------------
-    # LungSight logo
-    # --------------------------------------------------------
-
-    logo_uri = _logo_data_uri()
-
-    if logo_uri:
-
-        logo_html = (
-            '<img '
-            f'src="{logo_uri}" '
-            'class="ls-nav-brand-logo" '
-            'alt="LungSight logo">'
-        )
-
-    else:
-
-        logo_html = ""
+    hospital_html = (
+        f'<span class="ls-nav-hospital" title="{hospital_name}">'
+        '<span class="ls-nav-icon">local_hospital</span>'
+        f"{hospital_name}</span>"
+        if hospital_name
+        else ""
+    )
 
     # --------------------------------------------------------
-    # Navbar
-    #
-    # Three columns:
-    #
-    # LEFT   = LungSight
-    # CENTER = Hospital name
-    # RIGHT  = User profile
+    # Navbar: where you are (left) and who you are (right).
+    # The LungSightAI brand lives in the sidebar.
     # --------------------------------------------------------
 
     with st.container(
         key="top_navbar"
     ):
 
-        left_col, center_col, right_col = (
-            st.columns(
-                [1.5, 3, 1.8],
-                vertical_alignment="center",
-            )
+        left_col, right_col = st.columns(
+            [3, 2],
+            vertical_alignment="center",
         )
-
-        # ====================================================
-        # LEFT
-        # ====================================================
 
         with left_col:
 
             st.markdown(
-                f"""<div class="ls-nav-left-wrap">
-{logo_html}
-<div class="ls-nav-appname">LungSight</div>
-</div>""",
+                '<div class="ls-nav-context">'
+                f'<div class="ls-nav-page">{_safe_text(page_name)}</div>'
+                f'<div class="ls-nav-info">{_safe_text(page_info)}</div>'
+                "</div>",
                 unsafe_allow_html=True,
             )
-
-        # ====================================================
-        # CENTER
-        # ====================================================
-
-        with center_col:
-
-            st.markdown(
-                f"""<div class="ls-nav-hospital-wrap">
-<div class="ls-nav-hospital-name">
-{hospital_name}
-</div>
-</div>""",
-                unsafe_allow_html=True,
-            )
-
-        # ====================================================
-        # RIGHT
-        # ====================================================
 
         with right_col:
 
             st.markdown(
-                f"""<div class="ls-nav-profile-wrap">
-{avatar_html}
-<div class="ls-nav-user-text">
-<div class="ls-nav-user-name">{user_name}</div>
-<div class="ls-nav-user-role">{role_text}</div>
-</div>
-</div>""",
+                '<div class="ls-nav-profile-wrap">'
+                '<div class="ls-nav-user-text">'
+                f'<div class="ls-nav-user-name">{user_name}</div>'
+                f'<div class="ls-nav-user-role">{role_text}{hospital_html}</div>'
+                "</div>"
+                f"{avatar_html}"
+                "</div>",
                 unsafe_allow_html=True,
             )

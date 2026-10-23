@@ -3,7 +3,6 @@
    Review Patient (X-Ray Review Report)
    ========================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 
@@ -12,26 +11,26 @@
    ---------------------------------------------------------- */
 
 :root {
-    --rx-film:         #F2F6F7;
-    --rx-white:        #FFFFFF;
-    --rx-ink:          #12283A;
-    --rx-slate:        #5A6F7F;
-    --rx-mist:         #DDE8EB;
+    --rx-film:         var(--ls-background);
+    --rx-white:        var(--ls-surface);
+    --rx-ink:          var(--ls-ink);
+    --rx-slate:        var(--ls-text-soft);
+    --rx-mist:         var(--ls-border);
 
-    --rx-teal:         #0F7C88;
-    --rx-teal-soft:    #E8F4F6;
+    --rx-teal:         var(--ls-primary);
+    --rx-teal-soft:    var(--ls-primary-soft);
 
-    --rx-green:        #2E8B6A;
-    --rx-green-soft:   #EAF6F1;
+    --rx-green:        var(--ls-success);
+    --rx-green-soft:   var(--ls-success-soft);
 
-    --rx-amber:        #B45309;
-    --rx-amber-soft:   #FEF3C7;
+    --rx-amber:        var(--ls-warning);
+    --rx-amber-soft:   var(--ls-warning-soft);
 
-    --rx-red:          #B91C1C;
-    --rx-red-soft:     #FEE2E2;
+    --rx-red:          var(--ls-danger);
+    --rx-red-soft:     var(--ls-danger-soft);
 
-    --rx-font-display: 'Fraunces', Georgia, serif;
-    --rx-font-body:    'Manrope', system-ui, -apple-system, sans-serif;
+    --rx-font-display: var(--ls-font-display);
+    --rx-font-body:    var(--ls-font);
 }
 
 .material-symbols-rounded {
@@ -160,10 +159,10 @@
     background:
         repeating-linear-gradient(
             45deg,
-            #F7FAFB,
-            #F7FAFB 12px,
-            #F2F6F7 12px,
-            #F2F6F7 24px
+            var(--ls-background),
+            var(--ls-background) 12px,
+            var(--ls-background) 12px,
+            var(--ls-background) 24px
         );
 
     border: 2px dashed var(--rx-mist);
@@ -383,7 +382,7 @@
 
 .rx-conf-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--rx-teal), #2BB6C4);
+    background: var(--ls-primary);
     border-radius: 999px;
     transition: width 0.4s ease;
 }
@@ -530,4 +529,20 @@
     .rx-ai-row b {
         text-align: left;
     }
+}
+
+/* ---------------------------------------------------------
+   AI DISCLAIMER (inside the AI screening result card)
+   --------------------------------------------------------- */
+
+.rx-ai-disclaimer {
+    margin: 12px 0 0;
+    padding-top: 10px;
+
+    border-top: 1px solid var(--rx-mist);
+
+    color: var(--rx-slate);
+
+    font-size: 0.78rem;
+    line-height: 1.45;
 }

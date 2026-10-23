@@ -1,13 +1,21 @@
 import calendar
 from datetime import date
 
+import altair as alt
 import streamlit as st
 
+from backend.backend_utils.dashboard_utils import (
+    get_ai_daily_counts,
+    get_hospital_overview,
+    get_system_metrics,
+)
+
 from streamlit_app.components.ui import (
+    empty_state,
     page_header,
-    metric_card,
     section_title,
 )
+from streamlit_app.components.role_dashboard import show_metric_row
 
 from shared.assets import load_css
 
@@ -50,6 +58,67 @@ def show_calendar():
 
 
 # ============================================================
+# DATA (cached briefly; the Refresh button clears it)
+# ============================================================
+
+# Categorical pair validated for color-vision deficiency (dataviz validator).
+AI_NEGATIVE_COLOR = "#2A5FA8"
+AI_POSITIVE_COLOR = "#C2410C"
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def load_dashboard_data():
+    metrics = get_system_metrics()
+
+    try:
+        daily = get_ai_daily_counts(days=14)
+    except Exception as exc:
+        print(f"[dashboard] daily AI counts failed: {exc}")
+        daily = None
+
+    try:
+        hospitals = get_hospital_overview()
+    except Exception as exc:
+        print(f"[dashboard] hospital overview failed: {exc}")
+        hospitals = None
+
+    return metrics, daily, hospitals
+
+
+def ai_activity_chart(daily):
+    """Stacked daily bars: AI negative (bottom) and AI positive (top)."""
+
+    rows = [
+        {"date": day["date"], "finding": finding, "count": day[key], "order": order}
+        for day in daily
+        for order, (key, finding) in enumerate((("negative", "AI negative"), ("positive", "AI positive")))
+    ]
+
+    return (
+        alt.Chart(alt.Data(values=rows))
+        .mark_bar(cornerRadiusEnd=4, stroke="white", strokeWidth=2)
+        .encode(
+            x=alt.X("date:T", timeUnit="yearmonthdate", title=None,
+                    axis=alt.Axis(format="%b %d", labelAngle=0, grid=False, tickCount=7)),
+            y=alt.Y("sum(count):Q", title="Analyses", axis=alt.Axis(tickMinStep=1)),
+            color=alt.Color(
+                "finding:N",
+                scale=alt.Scale(domain=["AI negative", "AI positive"], range=[AI_NEGATIVE_COLOR, AI_POSITIVE_COLOR]),
+                legend=alt.Legend(title=None, orient="top"),
+            ),
+            order=alt.Order("order:Q"),
+            tooltip=[
+                alt.Tooltip("date:T", title="Date", format="%b %d, %Y"),
+                alt.Tooltip("finding:N", title="AI finding"),
+                alt.Tooltip("count:Q", title="Analyses"),
+            ],
+        )
+        .properties(height=260)
+        .configure_view(stroke=None)
+    )
+
+
+# ============================================================
 # PAGE
 # ============================================================
 
@@ -57,57 +126,52 @@ def show():
 
     load_css("dashboard.css")
 
-    # Keep the eight core metrics aligned and lightweight for the admin dashboard.
-    # Placeholder numbers: replace these with real queries when ready
-    metrics = [
-        ("Total scans today", 0, "radiology", ""),
-        ("Pneumonia detected", 0, "coronavirus", "red"),
-        ("Healthy cases", 0, "check_circle", "green"),
-        ("Pending cases", 0, "hourglass_top", "amber"),
-        ("Active doctors", 0, "stethoscope", "blue"),
-        ("Active hospitals", 0, "local_hospital", ""),
-        ("Active hospital admins", 0, "admin_panel_settings", "blue"),
-        ("AI status", "Operational", "smart_toy", "green"),
-    ]
-
     with st.container(key="sa_page"):
 
-        page_header(
+        if page_header(
             "Administrator dashboard",
-            "System-wide statistics for hospitals, users and scans.",
-        )
+            "System-wide activity across hospitals, users and AI analyses.",
+            "Refresh",
+            "sa_dashboard_refresh",
+            "refresh",
+        ):
+            load_dashboard_data.clear()
+            st.rerun()
 
-        # ---------------- Metrics: two rows of four ----------------
+        metrics, daily, hospitals = load_dashboard_data()
 
-        for start in (0, 4):
+        show_metric_row(metrics)
 
-            columns = st.columns(4)
-
-            for column, (title, value, icon, tone) in zip(columns, metrics[start:start + 4]):
-                with column:
-                    metric_card(title, value, icon, tone)
-
-        # ---------------- Chart + calendar ----------------
+        # ---------------- AI activity + calendar ----------------
 
         chart_col, calendar_col = st.columns([3, 1.2], gap="medium")
 
         with chart_col:
             with st.container(key="sa_card_chart"):
 
-                section_title("Pneumonia detection rate over time")
-
-                chart_data = {
-                    "date": ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"],
-                    "Pneumonia detected": [5, 10, 7, 12, 8],
-                    "Healthy cases": [15, 20, 18, 22, 25],
-                }
-
-                st.line_chart(
-                    chart_data,
-                    x="date",
-                    y=["Pneumonia detected", "Healthy cases"],
-                    height=260,
+                section_title(
+                    "AI analyses per day",
+                    "Last 14 days, by AI finding. AI findings are not diagnoses.",
                 )
+
+                if daily is None:
+                    empty_state("AI activity could not be loaded.")
+
+                elif not any(day["positive"] or day["negative"] for day in daily):
+                    empty_state("No chest X-rays were analyzed in the last 14 days.")
+
+                else:
+                    st.altair_chart(ai_activity_chart(daily), width="stretch")
+
+                    with st.expander("View as table"):
+                        st.dataframe(
+                            {
+                                "Date": [day["date"] for day in daily],
+                                "AI negative": [day["negative"] for day in daily],
+                                "AI positive": [day["positive"] for day in daily],
+                            },
+                            hide_index=True,
+                        )
 
         with calendar_col:
             with st.container(key="sa_card_calendar"):
@@ -119,26 +183,46 @@ def show():
 
         map_col, hospitals_col = st.columns([3, 1.2], gap="medium")
 
+        located = [
+            hospital
+            for hospital in hospitals or []
+            if hospital.get("latitude") is not None
+            and hospital.get("longitude") is not None
+        ]
+
         with map_col:
             with st.container(key="sa_card_map"):
 
                 section_title("Hospital locations")
 
-                st.map(
-                    {"lat": [10.3236], "lon": [123.9227]},
-                    height=260,
-                )
+                if located:
+                    st.map(
+                        {
+                            "lat": [float(h["latitude"]) for h in located],
+                            "lon": [float(h["longitude"]) for h in located],
+                        },
+                        height=260,
+                    )
+                else:
+                    empty_state("No hospital locations have been recorded yet.")
 
         with hospitals_col:
             with st.container(key="sa_card_hospitals"):
 
                 section_title("Partnered hospitals")
 
-                st.dataframe(
-                    {
-                        "Hospital": ["Hospital A", "Hospital B", "Hospital C"],
-                        "Doctors": [5, 10, 7],
-                    },
-                    hide_index=True,
-                    height=260,
-                )
+                if hospitals is None:
+                    empty_state("Hospitals could not be loaded.")
+
+                elif not hospitals:
+                    empty_state("No hospitals yet.")
+
+                else:
+                    st.dataframe(
+                        {
+                            "Hospital": [h.get("hospital_name") or "—" for h in hospitals],
+                            "Status": ["Active" if h.get("is_active") else "Inactive" for h in hospitals],
+                        },
+                        hide_index=True,
+                        height=260,
+                    )

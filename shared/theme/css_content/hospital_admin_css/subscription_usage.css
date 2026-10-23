@@ -15,41 +15,8 @@
    (same palette as the rest of the app)
    --------------------------------------------------------- */
 
-:root {
-    --ls-primary: #176b87;
-    --ls-primary-dark: #0f526a;
-    --ls-primary-soft: #eaf6fa;
-
-    --ls-accent: #2b8ca8;
-    --ls-success: #16845b;
-    --ls-success-soft: #eaf8f1;
-
-    --ls-warning: #b7791f;
-    --ls-warning-soft: #fff7e8;
-
-    --ls-danger: #c0392b;
-    --ls-danger-soft: #fff0ee;
-
-    --ls-text: #172b35;
-    --ls-text-soft: #52636c;
-    --ls-muted: #7a8990;
-
-    --ls-border: #dce6ea;
-    --ls-border-light: #e9eff2;
-
-    --ls-background: #f7fafb;
-    --ls-card: #ffffff;
-
-    --ls-radius-sm: 8px;
-    --ls-radius-md: 14px;
-    --ls-radius-lg: 20px;
-
-    --ls-shadow-sm:
-        0 2px 8px rgba(23, 55, 66, 0.05);
-
-    --ls-shadow-md:
-        0 8px 24px rgba(23, 55, 66, 0.08);
-}
+/* Colors, radii and shadows (--ls-*) come from shared/theme/tokens.json
+   via shared/theme/streamlit_theme.py. */
 
 /* ---------------------------------------------------------
    MATERIAL SYMBOLS — SAFETY NET
@@ -130,11 +97,7 @@ div[class*="st-key-sa_page"] [data-testid="stHeadingWithActionElements"] h3::bef
 
     border-radius: 2px;
 
-    background: linear-gradient(
-        180deg,
-        var(--ls-primary),
-        var(--ls-accent)
-    );
+    background: var(--ls-primary);
 
     margin-right: 2px;
 }
@@ -537,11 +500,11 @@ div[class*="st-key-sa_page"] .sa-pill-blue {
 }
 
 div[class*="st-key-sa_page"] .sa-pill-grey {
-    background: #f0f3f5;
+    background: var(--ls-surface-soft);
 
-    color: #64748b;
+    color: var(--ls-muted);
 
-    border-color: #dce4e8;
+    border-color: var(--ls-border);
 }
 
 /* ---------------------------------------------------------
@@ -563,11 +526,7 @@ div[class*="st-key-sa_page"] [data-testid="stProgressBar"] > div {
 div[class*="st-key-sa_page"] [data-testid="stProgressBar"] [role="progressbar"] > div {
     border-radius: 999px;
 
-    background: linear-gradient(
-        90deg,
-        var(--ls-primary),
-        var(--ls-accent)
-    );
+    background: var(--ls-primary);
 
     transition: width 0.4s ease;
 }
@@ -578,19 +537,11 @@ div[class*="st-key-sa_page"] [data-testid="stProgressBar"] [role="progressbar"] 
 
 div[class*="st-key-sa_page"] .su-bar-amber + div [role="progressbar"] > div,
 div[class*="st-key-sa_page"] [data-tone="amber"] [role="progressbar"] > div {
-    background: linear-gradient(
-        90deg,
-        #d99b3f,
-        var(--ls-warning)
-    ) !important;
+    background: var(--ls-warning) !important;
 }
 
 div[class*="st-key-sa_page"] [data-tone="red"] [role="progressbar"] > div {
-    background: linear-gradient(
-        90deg,
-        #d8614f,
-        var(--ls-danger)
-    ) !important;
+    background: var(--ls-danger) !important;
 }
 
 /* ---------------------------------------------------------

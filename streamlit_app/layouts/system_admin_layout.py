@@ -3,7 +3,7 @@ from components.sidebar import show_admin_sidebar
 from components.navbar import show_top_navbar
 
 from pages.system_administrator import dashboard, manage_user, configure_system_settings, reports, manage_subscriptions, training_data_review
-from streamlit_app.pages.system_administrator import manage_applications, manage_patients, profile, manage_examinations, manage_medical_records, manage_hospital
+from streamlit_app.pages.system_administrator import manage_applications, manage_patients, manage_examinations, manage_medical_records, manage_hospital
 from streamlit_app.pages import profile
 
 def show_system_admin_layout():
@@ -17,7 +17,12 @@ def show_system_admin_layout():
         "Reports": "Generate and view system reports and analytics.",
         "Manage Patients": "Manage Patient informations",
         "Manage Examinations": "Manage Patient Examinations",
-        "Profile": "Update your profile and admin-specific account preferences.",
+        "Medical Records": "Browse and manage patient medical records.",
+        "Manage Hospitals": "Partner hospitals, their status and subscriptions.",
+        "Manage Client Applications": "Review hospital applications to join LungSightAI.",
+        "Manage Subscriptions": "Subscription plans and hospital billing status.",
+        "Training": "Review consented, clinician-confirmed X-rays for model retraining.",
+        "Profile": "Update your profile, password and preferences.",
     }
     show_top_navbar(page_name=page, page_info=page_info.get(page, "Page information is not available."))
 

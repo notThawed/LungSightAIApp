@@ -417,7 +417,7 @@ def open_cancel_dialog(subscription):
 
     st.markdown(
         "<p style='font-size:0.9rem; line-height:1.55; "
-        "color:#5A6F7F; margin-bottom:1rem;'>"
+        "color:var(--ls-text-soft); margin-bottom:1rem;'>"
         "Cancelling your subscription means that LungSight "
         "will stop billing you after your current billing "
         "period ends."
@@ -437,7 +437,7 @@ def open_cancel_dialog(subscription):
     )
 
     st.markdown(
-        "<p style='font-size:0.85rem; color:#5A6F7F; "
+        "<p style='font-size:0.85rem; color:var(--ls-text-soft); "
         "margin-top:0.75rem;'>"
         "You can reactivate at any time before the end date."
         "</p>",
@@ -491,7 +491,7 @@ def open_reactivate_dialog(subscription):
 
     st.markdown(
         "<p style='font-size:0.9rem; line-height:1.55; "
-        "color:#5A6F7F; margin-bottom:1rem;'>"
+        "color:var(--ls-text-soft); margin-bottom:1rem;'>"
         "Reactivating will undo the scheduled cancellation. "
         "Your subscription will continue as normal."
         "</p>",
@@ -819,7 +819,7 @@ def _render_downgrade_content(
 
     st.markdown(
         "<p style='font-size:0.9rem; line-height:1.55; "
-        "color:#5A6F7F; margin-bottom:1rem;'>"
+        "color:var(--ls-text-soft); margin-bottom:1rem;'>"
         f"You're switching to <b>{safe(target_name)}</b>. "
         "This change takes effect at the end of your "
         "current billing period."
@@ -839,7 +839,7 @@ def _render_downgrade_content(
     )
 
     st.markdown(
-        "<p style='font-size:0.85rem; color:#5A6F7F; "
+        "<p style='font-size:0.85rem; color:var(--ls-text-soft); "
         "margin-top:0.75rem;'>"
         "You can undo this scheduled change any time before "
         "the switch date."
@@ -911,7 +911,7 @@ def _render_upgrade_content(
 
     st.markdown(
         "<p style='font-size:0.9rem; line-height:1.55; "
-        "color:#5A6F7F; margin-bottom:1rem;'>"
+        "color:var(--ls-text-soft); margin-bottom:1rem;'>"
         f"You're upgrading from <b>{safe(old_name)}</b> to "
         f"<b>{safe(target_name)}</b>. Your new features activate "
         "as soon as payment is confirmed."
@@ -934,7 +934,7 @@ def _render_upgrade_content(
     )
 
     st.markdown(
-        "<p style='font-size:0.85rem; color:#5A6F7F; "
+        "<p style='font-size:0.85rem; color:var(--ls-text-soft); "
         "margin-top:0.75rem;'>"
         "Your next renewal date and price will remain the same."
         "</p>",
@@ -996,7 +996,7 @@ def show_upgrade_success_screen():
     st.markdown(
         "<div style='text-align:center; margin-bottom:0.5rem;'>"
         "<span class='material-symbols-rounded' "
-        "style='font-size:56px; color:#2E8B6A;'>"
+        "style='font-size:56px; color:var(--ls-success);'>"
         "upgrade"
         "</span>"
         "</div>",

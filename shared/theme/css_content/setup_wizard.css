@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 /* ==========================================================
@@ -6,23 +5,23 @@
    ========================================================== */
 
 :root {
-  --ap-film:       #F2F6F7;
-  --ap-white:      #FFFFFF;
-  --ap-ink:        #12283A;
-  --ap-slate:      #5A6F7F;
-  --ap-mist:       #DDE8EB;
-  --ap-teal:       #0F7C88;
-  --ap-teal-dark:  #0B626C;
-  --ap-teal-soft:  #E8F4F6;
-  --ap-green:      #2E8B6A;
-  --ap-green-soft: #EAF6F1;
+  --ap-film:       var(--ls-background);
+  --ap-white:      var(--ls-surface);
+  --ap-ink:        var(--ls-ink);
+  --ap-slate:      var(--ls-text-soft);
+  --ap-mist:       var(--ls-border);
+  --ap-teal:       var(--ls-primary);
+  --ap-teal-dark:  var(--ls-primary-dark);
+  --ap-teal-soft:  var(--ls-primary-soft);
+  --ap-green:      var(--ls-success);
+  --ap-green-soft: var(--ls-success-soft);
 
-  --ap-font-display: 'Fraunces', Georgia, serif;
-  --ap-font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ap-font-display: var(--ls-font-display);
+  --ap-font-body:    var(--ls-font);
 
-  --ap-radius-sm: 8px;
-  --ap-radius-md: 12px;
-  --ap-radius-lg: 16px;
+  --ap-radius-sm: var(--ls-radius-sm);
+  --ap-radius-md: var(--ls-radius-md);
+  --ap-radius-lg: var(--ls-radius-lg);
 }
 
 
@@ -710,7 +709,7 @@
   margin-bottom: 1rem;
   padding: 0.7rem 0.9rem;
   background: var(--ap-teal-soft);
-  border: 1px solid #CFE7EB;
+  border: 1px solid var(--ls-border-strong);
   border-left: 3px solid var(--ap-teal);
   border-radius: var(--ap-radius-sm);
   font-size: 0.85rem;

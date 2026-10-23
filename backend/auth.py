@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# auth placeholder
-=======
 from backend.supabase_client import (
     supabase,
     admin_supabase,
@@ -464,4 +461,3 @@ def logout_user():
 
     supabase.auth.sign_out()
 
->>>>>>> origin/LungSightV2

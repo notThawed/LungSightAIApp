@@ -12,6 +12,8 @@ Session keys:
 
 import streamlit as st
 
+from shared.ai_labels import AI_RESULT_LABELS
+
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
@@ -59,10 +61,7 @@ STATUS_DISPLAY = {
     "used_in_training": ("Used in Training", "blue"),
 }
 
-RISK_DISPLAY = {
-    "positive": ("HIGH", "red"),
-    "negative": ("LOW", "green"),
-}
+RISK_DISPLAY = AI_RESULT_LABELS
 
 
 # ============================================================
@@ -193,9 +192,9 @@ def render_stat_card(label, value, icon, tone="blue"):
         st.markdown(
             "<div class='pr-hero-card' style='padding:16px;'>"
             f"<span class='material-symbols-rounded' "
-            f"style='font-size:28px;color:#475569;'>{icon}</span>"
+            f"style='font-size:28px;color:var(--ls-text-soft);'>{icon}</span>"
             f"<p style='margin:8px 0 4px 0;font-size:0.85rem;"
-            f"color:#64748b;'>{label}</p>"
+            f"color:var(--ls-muted);'>{label}</p>"
             f"<p style='margin:0;font-size:1.8rem;font-weight:700;'>"
             f"{value}</p>"
             "</div>",
@@ -245,7 +244,7 @@ def render_candidate_row(row):
 
         with cols[2]:
             override_badge = (
-                " <span style='color:#d97706;font-weight:700;'>"
+                " <span style='color:var(--ls-warning);font-weight:700;'>"
                 "⚠️</span>"
                 if is_override
                 else ""
@@ -549,7 +548,7 @@ def render_ai_card(row):
         f"<b>{ai_label}</b>"
         "</div>"
         "<div class='pr-hero-row'>"
-        "<span>Risk Level</span>"
+        "<span>AI result</span>"
         f"<div>{pill(risk_label, risk_tone)}</div>"
         "</div>"
         "<div class='pr-hero-row'>"
@@ -590,7 +589,7 @@ def render_doctor_card(row):
     override_note = (
         "<div class='pr-hero-row'>"
         "<span>Override</span>"
-        "<b style='color:#d97706;'>⚠️ Yes — doctor disagreed with AI</b>"
+        "<b style='color:var(--ls-warning);'>⚠️ Yes — doctor disagreed with AI</b>"
         "</div>"
         if is_override
         else ""
