@@ -341,20 +341,26 @@
    ---------------------------------------------------------- */
 
 .sa-pill {
-  display: inline-block;
-  padding: 0.18rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.76rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.015em;
+  line-height: 1.25;
   white-space: nowrap;
+  border: 1px solid transparent;
+  transition: all 0.15s ease-in-out;
 }
 
-.sa-pill-green { background: var(--sa-green-soft); color: var(--sa-green); }
-.sa-pill-amber { background: var(--sa-amber-soft); color: var(--sa-amber); }
-.sa-pill-red   { background: var(--sa-red-soft);   color: var(--sa-red); }
-.sa-pill-blue  { background: var(--sa-blue-soft);  color: var(--sa-blue); }
-.sa-pill-teal  { background: var(--sa-teal-soft);  color: var(--sa-teal-dark); }
-.sa-pill-grey  { background: #EEF2F4;              color: var(--sa-slate); }
+.sa-pill-green { background: rgba(16, 185, 129, 0.12); color: #047857; border-color: rgba(16, 185, 129, 0.28); }
+.sa-pill-amber { background: rgba(245, 158, 11, 0.12); color: #b45309; border-color: rgba(245, 158, 11, 0.28); }
+.sa-pill-red   { background: rgba(239, 68, 68, 0.12);  color: #b91c1c; border-color: rgba(239, 68, 68, 0.28); }
+.sa-pill-blue  { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; border-color: rgba(59, 130, 246, 0.28); }
+.sa-pill-teal  { background: rgba(20, 184, 166, 0.12); color: #0f766e; border-color: rgba(20, 184, 166, 0.28); }
+.sa-pill-grey  { background: rgba(100, 116, 139, 0.10); color: #334155; border-color: rgba(100, 116, 139, 0.22); }
 
 
 /* ----------------------------------------------------------

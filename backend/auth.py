@@ -250,6 +250,7 @@ def login_user(email, password):
 
         "email":
             response.user.email,
+
         # ----------------------------------------------------
         # Name
         # ----------------------------------------------------
@@ -452,4 +453,3 @@ def logout_user():
     """Sign out from Supabase."""
 
     supabase.auth.sign_out()
-

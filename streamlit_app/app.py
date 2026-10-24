@@ -50,26 +50,40 @@ def hide_streamlit_sidebar():
 # such as:
 #
 #     from backend.backend_utils.hospital_utils import ...
-#     from shared.theme.streamlit_theme import ...
+#     from shared.theme.theme_utils import ...
 #
 # to work correctly on Streamlit Cloud.
 # ==================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+APP_DIR = Path(__file__).resolve().parent
+
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
 
 
 # ==================================================
 # APPLICATION IMPORTS
 # ==================================================
 
+import importlib
+import auth.login
+importlib.reload(auth.login)
 from auth.login import show_login
 
-from shared.theme.streamlit_theme import (
-    set_theme,
-    apply_theme,
+import screens.homepage
+importlib.reload(screens.homepage)
+from screens.homepage import show_homepage
+
+# NEW — hospital-wide theme (replaces the old per-user theme)
+from shared.theme.theme_utils import apply_theme as apply_hospital_theme
+
+from backend.backend_utils.hospital_utils import (
+    get_hospital_by_id,
 )
 
 from layouts.physician_layout import show_physician_layout
@@ -213,7 +227,7 @@ if "user" not in st.session_state:
 
 
 # ==================================================
-# LOGIN
+# PUBLIC LANDING & LOGIN
 # ==================================================
 
 if not st.session_state.logged_in:
@@ -233,7 +247,12 @@ if not st.session_state.logged_in:
 
     hide_streamlit_sidebar()
 
-    show_login()
+    public_page = st.session_state.get("public_page", "home")
+
+    if public_page == "login":
+        show_login()
+    else:
+        show_homepage()
 
     st.stop()
 
@@ -257,16 +276,31 @@ if not user:
 
 
 # --------------------------------------------------
-# Theme
+# Theme — hospital-wide color
 # --------------------------------------------------
 
-user_theme = user.get(
-    "theme_preference",
-    "light",
-)
+# Load the hospital theme color into the session
+# so apply_hospital_theme() can read it.
+if "hospital_theme_color" not in user:
 
-set_theme(user_theme)
-apply_theme()
+    hospital_id_for_theme = user.get("hospital_id")
+
+    if hospital_id_for_theme:
+
+        _theme_hospital = get_hospital_by_id(
+            hospital_id_for_theme
+        )
+
+        if _theme_hospital:
+
+            user["hospital_theme_color"] = (
+                _theme_hospital.get("theme_color")
+                or "#0ea5e9"
+            )
+
+            st.session_state.user = user
+
+apply_hospital_theme()
 
 
 # --------------------------------------------------
