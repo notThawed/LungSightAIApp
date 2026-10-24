@@ -1,0 +1,1390 @@
+/* ============================================================
+   LUNGSIGHT HEALTHCARE - WIDESCREEN ENTERPRISE HOMEPAGE
+   shared/theme/css_content/homepage.css
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   GOOGLE FONTS & MATERIAL SYMBOLS
+   ------------------------------------------------------------ */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,-50..200&display=swap');
+
+/* ------------------------------------------------------------
+   DESIGN TOKENS - WIDESCREEN CLINICAL DESIGN SYSTEM
+   ------------------------------------------------------------ */
+:root {
+    /* Brand Clinical Teals */
+    --brand-teal:         #0F7C88;
+    --brand-teal-light:   #179EAE;
+    --brand-teal-dark:    #095963;
+    --brand-teal-deep:    #05363D;
+    --brand-cyan:         #23D2E5;
+    --brand-teal-ice:     #E8F6F8;
+    --brand-glow:         rgba(15, 124, 136, 0.18);
+    --brand-cyan-glow:    rgba(35, 210, 229, 0.35);
+
+    /* Radiography & Deep Slates */
+    --slate-deep:         #061824;
+    --navy-ink:           #081E2C;
+    --navy-surface:       #0D283C;
+    --navy-card:          #123650;
+    --navy-border:        #1A4769;
+
+    /* Medical Canvas & Surfaces */
+    --film-bg:            #F5F8FA;
+    --surface-white:      #FFFFFF;
+    --surface-card:       #F9FBFC;
+    --border-soft:        #DCE7EB;
+    --border-subtle:      #EDF3F5;
+
+    /* High-Contrast Typography */
+    --text-primary:       #081E2E;
+    --text-secondary:     #4A677B;
+    --text-muted:         #7C96A7;
+    --text-white:         #FFFFFF;
+    --text-cyan:          #A4EEF9;
+    --text-dark-dim:      #CEE2ED;
+
+    /* Live Status Indicators */
+    --status-online:      #10B981;
+    --status-glow:        rgba(16, 185, 129, 0.35);
+
+    /* Typography */
+    --font-heading:       'Fraunces', Georgia, serif;
+    --font-body:          'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Corner Geometry */
+    --radius-sm:          10px;
+    --radius-md:          16px;
+    --radius-lg:          24px;
+    --radius-xl:          32px;
+
+    /* Realistic Multi-Layer Shadows */
+    --shadow-soft:        0 2px 8px rgba(8, 28, 42, 0.04);
+    --shadow-card:        0 1px 0 0 rgba(255, 255, 255, 1) inset, 0 16px 44px -8px rgba(8, 30, 44, 0.08), 0 2px 6px rgba(8, 30, 44, 0.03);
+    --shadow-hover:       0 1px 0 0 rgba(255, 255, 255, 1) inset, 0 24px 60px -10px rgba(8, 30, 44, 0.14), 0 6px 16px rgba(8, 30, 44, 0.05);
+    --shadow-dark:        0 28px 72px -12px rgba(6, 24, 36, 0.58), 0 1px 0 0 rgba(255, 255, 255, 0.12) inset;
+}
+
+/* ============================================================
+   WIDESCREEN PAGE RESET & ATMOSPHERIC CANVAS
+   ============================================================ */
+html {
+    scroll-behavior: smooth !important;
+}
+
+.ls-section-anchor {
+    display: block;
+    position: relative;
+    top: -60px;
+    visibility: hidden;
+    scroll-margin-top: 70px;
+}
+
+.stApp {
+    background-color: var(--film-bg);
+    background-image:
+        radial-gradient(circle at 1px 1px, rgba(15, 124, 136, 0.07) 1px, transparent 0),
+        radial-gradient(circle at 15% 0%, rgba(15, 124, 136, 0.07) 0%, transparent 45%),
+        radial-gradient(circle at 85% 60%, rgba(35, 210, 229, 0.06) 0%, transparent 45%),
+        radial-gradient(circle at 50% 100%, rgba(8, 30, 44, 0.03) 0%, transparent 60%);
+    background-size: 28px 28px, 100% 100%, 100% 100%, 100% 100%;
+    background-attachment: fixed;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+#MainMenu,
+footer,
+[data-testid="stHeader"] {
+    display: none !important;
+}
+
+/* Hide Streamlit automatic heading anchor hover links */
+[data-testid="stHeaderActionElements"],
+.stMarkdown a.header-anchor,
+.stMarkdown h1 a,
+.stMarkdown h2 a,
+.stMarkdown h3 a,
+.stMarkdown h4 a {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Generous Widescreen Canvas (1560px max-width, strictly centered) */
+.block-container {
+    max-width: 1560px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-top: 1.5rem !important;
+    padding-bottom: 5rem !important;
+    padding-left: 2.6rem !important;
+    padding-right: 2.6rem !important;
+}
+
+/* ============================================================
+   MATERIAL SYMBOLS
+   ============================================================ */
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded', sans-serif !important;
+    font-weight: 500;
+    font-style: normal;
+    font-size: 20px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga' 1;
+    font-feature-settings: 'liga' 1;
+    -webkit-font-smoothing: antialiased;
+    vertical-align: middle;
+}
+
+/* ============================================================
+   UNIFIED FLOATING NAVBAR (Top Header)
+   ============================================================ */
+.st-key-homepage_navbar {
+    background: rgba(255, 255, 255, 0.94) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(215, 228, 235, 0.92) !important;
+    border-radius: 24px !important;
+    padding: 0.75rem 2rem !important;
+    box-shadow: 0 10px 34px rgba(8, 28, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+    margin-bottom: 2.6rem !important;
+}
+
+.st-key-homepage_navbar [data-testid="column"] {
+    display: flex;
+    align-items: center;
+}
+
+.ls-nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ls-nav-logo-img {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+}
+
+.ls-nav-fallback-icon {
+    font-size: 34px !important;
+    color: var(--brand-teal) !important;
+}
+
+.ls-nav-title {
+    font-family: var(--font-heading);
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--navy-ink);
+    letter-spacing: -0.015em;
+    margin: 0;
+}
+
+.ls-nav-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--brand-teal-ice);
+    border: 1px solid rgba(15, 124, 136, 0.2);
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.74rem;
+    font-weight: 750;
+    color: var(--brand-teal-dark);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.ls-nav-tag .material-symbols-rounded {
+    font-size: 14px !important;
+    color: var(--brand-teal);
+}
+
+.ls-nav-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 34px;
+    width: 100%;
+}
+
+.ls-nav-link {
+    padding: 6px 14px;
+    border-radius: 14px;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 650;
+    text-decoration: none;
+    outline: none !important;
+    transition: all 0.2s ease;
+}
+
+.ls-nav-link:hover {
+    color: var(--brand-teal);
+    background: var(--brand-teal-ice);
+}
+
+.ls-nav-link:focus,
+.ls-nav-link:focus-visible,
+.ls-nav-link:active {
+    outline: none !important;
+    box-shadow: none !important;
+    color: var(--brand-teal) !important;
+    background: var(--brand-teal-ice) !important;
+}
+
+/* Navbar Sign In Button */
+.st-key-nav_signin_btn button {
+    width: 100% !important;
+    background: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-teal-dark) 100%) !important;
+    color: #FFFFFF !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 14px !important;
+    padding: 0.65rem 1.4rem !important;
+    font-family: var(--font-body) !important;
+    font-weight: 800 !important;
+    font-size: 0.92rem !important;
+    box-shadow: 0 4px 16px rgba(15, 124, 136, 0.3) !important;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.st-key-nav_signin_btn button:hover {
+    background: linear-gradient(135deg, var(--brand-teal-light) 0%, var(--brand-teal) 100%) !important;
+    box-shadow: 0 8px 24px rgba(15, 124, 136, 0.42) !important;
+    transform: translateY(-2px) !important;
+}
+
+.st-key-nav_signin_btn button p {
+    color: #FFFFFF !important;
+    font-weight: 800 !important;
+}
+
+/* ============================================================
+   HERO SECTION
+   ============================================================ */
+.st-key-hero_container {
+    margin-bottom: 4.4rem;
+}
+
+.ls-hero-kicker-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--brand-teal-ice);
+    border: 1px solid rgba(15, 124, 136, 0.22);
+    padding: 7px 18px;
+    border-radius: 24px;
+    font-size: 0.78rem;
+    font-weight: 750;
+    color: var(--brand-teal-dark);
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.02em;
+}
+
+.ls-hero-beacon {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--status-online);
+    box-shadow: 0 0 0 3px var(--status-glow);
+    animation: ls-beacon-pulse 2s infinite;
+}
+
+@keyframes ls-beacon-pulse {
+    0%, 100% { transform: scale(0.95); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.45); }
+    50% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+}
+
+.ls-hero-title {
+    font-family: var(--font-heading);
+    font-size: 3.65rem;
+    font-weight: 600;
+    line-height: 1.12;
+    color: var(--navy-ink);
+    letter-spacing: -0.03em;
+    margin: 0 0 1.4rem 0;
+}
+
+.ls-hero-title span {
+    background: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-teal-light) 60%, var(--brand-cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.ls-hero-subtitle {
+    font-size: 1.16rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    max-width: 620px;
+    margin: 0 0 2.4rem 0;
+    font-weight: 450;
+}
+
+/* Hero CTA Row */
+.st-key-hero_portal_btn button {
+    width: 100% !important;
+    height: 52px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: linear-gradient(180deg, var(--brand-teal-light) 0%, var(--brand-teal) 100%) !important;
+    color: #FFFFFF !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 16px !important;
+    padding: 0 1.8rem !important;
+    font-weight: 800 !important;
+    font-size: 0.98rem !important;
+    line-height: 1 !important;
+    box-shadow: 0 8px 26px rgba(15, 124, 136, 0.36) !important;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.st-key-hero_portal_btn button:hover {
+    background: linear-gradient(180deg, var(--brand-cyan) 0%, var(--brand-teal) 100%) !important;
+    box-shadow: 0 12px 32px rgba(15, 124, 136, 0.46) !important;
+    transform: translateY(-2px) !important;
+}
+
+.st-key-hero_portal_btn button p {
+    color: #FFFFFF !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+}
+
+.st-key-hero_plans_btn button {
+    width: 100% !important;
+    height: 52px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #FFFFFF !important;
+    color: var(--brand-teal) !important;
+    border: 1.5px solid var(--border-soft) !important;
+    border-radius: 16px !important;
+    padding: 0 1.6rem !important;
+    font-weight: 750 !important;
+    font-size: 0.98rem !important;
+    line-height: 1 !important;
+    box-shadow: var(--shadow-soft) !important;
+    transition: all 0.22s ease !important;
+}
+
+.st-key-hero_plans_btn button:hover {
+    background: var(--brand-teal-ice) !important;
+    border-color: var(--brand-teal) !important;
+    box-shadow: 0 4px 18px rgba(15, 124, 136, 0.18) !important;
+    transform: translateY(-2px) !important;
+}
+
+.st-key-hero_plans_btn button p {
+    color: var(--brand-teal) !important;
+    font-weight: 750 !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+}
+
+/* Hero Metrics Strip */
+.ls-hero-metrics {
+    display: flex;
+    align-items: center;
+    gap: 36px;
+    padding-top: 2rem;
+    margin-top: 2.2rem;
+    border-top: 1px solid var(--border-soft);
+}
+
+.ls-metric-item b {
+    display: block;
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--navy-ink);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+.ls-metric-item span {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 550;
+}
+
+/* Hero Showcase Card (Right Side) */
+.ls-hero-image-card {
+    position: relative;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: var(--slate-deep);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: var(--shadow-dark), 0 0 50px rgba(35, 210, 229, 0.16);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ls-hero-image-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 34px 85px -12px rgba(6, 24, 36, 0.75), 0 0 60px rgba(35, 210, 229, 0.22);
+}
+
+.ls-hero-image-card img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+}
+
+.ls-hero-floating-badge {
+    position: absolute;
+    bottom: 22px;
+    left: 22px;
+    right: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.5rem;
+    background: rgba(7, 24, 38, 0.9);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 20px;
+    color: #FFFFFF;
+}
+
+.ls-hero-badge-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ls-hero-badge-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(35, 210, 229, 0.2);
+    color: var(--brand-cyan);
+}
+
+.ls-hero-badge-text b {
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 750;
+    color: #FFFFFF;
+}
+
+.ls-hero-badge-text span {
+    font-size: 0.78rem;
+    color: var(--text-dark-dim);
+}
+
+.ls-hero-badge-tag {
+    background: rgba(16, 185, 129, 0.22);
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    color: #10B981;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 5px 14px;
+    border-radius: 14px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+/* ============================================================
+   SECTION HEADERS
+   ============================================================ */
+.ls-section-header {
+    text-align: center !important;
+    margin-bottom: 2.4rem !important;
+}
+
+.ls-section-kicker {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: var(--brand-teal-ice) !important;
+    border: 1px solid rgba(15, 124, 136, 0.2) !important;
+    color: var(--brand-teal) !important;
+    font-size: 0.8rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.18em !important;
+    text-transform: uppercase !important;
+    padding: 6px 18px !important;
+    border-radius: 22px !important;
+    margin: 0 auto 0.8rem auto !important;
+    text-align: center !important;
+}
+
+.ls-section-title {
+    font-family: var(--font-heading) !important;
+    font-size: 2.85rem !important;
+    font-weight: 600 !important;
+    color: var(--navy-ink) !important;
+    letter-spacing: -0.025em !important;
+    margin: 0 auto 0.9rem auto !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+.ls-section-desc {
+    font-size: 1.06rem !important;
+    color: var(--text-secondary) !important;
+    max-width: 820px !important;
+    margin: 0 auto !important;
+    line-height: 1.62 !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+/* Flex Column Layout & Equal Heights */
+.st-key-features_section [data-testid="column"],
+.st-key-pipeline_section [data-testid="column"],
+.st-key-subscriptions_section [data-testid="column"],
+.st-key-trust_section [data-testid="column"] {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.st-key-features_section [data-testid="column"] > div,
+.st-key-pipeline_section [data-testid="column"] > div,
+.st-key-subscriptions_section [data-testid="column"] > div,
+.st-key-trust_section [data-testid="column"] > div {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+}
+
+.st-key-features_section [data-testid="stMarkdownContainer"],
+.st-key-pipeline_section [data-testid="stMarkdownContainer"],
+.st-key-trust_section [data-testid="stMarkdownContainer"] {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+}
+
+/* ============================================================
+   FEATURE CARDS GRID (4 Pillars)
+   ============================================================ */
+.st-key-features_section {
+    margin-bottom: 4.6rem;
+}
+
+.ls-features-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 1.8rem !important;
+    margin-bottom: 4.6rem !important;
+    width: 100% !important;
+    align-items: stretch !important;
+}
+
+.ls-feature-card {
+    background: #FFFFFF !important;
+    border: 1px solid var(--border-soft) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 2.2rem 1.8rem !important;
+    box-shadow: var(--shadow-card) !important;
+    transition: all 0.26s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    height: 100% !important;
+    min-height: 270px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+}
+
+.ls-feature-card:hover {
+    border-color: rgba(15, 124, 136, 0.4) !important;
+    box-shadow: var(--shadow-hover) !important;
+    transform: translateY(-6px) !important;
+}
+
+.ls-feature-icon-box {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 58px !important;
+    height: 58px !important;
+    border-radius: 18px !important;
+    background: linear-gradient(135deg, var(--brand-teal-ice) 0%, rgba(23, 158, 174, 0.18) 100%) !important;
+    border: 1px solid rgba(15, 124, 136, 0.22) !important;
+    color: var(--brand-teal) !important;
+    margin: 0 auto 1.2rem auto !important;
+    box-shadow: 0 4px 14px rgba(15, 124, 136, 0.12) !important;
+    flex-shrink: 0 !important;
+}
+
+.ls-feature-icon-box .material-symbols-rounded {
+    font-size: 28px !important;
+    color: var(--brand-teal) !important;
+}
+
+.ls-feature-card h3 {
+    font-family: var(--font-heading) !important;
+    font-size: 1.3rem !important;
+    font-weight: 600 !important;
+    color: var(--navy-ink) !important;
+    margin: 0 auto 0.7rem auto !important;
+    letter-spacing: -0.015em !important;
+    min-height: 2.8rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    line-height: 1.25 !important;
+    width: 100% !important;
+}
+
+.ls-feature-card p {
+    font-size: 0.94rem !important;
+    line-height: 1.6 !important;
+    color: var(--text-secondary) !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+/* ============================================================
+   HOW IT WORKS (3-Step Clinical Pipeline)
+   ============================================================ */
+.st-key-pipeline_section {
+    margin-bottom: 4.6rem;
+    padding: 4.5rem 4rem;
+    background: linear-gradient(180deg, var(--navy-surface) 0%, var(--slate-deep) 100%);
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: var(--shadow-dark);
+    color: #FFFFFF;
+    text-align: center;
+}
+
+.st-key-pipeline_section .ls-section-title {
+    color: #FFFFFF !important;
+    text-align: center !important;
+}
+
+.st-key-pipeline_section .ls-section-desc {
+    color: var(--text-dark-dim) !important;
+    text-align: center !important;
+    margin: 0 auto !important;
+}
+
+.ls-pipeline-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 1.8rem !important;
+    width: 100% !important;
+    align-items: stretch !important;
+    margin-top: 1rem !important;
+}
+
+.ls-step-card {
+    position: relative;
+    padding: 2.4rem 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(12px);
+    transition: all 0.26s ease;
+    height: 100%;
+    min-height: 270px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.ls-step-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(35, 210, 229, 0.4);
+    transform: translateY(-5px);
+}
+
+.ls-step-number {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.76rem !important;
+    font-weight: 800 !important;
+    color: var(--brand-cyan) !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    margin: 0 auto 1.2rem auto !important;
+    background: rgba(35, 210, 229, 0.14) !important;
+    padding: 6px 16px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(35, 210, 229, 0.3) !important;
+}
+
+.ls-step-card h3 {
+    font-family: var(--font-heading) !important;
+    font-size: 1.35rem !important;
+    font-weight: 600 !important;
+    color: #FFFFFF !important;
+    margin: 0 auto 0.8rem auto !important;
+    min-height: 2.4rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    line-height: 1.25 !important;
+    width: 100% !important;
+}
+
+.ls-step-card p {
+    font-size: 0.92rem !important;
+    line-height: 1.62 !important;
+    color: var(--text-dark-dim) !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+/* ============================================================
+   HOSPITAL SUBSCRIPTION PLANS (Transferred from login.css)
+   ============================================================ */
+.st-key-subscriptions_section {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 auto 4.6rem auto !important;
+    padding: 0 !important;
+}
+
+.ls-subscriptions-header {
+    width: 100% !important;
+    margin: 0 auto 2.4rem auto !important;
+    text-align: center !important;
+}
+
+.ls-subscriptions-kicker {
+    display: inline-block !important;
+    margin: 0 auto 0.8rem auto !important;
+    color: var(--brand-teal) !important;
+    font-family: var(--font-body) !important;
+    font-size: 0.8rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.2em !important;
+    text-transform: uppercase !important;
+    background: var(--brand-teal-ice);
+    border: 1px solid rgba(15, 124, 136, 0.2);
+    padding: 6px 18px;
+    border-radius: 22px;
+    text-align: center !important;
+}
+
+.ls-subscriptions-title {
+    margin: 0.4rem auto 0.8rem auto !important;
+    color: var(--navy-ink) !important;
+    font-family: var(--font-heading) !important;
+    font-size: 2.85rem !important;
+    font-weight: 600 !important;
+    line-height: 1.15 !important;
+    letter-spacing: -0.025em !important;
+    text-align: center !important;
+}
+
+.ls-subscriptions-subtitle {
+    margin: 0 auto !important;
+    max-width: 800px !important;
+    color: var(--text-secondary) !important;
+    font-size: 1.06rem !important;
+    line-height: 1.62 !important;
+    text-align: center !important;
+}
+
+/* Dark Radiography SaaS Tier Cards */
+[class*="st-key-plan_card_"] {
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: linear-gradient(180deg, var(--navy-surface) 0%, var(--slate-deep) 100%);
+    border: 1px solid var(--navy-border);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 2.2rem;
+    box-shadow: var(--shadow-dark);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.28s ease,
+                border-color 0.28s ease;
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+[class*="st-key-plan_card_"] > div[data-testid="stVerticalBlock"] {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    height: 100% !important;
+}
+
+[class*="st-key-plan_card_"] .stButton {
+    margin-top: auto !important;
+}
+
+[class*="st-key-plan_card_"]:hover {
+    transform: translateY(-8px);
+    border-color: var(--brand-cyan);
+    box-shadow:
+        0 0 0 1px rgba(35, 210, 229, 0.4),
+        0 28px 60px -10px rgba(0, 0, 0, 0.72),
+        0 0 36px rgba(35, 210, 229, 0.24);
+}
+
+[class*="st-key-plan_card_"] .ls-plan-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 1.4rem auto;
+    border-radius: 16px;
+    background: rgba(35, 210, 229, 0.14);
+    border: 1px solid rgba(35, 210, 229, 0.35);
+    color: var(--brand-cyan);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+[class*="st-key-plan_card_"] .ls-plan-icon .material-symbols-rounded {
+    font-size: 26px !important;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-name {
+    margin: 0 !important;
+    color: #FFFFFF !important;
+    font-family: var(--font-heading) !important;
+    font-size: 1.65rem !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-desc {
+    min-height: 3rem;
+    margin: 0.55rem auto 1.4rem auto !important;
+    color: var(--text-dark-dim) !important;
+    font-size: 0.9rem !important;
+    line-height: 1.54 !important;
+    text-align: center !important;
+    max-width: 320px;
+}
+
+.ls-plan-price-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0 auto;
+    text-align: center;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-price {
+    margin: 0 !important;
+    color: #FFFFFF !important;
+    font-size: 2.25rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    font-variant-numeric: tabular-nums;
+    text-align: center !important;
+}
+
+.ls-plan-price-row span {
+    color: var(--brand-cyan) !important;
+    font-size: 0.88rem !important;
+    font-weight: 700 !important;
+}
+
+[class*="_popular"] {
+    border-color: rgba(35, 210, 229, 0.65) !important;
+    box-shadow: 0 0 0 1px rgba(35, 210, 229, 0.4), 0 28px 60px -10px rgba(0, 0, 0, 0.72), 0 0 36px rgba(35, 210, 229, 0.24) !important;
+    transform: translateY(-4px);
+}
+
+.ls-plan-popular-badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, var(--brand-cyan) 0%, var(--brand-teal) 100%);
+    color: #061824;
+    font-size: 0.72rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    padding: 5px 12px;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(35, 210, 229, 0.4);
+}
+
+.ls-plan-popular-badge .material-symbols-rounded {
+    font-size: 13px !important;
+    color: #061824 !important;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-yearly {
+    margin: 0.35rem auto 1.5rem auto !important;
+    color: var(--text-dark-dim) !important;
+    font-size: 0.84rem !important;
+    text-align: center !important;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-features {
+    width: 100%;
+    margin: 0 0 1.8rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+[class*="st-key-plan_card_"] .ls-plan-feature {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 46px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0 0.4rem;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-feature span {
+    color: var(--text-dark-dim) !important;
+    font-size: 0.88rem !important;
+}
+
+[class*="st-key-plan_card_"] .ls-plan-feature b {
+    color: #FFFFFF !important;
+    font-size: 0.92rem !important;
+    font-weight: 750 !important;
+    font-variant-numeric: tabular-nums;
+}
+
+[class*="st-key-plan_card_"] button {
+    width: 100% !important;
+    background: rgba(35, 210, 229, 0.08) !important;
+    border: 1.5px solid rgba(35, 210, 229, 0.5) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 0.82rem 1.3rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+[class*="st-key-plan_card_"] button p {
+    color: #FFFFFF !important;
+    font-family: var(--font-body) !important;
+    font-weight: 750 !important;
+    font-size: 0.94rem !important;
+    text-align: center !important;
+    margin: 0 !important;
+}
+
+[class*="st-key-plan_card_"] button:hover {
+    background: var(--brand-teal) !important;
+    border-color: var(--brand-cyan) !important;
+    box-shadow: 0 6px 20px rgba(35, 210, 229, 0.4) !important;
+    transform: translateY(-2px) !important;
+}
+
+[class*="st-key-plan_card_"] button:active {
+    transform: translateY(0) !important;
+}
+
+/* ============================================================
+   ABOUT US SECTION (Elevated Clinical Narrative)
+   ============================================================ */
+.ls-about-section {
+    margin-bottom: 4.6rem;
+}
+
+.ls-about-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 2rem !important;
+    width: 100% !important;
+    align-items: stretch !important;
+}
+
+.ls-about-card {
+    background: linear-gradient(180deg, #FFFFFF 0%, #F9FDFE 100%) !important;
+    border: 1px solid var(--border-soft) !important;
+    border-top: 3px solid var(--brand-teal) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 2.2rem 1.8rem !important;
+    box-shadow: var(--shadow-card) !important;
+    transition: all 0.26s ease !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    height: 100% !important;
+    min-height: 270px !important;
+    width: 100% !important;
+}
+
+.ls-about-card:hover {
+    border-color: rgba(15, 124, 136, 0.35) !important;
+    border-top-color: var(--brand-cyan) !important;
+    box-shadow: var(--shadow-hover) !important;
+    transform: translateY(-5px) !important;
+}
+
+.ls-about-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 18px !important;
+    background: var(--brand-teal-ice) !important;
+    border: 1px solid rgba(15, 124, 136, 0.2) !important;
+    color: var(--brand-teal) !important;
+    margin: 0 auto 1.2rem auto !important;
+    flex-shrink: 0 !important;
+}
+
+.ls-about-icon .material-symbols-rounded {
+    font-size: 27px !important;
+    color: var(--brand-teal) !important;
+}
+
+.ls-about-card h3 {
+    font-family: var(--font-heading) !important;
+    font-size: 1.35rem !important;
+    font-weight: 600 !important;
+    color: var(--navy-ink) !important;
+    margin: 0 auto 0.8rem auto !important;
+    min-height: 2.4rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    line-height: 1.25 !important;
+    width: 100% !important;
+}
+
+.ls-about-card p {
+    font-size: 0.94rem !important;
+    line-height: 1.65 !important;
+    color: var(--text-secondary) !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+/* ============================================================
+   INSTITUTIONAL TRUST & COMPLIANCE BANNER
+   ============================================================ */
+.st-key-trust_section {
+    margin-bottom: 4.6rem !important;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FCFD 100%) !important;
+    border: 1px solid var(--border-soft) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: 2.6rem 2.4rem !important;
+    box-shadow: var(--shadow-card) !important;
+    text-align: center !important;
+}
+
+.ls-trust-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 1.5rem !important;
+    width: 100% !important;
+    align-items: stretch !important;
+    margin-top: 1rem !important;
+}
+
+.ls-trust-card {
+    text-align: center !important;
+    padding: 1.5rem 1.1rem !important;
+    border-radius: var(--radius-md) !important;
+    transition: all 0.22s ease !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    height: 100% !important;
+    min-height: 170px !important;
+    width: 100% !important;
+}
+
+.ls-trust-card:hover {
+    background: rgba(234, 247, 249, 0.6) !important;
+    transform: translateY(-3px) !important;
+}
+
+.ls-trust-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 16px !important;
+    background: var(--brand-teal-ice) !important;
+    color: var(--brand-teal) !important;
+    margin: 0 auto 0.9rem auto !important;
+    flex-shrink: 0 !important;
+}
+
+.ls-trust-icon .material-symbols-rounded {
+    font-size: 26px !important;
+    color: var(--brand-teal) !important;
+}
+
+.ls-trust-card h4 {
+    font-family: var(--font-heading) !important;
+    font-size: 1.15rem !important;
+    font-weight: 600 !important;
+    color: var(--navy-ink) !important;
+    margin: 0 auto 0.5rem auto !important;
+    min-height: 2.6rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1.3 !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+.ls-trust-card p {
+    font-size: 0.88rem !important;
+    color: var(--text-secondary) !important;
+    line-height: 1.55 !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+/* ============================================================
+   UNIVERSAL CARD & CONTENT CENTERING GUARANTEES
+   ============================================================ */
+.ls-features-grid,
+.ls-pipeline-grid,
+.ls-about-grid,
+.ls-trust-grid {
+    text-align: center !important;
+}
+
+.ls-features-grid p,
+.ls-pipeline-grid p,
+.ls-about-grid p,
+.ls-trust-grid p {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.ls-features-grid h3,
+.ls-pipeline-grid h3,
+.ls-about-grid h3,
+.ls-trust-grid h4 {
+    text-align: center !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* ============================================================
+   BOTTOM CTA CALLOUT
+   ============================================================ */
+.st-key-cta_banner {
+    margin-bottom: 3.6rem !important;
+    background: linear-gradient(135deg, var(--brand-teal-deep) 0%, var(--brand-teal-dark) 50%, var(--brand-teal) 100%) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: 4.5rem 3.5rem !important;
+    color: #FFFFFF !important;
+    text-align: center !important;
+    box-shadow: 0 24px 54px -10px rgba(9, 89, 99, 0.45) !important;
+}
+
+.st-key-cta_banner h2 {
+    font-family: var(--font-heading) !important;
+    font-size: 2.8rem !important;
+    font-weight: 600 !important;
+    margin: 0 auto 1rem auto !important;
+    color: #FFFFFF !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+.st-key-cta_banner p {
+    font-size: 1.1rem !important;
+    color: var(--text-cyan) !important;
+    max-width: 680px !important;
+    margin: 0 auto 2.2rem auto !important;
+    line-height: 1.65 !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+.st-key-cta_portal_btn button {
+    background: #FFFFFF !important;
+    border: none !important;
+    border-radius: 16px !important;
+    padding: 1rem 2.4rem !important;
+    min-height: 52px !important;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.25) !important;
+    transition: all 0.22s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.st-key-cta_portal_btn button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35) !important;
+    background: var(--brand-teal-ice) !important;
+}
+
+.st-key-cta_portal_btn button p {
+    color: var(--brand-teal-dark) !important;
+    font-weight: 800 !important;
+    font-size: 1.05rem !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+}
+
+/* ============================================================
+   PAGE FOOTER
+   ============================================================ */
+.ls-hp-footer {
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--border-soft);
+    margin-top: 3.5rem;
+    text-align: center !important;
+}
+
+.ls-footer-disclaimer {
+    background: var(--surface-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 1.2rem 1.8rem;
+    margin: 1.5rem auto 1.6rem auto !important;
+    max-width: 980px;
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    text-align: center !important;
+}
+
+.ls-footer-disclaimer b {
+    color: var(--navy-ink);
+}
+
+.ls-footer-copyright {
+    text-align: center !important;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 1.2rem auto 0 auto !important;
+}
+
+/* ============================================================
+   RESPONSIVE DESIGN (Adaptive on All Screen Widths)
+   ============================================================ */
+@media (max-width: 1200px) {
+    .block-container {
+        padding-left: 1.8rem !important;
+        padding-right: 1.8rem !important;
+    }
+
+    .ls-hero-title {
+        font-size: 3rem;
+    }
+
+    .ls-section-title {
+        font-size: 2.4rem;
+    }
+
+    .ls-nav-links {
+        gap: 20px;
+    }
+
+    .ls-features-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1.5rem !important;
+    }
+
+    .ls-trust-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1.2rem !important;
+    }
+}
+
+@media (max-width: 992px) {
+    .ls-hero-title {
+        font-size: 2.6rem;
+    }
+
+    .ls-nav-links {
+        display: none;
+    }
+
+    .ls-pipeline-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.4rem !important;
+    }
+
+    .ls-about-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.4rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .block-container {
+        padding-left: 1.2rem !important;
+        padding-right: 1.2rem !important;
+    }
+
+    .ls-hero-title {
+        font-size: 2.2rem;
+    }
+
+    .ls-hero-metrics {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+
+    .ls-section-title {
+        font-size: 2rem;
+    }
+
+    .ls-features-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.2rem !important;
+    }
+
+    .ls-trust-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    .st-key-pipeline_section,
+    .st-key-trust_section,
+    .st-key-cta_banner {
+        padding: 2.5rem 1.8rem !important;
+    }
+}

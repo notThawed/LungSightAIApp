@@ -1,0 +1,555 @@
+/* =========================================================
+   LUNGSIGHT — HOSPITAL ADMIN
+   Subscription & Usage
+   shared/theme/css_content/hospital_admin_css/subscription_usage.css
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0');
+
+/* ---------------------------------------------------------
+   DESIGN TOKENS
+   --------------------------------------------------------- */
+
+:root {
+    --ls-primary: #0F7C88;
+    --ls-primary-dark: #0B626C;
+    --ls-primary-soft: #E8F4F6;
+    --ls-primary-glow: rgba(15, 124, 136, 0.16);
+
+    --ls-accent: #2B8CA8;
+    --ls-success: #23745A;
+    --ls-success-soft: #EAF6F1;
+
+    --ls-warning: #B45309;
+    --ls-warning-soft: #FEF3C7;
+
+    --ls-danger: #B91C1C;
+    --ls-danger-soft: #FEE2E2;
+
+    --ls-text: #12283A;
+    --ls-text-soft: #5A6F7F;
+    --ls-muted: #7E92A0;
+
+    --ls-border: #DDE8EB;
+    --ls-border-light: #EBF2F4;
+
+    --ls-background: #F7FAFB;
+    --ls-card: #FFFFFF;
+    --ls-surface-subtle: #F8FAFB;
+
+    --ls-radius-sm: 8px;
+    --ls-radius-md: 14px;
+    --ls-radius-lg: 20px;
+
+    --ls-font-display: 'Fraunces', Georgia, serif;
+    --ls-font-body: 'Manrope', system-ui, -apple-system, sans-serif;
+
+    --ls-shadow-xs: 0 1px 3px rgba(18, 40, 58, 0.04);
+    --ls-shadow-sm: 0 2px 8px rgba(18, 40, 58, 0.05);
+    --ls-shadow-md: 0 8px 24px -4px rgba(18, 40, 58, 0.08);
+}
+
+/* ---------------------------------------------------------
+   MATERIAL SYMBOLS
+   --------------------------------------------------------- */
+
+.material-symbols-rounded,
+.material-symbols-outlined {
+    font-family: "Material Symbols Rounded" !important;
+    font-weight: normal;
+    font-style: normal;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------------------------------------------------
+   PAGE WRAPPER
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] {
+    font-family: var(--ls-font-body);
+    animation: suFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes suFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ---------------------------------------------------------
+   SECTION SUBHEADERS
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] [data-testid="stHeadingWithActionElements"] h3,
+div[class*="st-key-sa_page"] h3:not([data-testid="stMetricLabel"]) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 4px;
+    color: var(--ls-text);
+    font-size: 1.25rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stHeadingWithActionElements"] h3::before {
+    content: "";
+    display: inline-block;
+    width: 4px;
+    height: 18px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, var(--ls-primary) 0%, var(--ls-accent) 100%);
+    margin-right: 2px;
+}
+
+/* Captions under subheaders */
+div[class*="st-key-sa_page"] [data-testid="stCaptionContainer"] {
+    color: var(--ls-text-soft);
+    font-size: 0.84rem;
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+/* Streamlit dividers */
+div[class*="st-key-sa_page"] hr,
+div[class*="st-key-sa_page"] [data-testid="stDivider"] {
+    border: 0;
+    border-top: 1px solid var(--ls-border-light);
+    margin: 28px 0 24px;
+}
+
+/* ---------------------------------------------------------
+   SUBSCRIPTION DETAILS & USAGE CARDS (TARGETED SELECTORS)
+   Applies card container to outer columns, avoiding inner columns
+   --------------------------------------------------------- */
+
+/* Details cards containing .sa-rows */
+div[class*="st-key-sa_page"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has(.sa-rows) {
+    padding: 18px 20px;
+    background: var(--ls-card);
+    border: 1px solid var(--ls-border);
+    border-radius: var(--ls-radius-md);
+    box-shadow: var(--ls-shadow-xs);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has(.sa-rows):hover {
+    transform: translateY(-2px);
+    border-color: rgba(15, 124, 136, 0.3);
+    box-shadow: var(--ls-shadow-sm);
+}
+
+/* Usage cards containing a progress bar */
+div[class*="st-key-sa_page"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has([data-testid="stProgressBar"]) {
+    padding: 20px 22px;
+    background: var(--ls-card);
+    border: 1px solid var(--ls-border);
+    border-radius: var(--ls-radius-md);
+    box-shadow: var(--ls-shadow-xs);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has([data-testid="stProgressBar"]):hover {
+    transform: translateY(-2px);
+    border-color: rgba(15, 124, 136, 0.3);
+    box-shadow: var(--ls-shadow-sm);
+}
+
+/* RESET INNER NESTED COLUMNS (e.g. value_col, status_col inside render_usage_item) */
+div[class*="st-key-sa_page"] [data-testid="stColumn"]:has([data-testid="stProgressBar"]) [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* RESET COLUMNS CONTAINING .sa-metric (they already have their own card styling) */
+div[class*="st-key-sa_page"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has(.sa-metric) {
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* ---------------------------------------------------------
+   ROWS — from show_rows() / sa-rows / sa-row
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] .sa-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px 0;
+    background: transparent;
+    border: none;
+}
+
+div[class*="st-key-sa_page"] .sa-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--ls-border-light);
+    background: transparent;
+    transition: background 0.15s ease;
+}
+
+div[class*="st-key-sa_page"] .sa-row:last-child {
+    border-bottom: none;
+}
+
+div[class*="st-key-sa_page"] .sa-row span {
+    color: var(--ls-text-soft);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+div[class*="st-key-sa_page"] .sa-row b {
+    color: var(--ls-text);
+    font-size: 0.92rem;
+    font-weight: 750;
+    text-align: right;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------
+   USAGE ITEM INNER STYLING
+   --------------------------------------------------------- */
+
+/* Header with Material Icon */
+div[class*="st-key-sa_page"] [data-testid="stColumn"]:has([data-testid="stProgressBar"]) h3 {
+    font-size: 1.15rem;
+    font-weight: 750;
+    color: var(--ls-text);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stColumn"]:has([data-testid="stProgressBar"]) h3 .material-symbols-rounded,
+div[class*="st-key-sa_page"] [data-testid="stColumn"]:has([data-testid="stProgressBar"]) h3 .material-symbols-outlined {
+    font-size: 22px;
+    color: var(--ls-primary);
+    background: var(--ls-primary-soft);
+    padding: 5px;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 124, 136, 0.15);
+}
+
+/* Inner Horizontal Block (Used metric + status pill) */
+div[class*="st-key-sa_page"] [data-testid="stColumn"]:has([data-testid="stProgressBar"]) [data-testid="stHorizontalBlock"] {
+    align-items: flex-end;
+    margin-bottom: 12px;
+}
+
+/* ---------------------------------------------------------
+   ST.METRIC — used by render_usage_item() for Used
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] [data-testid="stMetric"] {
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stMetricLabel"] {
+    color: var(--ls-muted) !important;
+    font-size: 0.7rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    margin-bottom: 2px !important;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stMetricValue"] {
+    color: var(--ls-text) !important;
+    font-size: 2rem !important;
+    font-weight: 850 !important;
+    letter-spacing: -0.025em !important;
+    line-height: 1.1 !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stMetricDelta"] {
+    color: var(--ls-text-soft) !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.01em !important;
+    margin-top: 2px !important;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stMetricDelta"] svg {
+    display: none;
+}
+
+/* ---------------------------------------------------------
+   PILLS — from pill() / sa-pill
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] .sa-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 750;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+div[class*="st-key-sa_page"] .sa-pill-green {
+    background: var(--ls-success-soft);
+    color: var(--ls-success);
+    border-color: rgba(35, 116, 90, 0.2);
+}
+
+div[class*="st-key-sa_page"] .sa-pill-amber {
+    background: var(--ls-warning-soft);
+    color: var(--ls-warning);
+    border-color: rgba(180, 83, 9, 0.2);
+}
+
+div[class*="st-key-sa_page"] .sa-pill-red {
+    background: var(--ls-danger-soft);
+    color: var(--ls-danger);
+    border-color: rgba(185, 28, 28, 0.2);
+}
+
+div[class*="st-key-sa_page"] .sa-pill-blue {
+    background: var(--ls-primary-soft);
+    color: var(--ls-primary);
+    border-color: rgba(15, 124, 136, 0.2);
+}
+
+div[class*="st-key-sa_page"] .sa-pill-grey {
+    background: #F0F3F5;
+    color: #5A6F7F;
+    border-color: #DCE4E8;
+}
+
+/* ---------------------------------------------------------
+   PROGRESS BARS — st.progress
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] [data-testid="stProgressBar"] {
+    margin: 6px 0 8px;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stProgressBar"] > div {
+    height: 10px;
+    background: #E8EFF2;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+div[class*="st-key-sa_page"] [data-testid="stProgressBar"] [role="progressbar"] > div {
+    border-radius: 999px;
+    background: linear-gradient(90deg, #10B981 0%, #059669 100%);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.35);
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Remaining caption under progress */
+div[class*="st-key-sa_page"] [data-testid="stColumn"]:has([data-testid="stProgressBar"]) > div:last-child [data-testid="stCaptionContainer"] {
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    font-weight: 650;
+    color: var(--ls-text-soft);
+}
+
+/* ---------------------------------------------------------
+   METRIC CARDS — from metric_card() / sa-metric
+   (Remaining capacity section)
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] .sa-metric {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 22px;
+    background: var(--ls-card);
+    border: 1px solid var(--ls-border);
+    border-radius: var(--ls-radius-md);
+    box-shadow: var(--ls-shadow-xs);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.2s ease,
+                border-color 0.2s ease;
+    overflow: hidden;
+    min-height: 94px;
+}
+
+div[class*="st-key-sa_page"] .sa-metric::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--ls-border);
+    border-radius: 4px 0 0 4px;
+}
+
+div[class*="st-key-sa_page"] .sa-metric:hover {
+    transform: translateY(-2px);
+    border-color: rgba(15, 124, 136, 0.3);
+    box-shadow: var(--ls-shadow-sm);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    background: var(--ls-primary-soft);
+    border: 1px solid rgba(15, 124, 136, 0.15);
+    border-radius: 12px;
+    color: var(--ls-primary);
+    font-family: "Material Symbols Rounded";
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+    font-size: 24px;
+    line-height: 1;
+}
+
+div[class*="st-key-sa_page"] .sa-metric-title {
+    color: var(--ls-text-soft);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+div[class*="st-key-sa_page"] .sa-metric-value {
+    color: var(--ls-text);
+    font-size: 1.7rem;
+    font-weight: 850;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Metric tones */
+div[class*="st-key-sa_page"] .sa-metric-blue::before {
+    background: var(--ls-primary);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-blue .sa-metric-icon {
+    background: var(--ls-primary-soft);
+    color: var(--ls-primary);
+    border-color: rgba(15, 124, 136, 0.2);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-green::before {
+    background: var(--ls-success);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-green .sa-metric-icon {
+    background: var(--ls-success-soft);
+    color: var(--ls-success);
+    border-color: rgba(35, 116, 90, 0.2);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-amber::before {
+    background: var(--ls-warning);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-amber .sa-metric-icon {
+    background: var(--ls-warning-soft);
+    color: var(--ls-warning);
+    border-color: rgba(180, 83, 9, 0.2);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-red::before {
+    background: var(--ls-danger);
+}
+
+div[class*="st-key-sa_page"] .sa-metric-red .sa-metric-icon {
+    background: var(--ls-danger-soft);
+    color: var(--ls-danger);
+    border-color: rgba(185, 28, 28, 0.2);
+}
+
+/* ---------------------------------------------------------
+   STREAMLIT INFO / ALERT CALLOUT
+   --------------------------------------------------------- */
+
+div[class*="st-key-sa_page"] [data-testid="stAlert"] {
+    padding: 16px 18px;
+    border-radius: var(--ls-radius-md);
+    border: 1px solid rgba(15, 124, 136, 0.2);
+    background: var(--ls-primary-soft);
+    color: var(--ls-text);
+    font-size: 0.86rem;
+    line-height: 1.6;
+    box-shadow: var(--ls-shadow-xs);
+}
+
+div[class*="st-key-sa_page"] [data-testid="stAlert"] svg {
+    color: var(--ls-primary);
+}
+
+/* ---------------------------------------------------------
+   RESPONSIVE DESIGN
+   --------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    div[class*="st-key-sa_page"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        margin-bottom: 12px;
+    }
+
+    div[class*="st-key-sa_page"] .sa-metric {
+        padding: 16px 18px;
+    }
+
+    div[class*="st-key-sa_page"] .sa-metric-value {
+        font-size: 1.45rem;
+    }
+
+    div[class*="st-key-sa_page"] [data-testid="stMetricValue"] {
+        font-size: 1.65rem !important;
+    }
+}
+
+/* ---------------------------------------------------------
+   REDUCED MOTION
+   --------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

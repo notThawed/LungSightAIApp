@@ -1,0 +1,128 @@
+/* ==========================================================
+   PHYSICIAN - PATIENT QUEUE
+   shared/theme/css_content/physician_css/patient_queue.css
+
+   Only styles unique to the Patient Queue page.
+
+   The shared component styles (.sa-pill, .sa-metric, .sa-th,
+   .sa-cell, .sa-row, .sa-note, buttons, inputs, dialogs, ...)
+   come from:
+       shared/theme/css_content/system_admin_css/base.css
+
+   base.css scopes everything to:
+       .st-key-sa_page      (the page)
+       .st-key-sa_dialog    (the inside of dialogs)
+
+   The physician page wraps its content in
+       st.container(key="sa_page")
+   and each dialog wraps its content in
+       st.container(key="sa_dialog")
+   so those shared styles apply here too.
+
+   Nothing below should redefine .sa-* component classes.
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   Page
+   ---------------------------------------------------------- */
+
+.st-key-sa_page {
+  width: 100%;
+}
+
+
+/* ----------------------------------------------------------
+   Refresh button
+   ---------------------------------------------------------- */
+
+.st-key-physician_queue_refresh {
+  margin-bottom: 0.75rem;
+}
+
+
+/* ----------------------------------------------------------
+   Metric row: keep all four cards the same height
+   ---------------------------------------------------------- */
+
+.st-key-sa_page [data-testid="stHorizontalBlock"] {
+  align-items: stretch;
+}
+
+
+/* ----------------------------------------------------------
+   Queue tables
+   ---------------------------------------------------------- */
+
+.st-key-physician_queue_table_pending,
+.st-key-physician_xray_table_xray {
+  margin-top: 0.25rem;
+}
+
+
+/* ----------------------------------------------------------
+   Row action buttons: keep them compact inside tables
+   ---------------------------------------------------------- */
+
+.st-key-physician_queue_table_pending [data-testid^="stBaseButton"],
+.st-key-physician_xray_table_xray  [data-testid^="stBaseButton"] {
+  min-height: 2rem;
+  padding: 0.25rem 0.65rem;
+}
+
+
+/* ----------------------------------------------------------
+   Dialog spacing
+   ---------------------------------------------------------- */
+
+.st-key-sa_dialog {
+  gap: 0.75rem;
+}
+
+.st-key-sa_dialog .sa-section-title {
+  margin-top: 0.35rem;
+}
+
+
+/* ----------------------------------------------------------
+   Examination dialog: keep vitals columns aligned
+   ---------------------------------------------------------- */
+
+.st-key-sa_dialog [data-testid="stHorizontalBlock"] {
+  align-items: stretch;
+}
+
+
+/* ----------------------------------------------------------
+   Alerts inside dialogs
+   ---------------------------------------------------------- */
+
+.st-key-sa_dialog [data-testid="stAlert"] {
+  border-radius: 8px;
+}
+
+
+/* ----------------------------------------------------------
+   History dialog pills
+   ---------------------------------------------------------- */
+
+.st-key-sa_dialog .sa-pill {
+  margin-bottom: 0.2rem;
+}
+
+
+/* ----------------------------------------------------------
+   Responsive layout
+   ---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .st-key-sa_page [data-testid="stHorizontalBlock"] {
+    gap: 0.6rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .st-key-sa_page [data-testid="stHorizontalBlock"] {
+    gap: 0.5rem;
+  }
+}

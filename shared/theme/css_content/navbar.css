@@ -1,0 +1,286 @@
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap");
+
+/* ============================================================
+   LUNGSIGHT NAVBAR
+   ============================================================ */
+
+:root {
+	--ls-nav-bg: #ffffff;
+	--ls-nav-border: rgba(30, 41, 59, 0.08);
+	--ls-nav-ink: #0f172a;
+	--ls-nav-muted: #64748b;
+	--ls-nav-accent: #0f7c88;
+	--ls-nav-accent-soft: #e8f4f6;
+}
+
+/* ============================================================
+   NAVBAR CONTAINER
+   ============================================================ */
+
+.st-key-top_navbar {
+	position: sticky;
+	top: 1rem;
+	z-index: 100;
+	margin-top: 1rem;
+	margin-bottom: 0.75rem;
+	padding: 1.5rem 2rem;
+	border-radius: 0;
+	background: var(--ls-nav-bg);
+	box-shadow: none;
+	width: 100%;
+	max-width: 100%;
+	left: 0;
+	right: 0;
+}
+
+/* Remove default Streamlit padding at the top */
+div[data-testid="stMainBlockContainer"] {
+	padding-top: 0 !important;
+	padding-left: 1rem !important;
+	padding-right: 1rem !important;
+}
+
+/* Remove top padding from the main app */
+section[data-testid="stAppViewBlockContainer"] {
+	padding-top: 0 !important;
+}
+
+/* Make the container take full width */
+.st-key-top_navbar [data-testid="stVerticalBlock"] {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+/* Ensure columns are full width */
+.st-key-top_navbar .stColumns {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+/* ============================================================
+   LEFT SIDE
+   ============================================================ */
+
+.ls-nav-left-wrap {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+}
+
+/* LungSight logo */
+
+.ls-nav-brand-logo {
+	width: 2.25rem;
+	height: 2.25rem;
+
+	object-fit: contain;
+
+	border-radius: 50%;
+}
+
+/* LungSight name */
+
+.ls-nav-appname {
+	font-family: "Barlow Condensed", sans-serif;
+
+	font-size: 1.45rem;
+	font-weight: 700;
+
+	line-height: 1;
+
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+
+	color: var(--ls-nav-ink);
+}
+
+/* ============================================================
+   CENTER — HOSPITAL NAME
+   ============================================================ */
+
+.ls-nav-hospital-wrap {
+	display: flex;
+
+	align-items: center;
+	justify-content: center;
+
+	width: 100%;
+
+	text-align: center;
+}
+
+.ls-nav-hospital-name {
+	font-family: "Manrope", sans-serif;
+
+	font-size: 1rem;
+	font-weight: 700;
+
+	line-height: 1.2;
+
+	color: var(--ls-nav-ink);
+
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* ============================================================
+   RIGHT — USER PROFILE
+   ============================================================ */
+
+.ls-nav-profile-wrap {
+	display: flex;
+
+	align-items: center;
+	justify-content: flex-end;
+
+	gap: 0.65rem;
+
+	width: 100%;
+}
+
+/* ============================================================
+   PROFILE IMAGE
+   ============================================================ */
+
+.ls-nav-avatar-image,
+.ls-nav-avatar-fallback {
+	width: 2.45rem;
+	height: 2.45rem;
+
+	flex-shrink: 0;
+
+	border-radius: 50%;
+
+	border: 1px solid rgba(15, 124, 136, 0.25);
+
+	object-fit: cover;
+}
+
+/* Fallback initials */
+
+.ls-nav-avatar-fallback {
+	display: flex;
+
+	align-items: center;
+	justify-content: center;
+
+	background: var(--ls-nav-accent-soft);
+
+	color: var(--ls-nav-accent);
+
+	font-family: "Barlow Condensed", sans-serif;
+
+	font-size: 0.95rem;
+	font-weight: 700;
+
+	letter-spacing: 0.05em;
+}
+
+/* ============================================================
+   USER TEXT
+   ============================================================ */
+
+.ls-nav-user-text {
+	display: flex;
+
+	flex-direction: column;
+
+	align-items: flex-end;
+
+	min-width: 0;
+
+	text-align: right;
+}
+
+.ls-nav-user-name {
+	font-family: "Manrope", sans-serif;
+
+	font-size: 0.86rem;
+	font-weight: 700;
+
+	line-height: 1.2;
+
+	color: var(--ls-nav-ink);
+
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+
+	max-width: 180px;
+}
+
+.ls-nav-user-role {
+	margin-top: 0.12rem;
+
+	font-family: "Manrope", sans-serif;
+
+	font-size: 0.67rem;
+	font-weight: 600;
+
+	line-height: 1.1;
+
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+
+	color: var(--ls-nav-muted);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+	.st-key-top_navbar {
+		padding: 0.7rem 1rem;
+	}
+
+	.ls-nav-appname {
+		font-size: 1.25rem;
+	}
+
+	.ls-nav-brand-logo {
+		width: 2rem;
+		height: 2rem;
+	}
+
+	.ls-nav-hospital-name {
+		font-size: 0.9rem;
+	}
+
+	.ls-nav-avatar-image,
+	.ls-nav-avatar-fallback {
+		width: 2.1rem;
+		height: 2.1rem;
+	}
+
+	.ls-nav-user-name {
+		font-size: 0.78rem;
+		max-width: 140px;
+	}
+
+	.ls-nav-user-role {
+		font-size: 0.6rem;
+	}
+}
+
+@media (max-width: 650px) {
+
+	.ls-nav-appname {
+		display: none;
+	}
+
+	.ls-nav-hospital-name {
+		font-size: 0.82rem;
+		max-width: 180px;
+	}
+
+	.ls-nav-user-name {
+		max-width: 100px;
+	}
+
+	.ls-nav-user-role {
+		font-size: 0.55rem;
+	}
+}

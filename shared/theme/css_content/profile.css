@@ -1,0 +1,809 @@
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0');
+
+
+/* ==========================================================
+   LungSight Profile Settings
+   Medium-width professional layout
+   ========================================================== */
+
+:root {
+    --ap-film: #F2F6F7;
+    --ap-white: #FFFFFF;
+
+    --ap-ink: #12283A;
+    --ap-slate: #5A6F7F;
+    --ap-mist: #DDE8EB;
+
+    --ap-teal: #0F7C88;
+    --ap-teal-dark: #0B626C;
+    --ap-teal-soft: #E8F4F6;
+
+    --ap-green: #2E8B6A;
+    --ap-green-soft: #EAF6F1;
+
+    --ap-red: #C0392B;
+    --ap-red-soft: #FBEAE8;
+
+    --ap-font-display:
+        'Fraunces',
+        Georgia,
+        serif;
+
+    --ap-font-body:
+        'Manrope',
+        system-ui,
+        -apple-system,
+        'Segoe UI',
+        sans-serif;
+}
+
+
+/* ==========================================================
+   PAGE CONTAINER
+   ========================================================== */
+
+.st-key-profile_page {
+    width: 100%;
+    max-width: 1050px;
+
+    margin: 0 auto;
+    padding: 0 1rem 3rem;
+
+    font-family: var(--ap-font-body);
+    color: var(--ap-ink);
+}
+
+
+/* ==========================================================
+   PAGE HEADER
+   ========================================================== */
+
+.st-key-profile_page .ls-profile-heading {
+    margin-bottom: 1.2rem;
+}
+
+.st-key-profile_page .ls-profile-heading-title {
+    margin: 0;
+
+    font-family: var(--ap-font-display);
+    font-size: 1.85rem;
+    font-weight: 600;
+    line-height: 1.2;
+
+    color: var(--ap-ink);
+}
+
+.st-key-profile_page .ls-profile-heading-caption {
+    margin-top: 0.3rem;
+
+    font-family: var(--ap-font-body);
+    font-size: 0.88rem;
+    line-height: 1.5;
+
+    color: var(--ap-slate);
+}
+
+
+/* ==========================================================
+   PROFILE IDENTITY CARD
+   ========================================================== */
+
+.st-key-profile_page .st-key-profile_identity {
+    margin-bottom: 1rem;
+    padding: 1.25rem 1.4rem;
+
+    background: var(--ap-white);
+
+    border: 1px solid var(--ap-mist);
+    border-radius: 16px;
+
+    box-shadow:
+        0 3px 12px rgba(18, 40, 58, 0.045);
+}
+
+
+/* ==========================================================
+   PROFILE AVATAR
+   ========================================================== */
+
+.st-key-profile_page .st-key-profile_identity
+[data-testid="stImage"] img,
+
+.st-key-profile_page .ls-large-avatar {
+    width: 150px !important;
+    height: 150px !important;
+
+    min-width: 150px;
+    min-height: 150px;
+
+    max-width: 150px;
+
+    object-fit: cover;
+
+    border-radius: 50% !important;
+
+    border: 4px solid var(--ap-white);
+
+    outline: 2px solid var(--ap-mist);
+
+    box-shadow:
+        0 4px 16px rgba(18, 40, 58, 0.10);
+}
+
+.st-key-profile_page .ls-large-avatar {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    background: var(--ap-teal-soft);
+
+    color: var(--ap-teal);
+
+    font-family: var(--ap-font-display);
+
+    font-size: 2.8rem;
+    font-weight: 600;
+}
+
+
+/* ==========================================================
+   PROFILE IDENTITY TEXT
+   ========================================================== */
+
+.st-key-profile_page .ls-profile-name {
+    margin-bottom: 0.2rem;
+
+    font-family: var(--ap-font-display);
+
+    font-size: 1.55rem;
+    font-weight: 600;
+
+    line-height: 1.25;
+
+    color: var(--ap-ink);
+}
+
+.st-key-profile_page .ls-profile-role {
+    margin-bottom: 0.55rem;
+
+    font-size: 0.88rem;
+    font-weight: 600;
+
+    color: var(--ap-slate);
+}
+
+.st-key-profile_page .ls-profile-status {
+    margin-bottom: 0.55rem;
+}
+
+.st-key-profile_page .ls-profile-hospital {
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.4rem;
+
+    font-size: 0.82rem;
+    font-weight: 600;
+
+    color: var(--ap-slate);
+}
+
+.st-key-profile_page .ls-profile-hospital
+.material-symbols-rounded {
+    font-size: 1.05rem;
+
+    color: var(--ap-teal);
+}
+
+
+/* ==========================================================
+   SECTION CARDS
+   ========================================================== */
+
+.st-key-profile_page
+[class*="st-key-profile_section_"] {
+
+    width: 100%;
+
+    margin-bottom: 0.85rem;
+
+    padding: 1rem 1.2rem 1.15rem;
+
+    background: var(--ap-white);
+
+    border: 1px solid var(--ap-mist);
+
+    border-radius: 14px;
+
+    box-shadow:
+        0 2px 9px rgba(18, 40, 58, 0.035);
+}
+
+
+/* ==========================================================
+   SECTION HEADER
+   ========================================================== */
+
+.st-key-profile_page
+[class*="st-key-profile_section_"]
+.ls-section-header {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.5rem;
+
+    width: 100%;
+
+    margin: 0 0 0.25rem;
+    padding: 0;
+
+    line-height: 1;
+}
+
+
+/* ==========================================================
+   SECTION ICON
+   ========================================================== */
+
+.st-key-profile_page
+[class*="st-key-profile_section_"]
+.ls-section-icon {
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 1.4rem;
+    height: 1.4rem;
+
+    flex-shrink: 0;
+
+    font-family:
+        'Material Symbols Rounded';
+
+    font-size: 1.25rem;
+
+    color: var(--ap-teal);
+
+    font-variation-settings:
+        'FILL' 0,
+        'wght' 500,
+        'GRAD' 0,
+        'opsz' 24;
+}
+
+
+/* ==========================================================
+   SECTION TITLE
+   ========================================================== */
+
+.st-key-profile_page
+[class*="st-key-profile_section_"]
+.ls-section-title {
+
+    font-family: var(--ap-font-display);
+
+    font-size: 1.05rem;
+    font-weight: 600;
+
+    line-height: 1.3;
+
+    color: var(--ap-ink);
+}
+
+
+/* ==========================================================
+   SECTION CAPTION
+   ========================================================== */
+
+.st-key-profile_page
+[class*="st-key-profile_section_"]
+.ls-section-caption {
+
+    margin: 0 0 0.75rem;
+
+    font-size: 0.78rem;
+    line-height: 1.4;
+
+    color: var(--ap-slate);
+}
+
+
+/* ==========================================================
+   LABEL / VALUE ROWS
+   ========================================================== */
+
+.st-key-profile_page .ls-rows {
+
+    margin-top: 0.65rem;
+
+    border-top: 1px solid var(--ap-mist);
+}
+
+.st-key-profile_page .ls-row {
+
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 1.5rem;
+
+    min-height: 36px;
+
+    padding: 0.48rem 0;
+
+    border-bottom: 1px solid var(--ap-mist);
+
+    font-size: 0.82rem;
+
+    color: var(--ap-slate);
+}
+
+.st-key-profile_page .ls-row:last-child {
+    border-bottom: none;
+}
+
+.st-key-profile_page .ls-row b {
+
+    max-width: 65%;
+
+    color: var(--ap-ink);
+
+    font-weight: 600;
+
+    text-align: right;
+
+    word-break: break-word;
+}
+
+
+/* ==========================================================
+   STATUS BADGES
+   ========================================================== */
+
+.st-key-profile_page .ls-badge {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 0.3rem;
+
+    padding: 0.18rem 0.55rem;
+
+    border-radius: 999px;
+
+    font-size: 0.72rem;
+    font-weight: 600;
+
+    line-height: 1.25;
+}
+
+.st-key-profile_page .ls-badge-active {
+
+    background: var(--ap-green-soft);
+    color: var(--ap-green);
+}
+
+.st-key-profile_page .ls-badge-inactive {
+
+    background: var(--ap-mist);
+    color: var(--ap-slate);
+}
+
+.st-key-profile_page .ls-badge-suspended {
+
+    background: var(--ap-red-soft);
+    color: var(--ap-red);
+}
+
+.st-key-profile_page .ls-badge-pending {
+
+    background: var(--ap-teal-soft);
+    color: var(--ap-teal);
+}
+
+
+/* ==========================================================
+   HOSPITAL LOGO
+   ========================================================== */
+
+.st-key-profile_page
+.st-key-profile_section_hospital
+[data-testid="stImage"] img {
+
+    width: 120px !important;
+    height: 120px !important;
+
+    min-width: 120px;
+    min-height: 120px;
+
+    object-fit: cover;
+
+    border-radius: 50% !important;
+
+    border: 4px solid var(--ap-white);
+
+    outline: 2px solid var(--ap-mist);
+
+    box-shadow:
+        0 4px 14px rgba(18, 40, 58, 0.08);
+}
+
+
+/* ==========================================================
+   HOSPITAL LOGO PLACEHOLDER
+   ========================================================== */
+
+.st-key-profile_page
+.ls-hospital-logo-placeholder {
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 120px;
+    height: 120px;
+
+    border-radius: 50%;
+
+    background: var(--ap-teal-soft);
+
+    border: 4px solid var(--ap-white);
+
+    outline: 2px solid var(--ap-mist);
+
+    box-shadow:
+        0 4px 14px rgba(18, 40, 58, 0.08);
+}
+
+.st-key-profile_page
+.ls-hospital-logo-placeholder
+.material-symbols-rounded {
+
+    font-size: 3rem;
+
+    color: var(--ap-teal);
+}
+
+
+/* ==========================================================
+   FORM LABELS
+   ========================================================== */
+
+.st-key-profile_page label p {
+
+    font-size: 0.78rem;
+
+    font-weight: 600;
+
+    color: var(--ap-ink);
+}
+
+
+/* ==========================================================
+   FORM FIELDS
+   ========================================================== */
+
+.st-key-profile_page
+[data-testid="stTextInputRootElement"],
+
+.st-key-profile_page
+[data-testid="stTextAreaRootElement"],
+
+.st-key-profile_page
+[data-testid="stSelectbox"]
+[role="group"],
+
+.st-key-profile_page
+[data-testid="stDateInput"] > div,
+
+.st-key-profile_page
+div[data-baseweb="input"],
+
+.st-key-profile_page
+div[data-baseweb="textarea"],
+
+.st-key-profile_page
+div[data-baseweb="select"] > div {
+
+    background: var(--ap-film);
+
+    border: 1px solid var(--ap-mist);
+
+    border-radius: 8px;
+}
+
+
+/* ==========================================================
+   INPUT TEXT
+   ========================================================== */
+
+.st-key-profile_page input,
+.st-key-profile_page textarea {
+
+    background: transparent;
+
+    color: var(--ap-ink);
+
+    font-family: var(--ap-font-body);
+
+    font-size: 0.82rem;
+}
+
+
+/* ==========================================================
+   INPUT FOCUS
+   ========================================================== */
+
+.st-key-profile_page
+[data-testid="stTextInputRootElement"]:focus-within,
+
+.st-key-profile_page
+[data-testid="stTextAreaRootElement"]:focus-within,
+
+.st-key-profile_page
+div[data-baseweb="select"] > div:focus-within {
+
+    border-color: var(--ap-teal);
+
+    box-shadow:
+        0 0 0 2px rgba(15, 124, 136, 0.15);
+}
+
+
+/* ==========================================================
+   BUTTONS
+   ========================================================== */
+
+.st-key-profile_page
+[data-testid^="stBaseButton-primary"] {
+
+    background: var(--ap-teal) !important;
+
+    border: 1px solid var(--ap-teal) !important;
+
+    border-radius: 8px;
+}
+
+.st-key-profile_page
+[data-testid^="stBaseButton-primary"] p {
+
+    color: #FFFFFF;
+
+    font-size: 0.8rem;
+
+    font-weight: 600;
+}
+
+.st-key-profile_page
+[data-testid^="stBaseButton-primary"]:hover {
+
+    background: var(--ap-teal-dark) !important;
+
+    border-color: var(--ap-teal-dark) !important;
+}
+
+
+.st-key-profile_page
+[data-testid^="stBaseButton-secondary"] {
+
+    background: var(--ap-white) !important;
+
+    border: 1px solid var(--ap-mist) !important;
+
+    border-radius: 8px;
+}
+
+.st-key-profile_page
+[data-testid^="stBaseButton-secondary"] p {
+
+    color: var(--ap-slate);
+
+    font-size: 0.8rem;
+
+    font-weight: 600;
+}
+
+.st-key-profile_page
+[data-testid^="stBaseButton-secondary"]:hover {
+
+    border-color: var(--ap-teal) !important;
+}
+
+
+/* ==========================================================
+   FILE UPLOADER
+   ========================================================== */
+
+.st-key-profile_page
+[data-testid="stFileUploader"] {
+
+    margin-top: 0.25rem;
+}
+
+.st-key-profile_page
+[data-testid="stFileUploaderDropzone"] {
+
+    min-height: 70px;
+
+    padding: 0.55rem;
+
+    background: var(--ap-film);
+
+    border: 1px dashed var(--ap-mist);
+
+    border-radius: 9px;
+}
+
+
+/* ==========================================================
+   SECURITY TITLE
+   ========================================================== */
+
+.st-key-profile_page .ls-security-title {
+
+    margin-top: 0.9rem;
+    margin-bottom: 0.55rem;
+
+    font-size: 0.85rem;
+    font-weight: 700;
+
+    color: var(--ap-ink);
+}
+
+
+/* ==========================================================
+   NOTE BOX
+   ========================================================== */
+
+.st-key-profile_page .ls-note {
+
+    margin: 0.65rem 0 0.8rem;
+
+    padding: 0.55rem 0.75rem;
+
+    background: var(--ap-film);
+
+    border: 1px solid var(--ap-mist);
+
+    border-left: 3px solid var(--ap-teal);
+
+    border-radius: 7px;
+
+    font-size: 0.76rem;
+
+    line-height: 1.4;
+
+    color: var(--ap-slate);
+}
+
+
+/* ==========================================================
+   DIVIDERS
+   ========================================================== */
+
+.st-key-profile_page hr {
+
+    margin: 0.75rem 0;
+
+    border-color: var(--ap-mist);
+}
+
+
+/* ==========================================================
+   PROFILE SECTION IMAGES
+   ========================================================== */
+
+.st-key-profile_page
+[data-testid="stImage"] {
+
+    display: flex;
+
+    justify-content: center;
+}
+
+.st-key-profile_page
+[data-testid="stImage"] img {
+
+    object-fit: cover;
+
+    border-radius: 50%;
+}
+
+
+/* ==========================================================
+   SMALL SCREENS
+   ========================================================== */
+
+@media (max-width: 900px) {
+
+    .st-key-profile_page {
+
+        max-width: 100%;
+
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .st-key-profile_page
+    .st-key-profile_identity {
+
+        padding: 1rem;
+    }
+
+    .st-key-profile_page
+    .ls-profile-name {
+
+        font-size: 1.35rem;
+    }
+}
+
+
+@media (max-width: 640px) {
+
+    .st-key-profile_page {
+
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .st-key-profile_page
+    [class*="st-key-profile_section_"] {
+
+        padding: 0.9rem;
+
+        border-radius: 12px;
+    }
+
+    .st-key-profile_page
+    .ls-row {
+
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        gap: 0.2rem;
+    }
+
+    .st-key-profile_page
+    .ls-row b {
+
+        max-width: 100%;
+
+        text-align: left;
+    }
+
+    .st-key-profile_page
+    .ls-profile-heading-title {
+
+        font-size: 1.55rem;
+    }
+
+    .st-key-profile_page
+    .st-key-profile_identity
+    [data-testid="stImage"] img,
+
+    .st-key-profile_page
+    .ls-large-avatar {
+
+        width: 120px !important;
+        height: 120px !important;
+
+        min-width: 120px;
+        min-height: 120px;
+    }
+
+    .st-key-profile_page
+    .ls-profile-name {
+
+        font-size: 1.25rem;
+    }
+}
