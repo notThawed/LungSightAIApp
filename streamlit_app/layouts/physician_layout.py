@@ -3,7 +3,7 @@ import streamlit as st
 from components.sidebar import show_physician_sidebar
 from components.navbar import show_top_navbar
 
-from pages.physician import dashboard, patient_queue, review_patient, physician_patient_records, profile, followups
+from pages.physician import dashboard, patient_queue, review_patient, physician_patient_records, profile, followups, inpatient_dashboard
 from pages.hospital_administrator import subscription_gate
 from pages.system_administrator import manage_medical_records
 
@@ -62,6 +62,10 @@ def show_physician_layout():
 
     elif page == "Patient Records":
         physician_patient_records.show()
+
+    elif page == "Inpatient Dashboard":
+
+        inpatient_dashboard.show()
 
     elif page == "Follow-Ups":
 

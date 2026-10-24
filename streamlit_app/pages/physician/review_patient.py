@@ -18,7 +18,6 @@ from zoneinfo import ZoneInfo
 
 from backend.supabase_client import admin_supabase
 
-
 from backend.fetches import (
     get_xray_ready_examinations,
     get_xray_request_by_examination,
@@ -29,7 +28,6 @@ from backend.fetches import (
     get_examinations_by_patient,
     get_medical_records_by_patient,
 )
-
 
 from backend.crud import (
     save_xray_review,
@@ -61,7 +59,6 @@ from streamlit_app.components.ui import (
     show_flash_message,
 )
 
-# NEW IMPORT FOR CURB-65
 from streamlit_app.components.curb65_widget import render_curb65
 
 from shared.assets import load_css
@@ -781,7 +778,6 @@ def render_xray_section(examination):
         else:
             st.warning("Unable to load the X-ray image.")
 
-
     with heatmap_col:
         st.markdown(
             "<p class='rx-img-label'>AI Heatmap Overlay</p>",
@@ -809,7 +805,6 @@ def render_xray_section(examination):
                 ),
                 width="stretch",
             )
-
         else:
             st.markdown(
                 "<div class='rx-heatmap-placeholder'>"
@@ -824,7 +819,6 @@ def render_xray_section(examination):
                 "</div>",
                 unsafe_allow_html=True,
             )
-
 
     return request, image, ai
 
@@ -989,7 +983,7 @@ def render_ai_result_card(ai):
 
 
 # ============================================================
-# REPORT — CONFIRMED DIAGNOSIS (formerly Training Data Confirmation)
+# REPORT — CONFIRMED DIAGNOSIS
 # ============================================================
 
 def render_confirmed_diagnosis(ai):
@@ -1124,7 +1118,7 @@ def render_physician_form(examination, ai):
     st.markdown("<p class='rx-form-divider'></p>", unsafe_allow_html=True)
 
     # ==========================================
-    # CONFIRMED DIAGNOSIS (formerly Training Data)
+    # CONFIRMED DIAGNOSIS
     # ==========================================
     section_title("Confirmed Diagnosis")
     training_values = render_confirmed_diagnosis(ai)
@@ -1155,7 +1149,6 @@ def render_physician_form(examination, ai):
         
         severity_options = ["Not Assessed", "Low Risk", "Moderate Risk", "High Risk"]
         
-        # Pre-select if previously saved
         existing_sev = examination.get("severity_status") or "Not Assessed"
         sev_index = severity_options.index(existing_sev) if existing_sev in severity_options else 0
         
@@ -1185,8 +1178,15 @@ def render_physician_form(examination, ai):
         key=f"review_{exam_id}_disposition",
     )
 
-    # Smart recommendation based on CURB-65
-    if curb_score is not None and curb_score >= 2 and disposition == "Treated and Sent Home":
+    if disposition == "Admission":
+        st.markdown(
+            "<div style='padding: 0.75rem; background: #FFFDF5; border-left: 4px solid #B45309; border-radius: 6px; margin-bottom: 0.5rem;'>"
+            "<p style='margin:0; color: #78350F; font-weight: 600; font-size: 0.85rem;'>⚠️ Admission Order Required</p>"
+            "<p style='margin:0; color: #78350F; font-size: 0.8rem;'>Please specify the ward and initial treatment plan below.</p>"
+            "</div>",
+            unsafe_allow_html=True
+        )
+    elif curb_score is not None and curb_score >= 2 and disposition == "Treated and Sent Home":
         st.error("⚠️ **Warning:** CURB-65 score is ≥ 2. Clinical guidelines strongly recommend hospital admission.")
     elif curb_score is not None and curb_score >= 3 and disposition == "Admission":
         st.info("ℹ️ **Note:** CURB-65 score is ≥ 3. Consider assessing for ICU admission if clinically indicated.")
@@ -1196,6 +1196,7 @@ def render_physician_form(examination, ai):
         value=examination.get("disposition_notes") or "",
         height=80,
         key=f"review_{exam_id}_disposition_notes",
+        placeholder="Admit to Ward 4B. Start IV Ceftriaxone 1g q12h." if disposition == "Admission" else "",
     )
 
     return {
@@ -1208,7 +1209,7 @@ def render_physician_form(examination, ai):
         "curb65_score": curb_score,
         "curb65_status": curb_severity,
         "severity_status": physician_severity,
-        "training_values": training_values, # Return training_values from inside the form
+        "training_values": training_values,
     }
 
 
@@ -1216,9 +1217,13 @@ def render_physician_form(examination, ai):
 # REPORT — FOLLOW-UP CARD
 # ============================================================
 
-def render_followup_card(examination):
+def render_followup_card(examination, current_disposition):
 
     exam_id = examination.get("examination_id")
+
+    if current_disposition == "Admission":
+        st.info("ℹ️ Patient admitted. Follow-up available post-discharge.")
+        return
 
     section_title("Follow-Up")
 
@@ -1322,8 +1327,10 @@ def render_report_actions(
         width="stretch",
     )
 
+    btn_label = "Save & Admit Patient" if form_values["disposition"] == "Admission" else "Save Final Diagnosis"
+
     save_clicked = save_col.button(
-        "Save Final Diagnosis",
+        btn_label,
         key=f"review_{exam_id}_save",
         icon=":material/save:",
         type="primary",
@@ -1336,10 +1343,6 @@ def render_report_actions(
 
     if not save_clicked:
         return
-
-    # ==========================================
-    # Validation
-    # ==========================================
 
     if not form_values["findings"].strip():
         st.error("X-Ray Findings is required.")
@@ -1357,10 +1360,11 @@ def render_report_actions(
     if not training_values or not training_values.get("label"):
         st.error("Confirmed diagnosis is required.")
         return
+        
+    if form_values["disposition"] == "Admission" and not form_values["disposition_notes"].strip():
+        st.error("⚠️ Disposition Notes are required when admitting a patient.")
+        return
 
-    # ==========================================
-    # Gather image info
-    # ==========================================
     image_id = None
     try:
         imgs = get_xray_images_by_request(request["request_id"]) or []
@@ -1370,7 +1374,6 @@ def render_report_actions(
         image_id = None
 
     try:
-        # 1. Save X-ray review
         save_xray_review(
             request_id=request["request_id"],
             reviewed_by=user_id,
@@ -1378,10 +1381,12 @@ def render_report_actions(
             impression=form_values["impression"].strip() or None,
         )
 
-        # 2. Complete examination
+        # Set status to Admitted if disposition is Admission
+        exam_status = "Admitted" if form_values["disposition"] == "Admission" else "Completed"
+        
         update_examination(
             examination_id=exam_id,
-            status="Completed",
+            status=exam_status,
             reviewed_by=user_id,
             diagnosis=form_values["diagnosis"].strip() or None,
             plans_orders=form_values["plans"].strip() or None,
@@ -1393,7 +1398,6 @@ def render_report_actions(
             severity_status=form_values["severity_status"],
         )
 
-        # 3. Save training candidate
         if image_id:
             consented = patient.get("ai_consent_granted", False)
             if consented:
@@ -1466,9 +1470,6 @@ def render_review_report_page(patient, examination):
 
     left_col, right_col = st.columns([1.4, 1], gap="large")
 
-    # --------------------------------------------------------
-    # LEFT COLUMN
-    # --------------------------------------------------------
     with left_col:
 
         render_xray_section(examination)
@@ -1480,17 +1481,13 @@ def render_review_report_page(patient, examination):
             key_prefix=f"review_{exam_id}",
         )
 
-    # --------------------------------------------------------
-    # RIGHT COLUMN
-    # --------------------------------------------------------
     with right_col:
 
         render_ai_result_card(ai)
 
-        # form_values now includes training_values inside it
         form_values = render_physician_form(examination, ai)
 
-        render_followup_card(examination)
+        render_followup_card(examination, form_values["disposition"])
 
         render_report_actions(
             examination,

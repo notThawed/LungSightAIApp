@@ -106,6 +106,11 @@ PHYSICIAN_NAV = [
                 "folder_shared",
             ),
             (
+                "Inpatient Dashboard",
+                "Inpatient dashboard",
+                "assignment",
+            ),
+            (
                 "Follow-Ups",
                 "Follow-ups",
                 "assignment",

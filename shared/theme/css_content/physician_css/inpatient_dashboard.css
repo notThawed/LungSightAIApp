@@ -1,0 +1,450 @@
+/* =========================================================
+   LUNGSIGHT — INPATIENT MONITORING
+   Standalone clinical dashboard stylesheet
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;600;700&display=swap');
+
+:root {
+    --ip-bg:            #F5F8FA;
+    --ip-surface:       #FFFFFF;
+    --ip-border:        #DCE7EB;
+
+    --ip-ink:           #0B1F2E;
+    --ip-slate:         #4A677B;
+    --ip-muted:         #7C96A7;
+
+    --ip-teal:          #0F7C88;
+    --ip-teal-soft:     #E8F6F8;
+    --ip-teal-dark:     #095963;
+
+    --ip-red:           #A62222;
+    --ip-red-soft:      #FDF4F4;
+
+    --ip-green:         #0F8A5F;
+    --ip-green-soft:    #F1FAF6;
+
+    --ip-amber:         #A65A0A;
+    --ip-amber-soft:    #FDF6E8;
+
+    --ip-font-heading:  'Fraunces', Georgia, serif;
+    --ip-font-body:     'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+/* ----------------------------------------------------------
+   PAGE SHELL
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page {
+    font-family: var(--ip-font-body);
+    color: var(--ip-ink);
+    background: var(--ip-bg);
+    padding: 2rem 2.5rem 4rem;
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+.st-key-physician_inpatient_page .sa-page-title {
+    font-family: var(--ip-font-heading);
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: var(--ip-ink);
+    letter-spacing: -0.025em;
+    margin: 0 0 0.3rem 0;
+    padding: 0;
+}
+
+.st-key-physician_inpatient_page .sa-page-caption {
+    font-size: 0.95rem;
+    color: var(--ip-slate);
+    line-height: 1.55;
+    margin: 0 0 1.8rem 0;
+}
+
+/* ----------------------------------------------------------
+   SECTION HEADINGS
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page .sa-section-title {
+    font-family: var(--ip-font-heading);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--ip-ink);
+    letter-spacing: -0.01em;
+    margin: 2.2rem 0 0.75rem 0;
+    padding: 0 0 0.5rem 0;
+    border-bottom: 1px solid var(--ip-border);
+}
+
+.st-key-physician_inpatient_page .sa-section-caption {
+    font-size: 0.85rem;
+    color: var(--ip-slate);
+    margin: -0.35rem 0 1rem 0;
+}
+
+/* ----------------------------------------------------------
+   KPI STRIP
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page div[data-testid="metric-container"] {
+    background: var(--ip-surface);
+    border: 1px solid var(--ip-border);
+    border-radius: 12px;
+    padding: 1.4rem 1.3rem;
+    box-shadow: none;
+    transition: border-color 0.15s ease;
+}
+
+.st-key-physician_inpatient_page div[data-testid="metric-container"]:hover {
+    border-color: var(--ip-teal);
+}
+
+.st-key-physician_inpatient_page div[data-testid="metric-container"] label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ip-muted);
+}
+
+.st-key-physician_inpatient_page div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
+    font-family: var(--ip-font-heading);
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: var(--ip-ink);
+    letter-spacing: -0.02em;
+    margin-top: 0.3rem;
+}
+
+.st-key-physician_inpatient_page div[data-testid="column"]:nth-child(1) div[data-testid="stMetricValue"] { color: var(--ip-teal); }
+.st-key-physician_inpatient_page div[data-testid="column"]:nth-child(2) div[data-testid="stMetricValue"] { color: var(--ip-amber); }
+.st-key-physician_inpatient_page div[data-testid="column"]:nth-child(3) div[data-testid="stMetricValue"] { color: var(--ip-green); }
+
+/* ----------------------------------------------------------
+   WARD LIST — ADMISSION CARDS
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page [class*="st-key-ip_card_"] {
+    background: var(--ip-surface);
+    border: 1px solid var(--ip-border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 0.6rem;
+    transition: border-color 0.15s ease;
+}
+
+.st-key-physician_inpatient_page [class*="st-key-ip_card_"]:hover {
+    border-color: var(--ip-teal);
+}
+
+.st-key-physician_inpatient_page .ip-patient-name {
+    font-family: var(--ip-font-heading);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--ip-ink);
+    letter-spacing: -0.01em;
+    margin: 0 0 0.3rem 0;
+}
+
+.st-key-physician_inpatient_page .ip-patient-meta {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.8rem;
+    color: var(--ip-slate);
+    margin: 0;
+}
+
+/* Open button under card */
+.st-key-physician_inpatient_page [class*="st-key-ip_card_"] + div .stButton button {
+    background: var(--ip-teal-soft);
+    border: 1px solid var(--ip-border);
+    color: var(--ip-teal-dark);
+    font-family: var(--ip-font-body);
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    width: 100%;
+    margin-bottom: 1rem;
+    transition: all 0.15s ease;
+}
+
+.st-key-physician_inpatient_page [class*="st-key-ip_card_"] + div .stButton button:hover {
+    background: var(--ip-teal);
+    border-color: var(--ip-teal);
+    color: var(--ip-surface);
+}
+
+/* ----------------------------------------------------------
+   CLINICAL DECISION SUPPORT ALERTS
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page div[data-testid="stAlert"] {
+    border-radius: 8px !important;
+    padding: 0.95rem 1.15rem !important;
+    margin-bottom: 0.6rem !important;
+    box-shadow: none !important;
+    border: 1px solid transparent !important;
+}
+
+.st-key-physician_inpatient_page div[data-testid="stAlert"][kind="error"] {
+    background: var(--ip-red-soft) !important;
+    border-color: #F3D7D7 !important;
+    border-left: 3px solid var(--ip-red) !important;
+}
+
+.st-key-physician_inpatient_page div[data-testid="stAlert"][kind="error"] p {
+    color: var(--ip-red) !important;
+    font-weight: 600 !important;
+    font-size: 0.87rem !important;
+    line-height: 1.5 !important;
+    margin: 0 !important;
+}
+
+.st-key-physician_inpatient_page div[data-testid="stAlert"][kind="success"] {
+    background: var(--ip-green-soft) !important;
+    border-color: #C9E6D8 !important;
+    border-left: 3px solid var(--ip-green) !important;
+}
+
+.st-key-physician_inpatient_page div[data-testid="stAlert"][kind="success"] p {
+    color: var(--ip-green) !important;
+    font-weight: 600 !important;
+    font-size: 0.87rem !important;
+    line-height: 1.5 !important;
+    margin: 0 !important;
+}
+
+/* ----------------------------------------------------------
+   DISCHARGE READINESS CHECKLIST
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page div[data-testid="stCheckbox"] {
+    background: var(--ip-surface);
+    border: 1px solid var(--ip-border);
+    border-radius: 8px;
+    padding: 0.9rem 1rem;
+    margin-top: 0.5rem;
+}
+
+.st-key-physician_inpatient_page div[data-testid="stCheckbox"] label p {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ip-ink);
+}
+
+.st-key-physician_inpatient_page .ip-status-line {
+    margin-top: 1rem;
+    font-size: 0.88rem;
+    color: var(--ip-slate);
+}
+
+.st-key-physician_inpatient_page .sa-pill {
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    padding: 0.3rem 0.7rem !important;
+    border-radius: 4px !important;
+}
+
+/* ----------------------------------------------------------
+   DAILY ROUNDS
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page hr {
+    border: 0;
+    border-top: 1px solid var(--ip-border);
+    margin: 1rem 0;
+}
+
+.st-key-physician_inpatient_page div[data-testid="stMarkdown"] p strong {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--ip-ink);
+}
+
+.st-key-physician_inpatient_page div[data-testid="stCaptionContainer"] p {
+    color: var(--ip-slate) !important;
+    font-size: 0.83rem !important;
+    line-height: 1.55 !important;
+}
+
+/* ----------------------------------------------------------
+   CLINICAL TREND CHARTS
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page div[data-testid="stVegaLiteChart"] {
+    background: var(--ip-surface);
+    border: 1px solid var(--ip-border);
+    border-radius: 10px;
+    padding: 1rem 1rem 0.4rem;
+    margin-top: 0.4rem;
+}
+
+.st-key-physician_inpatient_page div[data-testid="stVegaLiteChart"] + div p {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ip-muted);
+    text-align: center;
+    margin-top: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.st-key-physician_inpatient_page div[data-testid="stCaptionContainer"] p:empty {
+    display: none;
+}
+
+/* ----------------------------------------------------------
+   PRIMARY / SECONDARY BUTTONS
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page .stButton > button[kind="primary"] {
+    background: var(--ip-teal);
+    border: 1px solid var(--ip-teal);
+    color: var(--ip-surface);
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 0.65rem 1.15rem;
+    transition: background 0.15s ease;
+}
+
+.st-key-physician_inpatient_page .stButton > button[kind="primary"]:hover {
+    background: var(--ip-teal-dark);
+    border-color: var(--ip-teal-dark);
+}
+
+.st-key-physician_inpatient_page .stButton > button[kind="secondary"] {
+    background: var(--ip-surface);
+    color: var(--ip-ink);
+    border: 1px solid var(--ip-border);
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.65rem 1.15rem;
+    transition: border-color 0.15s ease;
+}
+
+.st-key-physician_inpatient_page .stButton > button[kind="secondary"]:hover {
+    border-color: var(--ip-teal);
+    color: var(--ip-teal);
+}
+
+/* ----------------------------------------------------------
+   EMPTY STATE
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page .sa-empty {
+    background: var(--ip-surface);
+    border: 1px dashed var(--ip-border);
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--ip-slate);
+}
+
+/* ----------------------------------------------------------
+   DAILY ROUNDS TABLE
+   ---------------------------------------------------------- */
+
+/* Header container */
+.st-key-physician_inpatient_page .st-key-ip_rounds_header {
+    background: #F8FAFC;
+    border-top: 1px solid var(--ip-border);
+    border-bottom: 1px solid var(--ip-border);
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.st-key-physician_inpatient_page .ip-th {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ip-muted);
+}
+
+/* Row container */
+.st-key-physician_inpatient_page [class*="st-key-ip_round_row_"] {
+    padding: 1rem;
+    border-bottom: 1px solid var(--ip-border);
+    transition: background 0.15s ease;
+}
+
+.st-key-physician_inpatient_page [class*="st-key-ip_round_row_"]:hover {
+    background: #F8FAFC;
+}
+
+/* Cells */
+.st-key-physician_inpatient_page .ip-cell {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.88rem;
+    color: var(--ip-ink);
+}
+
+.st-key-physician_inpatient_page .ip-cell-strong {
+    font-weight: 600;
+    color: var(--ip-ink);
+    font-size: 0.88rem;
+}
+
+.st-key-physician_inpatient_page .ip-cell-notes {
+    font-size: 0.85rem;
+    color: var(--ip-slate);
+    line-height: 1.5;
+}
+
+/* Remove default Streamlit column gap for tight table look */
+.st-key-physician_inpatient_page [class*="st-key-ip_round_row_"] div[data-testid="stHorizontalBlock"] {
+    gap: 0.5rem;
+}
+
+/* =========================================================
+   STREAMLIT ALERT OVERRIDES (CRITICAL)
+   ========================================================= */
+
+/* --- Red Flags (Critical Alerts) --- */
+.st-key-physician_inpatient_page div[data-testid="stAlert"][kind="error"] {
+    background: var(--ip-red-soft) !important;
+    border: 1px solid transparent !important; /* Kills default red border */
+    border-left: 3px solid var(--ip-red) !important;
+    border-radius: 6px !important;
+    padding: 1rem 1.25rem !important;
+    box-shadow: none !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Style the inner text */
+.st-key-physician_inpatient_page div[data-testid="stAlert"][kind="error"] p {
+    color: var(--ip-red) !important;
+    font-family: var(--ip-font-body) !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+}
+
+/* --- All Clear (Success Alerts) --- */
+.st-key-physician_inpatient_page div[data-testid="stAlert"][kind="success"] {
+    background: var(--ip-green-soft) !important;
+    border: 1px solid transparent !important; 
+    border-left: 3px solid var(--ip-green) !important;
+    border-radius: 6px !important;
+    padding: 1rem 1.25rem !important;
+    box-shadow: none !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.st-key-physician_inpatient_page div[data-testid="stAlert"][kind="success"] p {
+    color: var(--ip-green) !important;
+    font-family: var(--ip-font-body) !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+}
+
+/* --- Info Alerts (e.g., No rounds logged) --- */
+.st-key-physician_inpatient_page div[data-testid="stAlert"][kind="info"] {
+    background: var(--ip-teal-soft) !important;
+    border: none !important;
+    border-left: 3px solid var(--ip-teal) !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+}
+
+/* --- Hide the default icons inside Streamlit alerts --- */
+.st-key-physician_inpatient_page div[data-testid="stAlert"] svg {
+    display: none !important;
+}

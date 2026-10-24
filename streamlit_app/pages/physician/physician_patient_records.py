@@ -4,6 +4,8 @@ import streamlit as st
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
+from backend.supabase_client import admin_supabase
+
 from backend.fetches import (
     get_completed_patients_with_latest_ai,
     get_examinations_by_patient,
@@ -851,6 +853,72 @@ def render_examination_report(patient, exam):
     with right_col:
         render_xray_analysis(exam)
         render_ai_summary(ai, ai_findings, pneumonia_type, ai_conf)
+
+    # ============================================================
+    # NEW: INPATIENT TIMELINE
+    # ============================================================
+    # Only show this section if the patient was admitted based on this exam.
+    if exam.get("disposition") == "Admission":
+        st.divider()
+        section_title("Inpatient Monitoring")
+
+        # Fetch all daily rounds linked to this specific admission
+        try:
+            res = (
+                admin_supabase
+                .table("examinations")
+                .select("*")
+                .eq("parent_examination_id", exam_id)
+                .order("examination_date", desc=True)
+                .execute()
+            )
+            rounds = res.data or []
+        except Exception as e:
+            st.error(f"Failed to load inpatient rounds: {e}")
+            rounds = []
+
+        # Show Discharge Status
+        if exam.get("status") == "Discharged":
+            st.markdown(
+                f"<div style='padding: 0.75rem; background: #EAF6F1; border-left: 4px solid #2E8B6A; border-radius: 8px; margin-bottom: 1rem; color: #12283A; font-weight: 500; font-size: 0.85rem;'>"
+                f"✅ Patient was discharged on {format_date_only(exam.get('time_of_discharge'))}."
+                f"</div>", 
+                unsafe_allow_html=True
+            )
+
+        # Show the daily rounds
+        if not rounds:
+            empty_state("No daily rounds logged for this admission.")
+        else:
+            for r in rounds:
+                r_date = format_date_only(r.get("examination_date"))
+                r_diagnosis = r.get("diagnosis") or "No clinical notes."
+                
+                st.markdown(
+                    f"<div class='pr-hero-card' style='padding: 1rem;'>"
+                    f"<p class='pr-hero-name' style='font-size: 1rem; margin-bottom: 0.25rem;'>Daily Round - {r_date}</p>"
+                    f"<p style='font-size: 0.85rem; color: #5A6F7F; margin: 0;'>{r_diagnosis}</p>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+
+        # Optional: Show the follow-up if it's been scheduled post-discharge
+        if exam.get("status") == "Discharged":
+            from backend.backend_utils.followup_utils import get_upcoming_follow_ups_by_patient
+            follow_ups = get_upcoming_follow_ups_by_patient(patient.get("patient_id")) or []
+            # Find if one is linked to this exam
+            linked_fu = next((fu for fu in follow_ups if fu.get("source_examination_id") == exam_id), None)
+            
+            if linked_fu:
+                st.markdown(
+                    f"<div class='pr-hero-card' style='padding: 1rem; margin-top: 0.5rem; border-left: 3px solid #0F7C88;'>"
+                    f"<p class='pr-hero-eyebrow' style='font-size: 0.7rem;'>Linked Follow-Up</p>"
+                    f"<p style='font-size: 0.85rem; color: #12283A; font-weight: 600; margin: 0;'>"
+                    f"Scheduled for {format_date_only(linked_fu.get('follow_up_date'))}</p>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+
 
 # ============================================================
 # PAGE
