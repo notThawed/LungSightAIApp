@@ -1596,3 +1596,329 @@ def get_patients_with_upcoming_follow_ups(
         )
 
         return []
+
+# ============================================================
+# FOLLOW-UP CODES (FU-YYYY-NNNNN)
+# ============================================================
+
+def generate_follow_up_code():
+    """
+    Generate the next human-readable follow-up code.
+
+    Format: FU-YYYY-NNNNN  (e.g. FU-2026-00042)
+    Sequence resets on January 1st each year.
+    """
+
+    current_year = datetime.now().year
+    prefix = f"FU-{current_year}-"
+
+    try:
+        response = (
+            admin_supabase
+            .table("follow_ups")
+            .select("follow_up_code")
+            .like("follow_up_code", f"{prefix}%")
+            .order("follow_up_code", desc=True)
+            .limit(1)
+            .execute()
+        )
+
+        rows = response.data or []
+
+        if not rows:
+            return f"{prefix}00001"
+
+        last_code = rows[0].get("follow_up_code") or ""
+
+        if not last_code.startswith(prefix):
+            return f"{prefix}00001"
+
+        try:
+            number = int(last_code.split("-")[-1])
+        except (ValueError, TypeError):
+            number = 0
+
+        return f"{prefix}{number + 1:05d}"
+
+    except Exception as exc:
+        print(f"Failed to generate follow-up code: {exc}")
+        return None
+
+
+# ============================================================
+# PREVIOUS FOLLOW-UP LOOKUP (chain)
+# ============================================================
+
+def find_previous_follow_up(patient_id, source_examination_id):
+    """
+    Find the most recent follow-up for this patient
+    linked to the same parent examination.
+    """
+
+    if not patient_id or not source_examination_id:
+        return None
+
+    try:
+        response = (
+            admin_supabase
+            .table("follow_ups")
+            .select("follow_up_id, follow_up_date, created_at")
+            .eq("patient_id", patient_id)
+            .eq("source_examination_id", source_examination_id)
+            .order("follow_up_date", desc=True)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+
+        rows = response.data or []
+
+        return rows[0]["follow_up_id"] if rows else None
+
+    except Exception as exc:
+        print(f"Failed to find previous follow-up: {exc}")
+        return None
+
+
+# ============================================================
+# GET FOLLOW-UP BY CODE
+# ============================================================
+
+def get_follow_up_by_code(code):
+    """Fetch a follow-up by its human-readable code."""
+
+    if not code:
+        return None
+
+    try:
+        response = (
+            admin_supabase
+            .table("follow_ups")
+            .select("""
+                *,
+                patients (
+                    patient_id, patient_code, first_name,
+                    middle_name, last_name, suffix,
+                    date_of_birth, sex, contact_number, hospital_id
+                ),
+                source_examination:examinations!follow_ups_source_examination_id_fkey (
+                    examination_id, patient_id, examination_type,
+                    examination_date, chief_complaint,
+                    history_of_present_illness, physical_examination,
+                    diagnosis, plans_orders, disposition,
+                    disposition_notes, status, follow_up_sequence
+                ),
+                follow_up_examination:examinations!follow_ups_follow_up_examination_id_fkey (
+                    examination_id, patient_id, examination_type,
+                    examination_date, diagnosis, status, follow_up_sequence
+                )
+            """)
+            .eq("follow_up_code", code.strip().upper())
+            .limit(1)
+            .execute()
+        )
+
+        rows = response.data or []
+        return rows[0] if rows else None
+
+    except Exception as exc:
+        print(f"Failed to get follow-up by code: {exc}")
+        return None
+
+
+# ============================================================
+# SEARCH FOLLOW-UPS
+# ============================================================
+
+def search_follow_ups(query, hospital_id=None):
+    """Search follow-ups by code OR patient name."""
+
+    if not query or not query.strip():
+        return []
+
+    query = query.strip()
+
+    try:
+        code_match = get_follow_up_by_code(query)
+
+        if code_match:
+            if hospital_id:
+                patient = code_match.get("patients") or {}
+                if isinstance(patient, list):
+                    patient = patient[0] if patient else {}
+                if patient.get("hospital_id") != hospital_id:
+                    return []
+            return [code_match]
+
+        query_builder = (
+            admin_supabase
+            .table("follow_ups")
+            .select("""
+                *,
+                patients!inner (
+                    patient_id, patient_code, first_name,
+                    middle_name, last_name, suffix,
+                    date_of_birth, sex, contact_number, hospital_id
+                ),
+                source_examination:examinations!follow_ups_source_examination_id_fkey (
+                    examination_id, patient_id, examination_type,
+                    examination_date, chief_complaint,
+                    history_of_present_illness, physical_examination,
+                    diagnosis, plans_orders, disposition,
+                    disposition_notes, status, follow_up_sequence
+                ),
+                follow_up_examination:examinations!follow_ups_follow_up_examination_id_fkey (
+                    examination_id, patient_id, examination_type,
+                    examination_date, diagnosis, status, follow_up_sequence
+                )
+            """)
+            .or_(
+                f"patients.first_name.ilike.%{query}%,"
+                f"patients.last_name.ilike.%{query}%"
+            )
+            .in_("status", ["Scheduled", "Rescheduled"])
+            .order("follow_up_date", desc=False)
+        )
+
+        if hospital_id:
+            query_builder = query_builder.eq(
+                "patients.hospital_id", hospital_id
+            )
+
+        response = query_builder.execute()
+        return response.data or []
+
+    except Exception as exc:
+        print(f"Failed to search follow-ups: {exc}")
+        return []
+
+
+# ============================================================
+# GET SCHEDULED FOLLOW-UPS FOR A DATE
+# ============================================================
+
+def get_scheduled_follow_ups_for_date(target_date, hospital_id=None):
+    """Return all follow-ups scheduled on a specific date."""
+
+    if not target_date:
+        target_date = date.today()
+
+    try:
+        query = (
+            admin_supabase
+            .table("follow_ups")
+            .select("""
+                *,
+                patients!inner (
+                    patient_id, patient_code, first_name,
+                    middle_name, last_name, suffix,
+                    date_of_birth, sex, contact_number, hospital_id
+                ),
+                source_examination:examinations!follow_ups_source_examination_id_fkey (
+                    examination_id, examination_type,
+                    examination_date, diagnosis, status
+                )
+            """)
+            .eq("follow_up_date", target_date.isoformat())
+            .in_("status", ["Scheduled", "Rescheduled"])
+            .order("follow_up_time", desc=False)
+        )
+
+        if hospital_id:
+            query = query.eq("patients.hospital_id", hospital_id)
+
+        response = query.execute()
+        return response.data or []
+
+    except Exception as exc:
+        print(f"Failed to get scheduled follow-ups: {exc}")
+        return []
+
+
+# ============================================================
+# MARK FOLLOW-UP ARRIVED (staff check-in)
+# ============================================================
+
+def mark_follow_up_arrived(follow_up_id, staff_user_id):
+    """
+    Called when staff marks a follow-up patient as arrived.
+
+    Creates the Follow-Up Examination and links it.
+    """
+
+    if not follow_up_id:
+        return {"success": False, "message": "Follow-up ID is required."}
+
+    try:
+        follow_up = get_follow_up(follow_up_id)
+
+        if not follow_up:
+            return {"success": False, "message": "Follow-up not found."}
+
+        status = (follow_up.get("status") or "").strip()
+
+        if status not in ("Scheduled", "Rescheduled"):
+            return {
+                "success": False,
+                "message": f"Follow-up is not active (status: {status}).",
+            }
+
+        if follow_up.get("follow_up_examination_id"):
+            return {
+                "success": False,
+                "message": "Patient already checked in for this follow-up.",
+            }
+
+        patient = follow_up.get("patients") or {}
+        if isinstance(patient, list):
+            patient = patient[0] if patient else {}
+
+        patient_id = patient.get("patient_id")
+
+        if not patient_id:
+            return {"success": False, "message": "Patient not found."}
+
+        next_sequence = get_next_follow_up_sequence(patient_id)
+
+        from backend.crud import create_examination
+
+        exam_result = create_examination(
+            patient_id=patient_id,
+            examination_type="Follow-Up Examination",
+            examination_date=datetime.now(timezone.utc),
+            created_by=staff_user_id,
+            follow_up_sequence=next_sequence,
+        )
+
+        if not exam_result:
+            return {
+                "success": False,
+                "message": "Failed to create follow-up examination.",
+            }
+
+        exam = exam_result[0]
+        exam_id = exam.get("examination_id")
+
+        link = link_follow_up_examination(follow_up_id, exam_id)
+        if not link.get("success"):
+            return {
+                "success": False,
+                "message": link.get("message", "Failed to link examination."),
+            }
+
+        complete = complete_follow_up(follow_up_id)
+        if not complete.get("success"):
+            return {
+                "success": False,
+                "message": complete.get("message", "Failed to complete follow-up."),
+            }
+
+        return {
+            "success": True,
+            "message": "Patient checked in. Follow-up examination created.",
+            "examination": exam,
+            "follow_up": follow_up,
+        }
+
+    except Exception as exc:
+        return {"success": False, "message": str(exc)}

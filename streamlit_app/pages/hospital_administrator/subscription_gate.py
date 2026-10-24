@@ -1,3 +1,15 @@
+# streamlit_app/pages/hospital_administrator/subscription_gate.py
+
+"""
+Physician / Hospital Admin — Subscription Gate.
+
+Handles:
+  - Expired subscription takeover
+  - Grace period warning banner
+  - Pre-expiry info banner
+  - Renewal flow (confirmation → PayMongo → success)
+"""
+
 import streamlit as st
 
 
@@ -9,6 +21,112 @@ SESSION_SHOW_RENEWAL      = "show_renewal_screen"
 SESSION_RENEWAL_PAYMENT   = "renewal_payment_id"
 SESSION_RENEWAL_URL       = "renewal_checkout_url"
 SESSION_RENEWAL_SUCCESS   = "renewal_success"
+SESSION_RENEWAL_DISMISSED = "renewal_banner_dismissed"
+
+
+# ============================================================
+# CSS — NOTIFICATION BANNERS
+# ============================================================
+
+_NOTIFICATION_CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  vertical-align: middle;
+}
+
+/* ---------------------------------------------------------
+   Renewal notification banner (inline, single-row)
+   --------------------------------------------------------- */
+
+.st-key-renewal_notification_info,
+.st-key-renewal_notification_grace {
+  padding: 12px 16px !important;
+  border-radius: 10px !important;
+  border: 1px solid !important;
+  margin-bottom: 1rem !important;
+  box-shadow: 0 1px 3px rgba(18, 40, 58, 0.04) !important;
+}
+
+.st-key-renewal_notification_info {
+  background: #F5FBFC !important;
+  border-color: #CFE7EB !important;
+  border-left: 4px solid #0F7C88 !important;
+}
+
+.st-key-renewal_notification_grace {
+  background: #FFFDF5 !important;
+  border-color: #FDE7B5 !important;
+  border-left: 4px solid #B45309 !important;
+}
+
+/* Compact buttons inside the banner */
+
+.st-key-renewal_notification_info [data-testid="stButton"] button,
+.st-key-renewal_notification_grace [data-testid="stButton"] button {
+  min-height: 30px !important;
+  height: 30px !important;
+  padding: 0 12px !important;
+  font-size: 12.5px !important;
+  border-radius: 6px !important;
+  margin: 0 !important;
+}
+
+.st-key-renewal_notification_info [data-testid="stButton"] button p,
+.st-key-renewal_notification_grace [data-testid="stButton"] button p {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+
+.st-key-renewal_notification_info [data-testid="stButton"] button[data-baseweb="button"][kind="primary"] {
+  background: #0F7C88 !important;
+  border-color: #0F7C88 !important;
+}
+
+.st-key-renewal_notification_info [data-testid="stButton"] button[data-baseweb="button"][kind="primary"] p {
+  color: #FFFFFF !important;
+}
+
+.st-key-renewal_notification_grace [data-testid="stButton"] button[data-baseweb="button"][kind="primary"] {
+  background: #B45309 !important;
+  border-color: #B45309 !important;
+}
+
+.st-key-renewal_notification_grace [data-testid="stButton"] button[data-baseweb="button"][kind="primary"] p {
+  color: #FFFFFF !important;
+}
+
+/* Dismiss "×" button — ghost style */
+
+[class*="st-key-renewal_dismiss_"] [data-testid="stButton"] button {
+  min-height: 28px !important;
+  height: 28px !important;
+  width: 28px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  color: #5A6F7F !important;
+  font-size: 16px !important;
+}
+
+[class*="st-key-renewal_dismiss_"] [data-testid="stButton"] button:hover {
+  background: rgba(90, 111, 127, 0.10) !important;
+  border-radius: 4px !important;
+}
+
+[class*="st-key-renewal_dismiss_"] [data-testid="stButton"] button p {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #5A6F7F !important;
+}
+"""
+
+
+def _inject_css():
+    st.markdown(f"<style>{_NOTIFICATION_CSS}</style>", unsafe_allow_html=True)
 
 
 # ============================================================
@@ -16,10 +134,7 @@ SESSION_RENEWAL_SUCCESS   = "renewal_success"
 # ============================================================
 
 def _reset_renewal_session():
-    """
-    Clears all renewal-related session keys.
-    Called on cancel, after success, and on logout.
-    """
+    """Clear all renewal-related session keys."""
 
     for key in (
         SESSION_SHOW_RENEWAL,
@@ -27,29 +142,30 @@ def _reset_renewal_session():
         SESSION_RENEWAL_URL,
         SESSION_RENEWAL_SUCCESS,
     ):
-
         st.session_state.pop(key, None)
 
 
 def _start_renewal_flow():
-    """
-    Called when the user clicks Renew.
-    Sets the flag to show the confirmation screen.
-    """
+    """Called when the user clicks Renew."""
 
     st.session_state[SESSION_SHOW_RENEWAL] = True
-
     st.rerun()
 
 
+def _dismiss_banner():
+    st.session_state[SESSION_RENEWAL_DISMISSED] = True
+    st.rerun()
+
+
+def _is_banner_dismissed():
+    return bool(st.session_state.get(SESSION_RENEWAL_DISMISSED, False))
+
+
 # ============================================================
-# RENEW BUTTON
+# RENEW BUTTON (used on expired screen)
 # ============================================================
 
 def _render_renew_button(key_suffix="default"):
-    """
-    Real renew button. Kicks off the confirmation screen.
-    """
 
     if st.button(
         "Renew Subscription",
@@ -58,8 +174,69 @@ def _render_renew_button(key_suffix="default"):
         key=f"renew_button_{key_suffix}",
         icon=":material/autorenew:",
     ):
-
         _start_renewal_flow()
+
+
+# ============================================================
+# INLINE NOTIFICATION BANNER (single-row)
+# ============================================================
+
+def _render_inline_notification(tone, icon, message):
+    """
+    Render the single-row notification banner.
+
+    Layout:
+        [icon]  [message .........................]  [Renew]  [×]
+    """
+
+    key = f"renewal_notification_{tone}"
+
+    with st.container(key=key):
+
+        icon_col, msg_col, renew_col, dismiss_col = st.columns(
+            [0.5, 8, 1.1, 0.5],
+            vertical_alignment="center",
+        )
+
+        # Icon
+        with icon_col:
+            icon_color = "#0F7C88" if tone == "info" else "#B45309"
+            st.markdown(
+                f"<span class='material-symbols-rounded' "
+                f"style='font-size:20px; color:{icon_color};'>"
+                f"{icon}</span>",
+                unsafe_allow_html=True,
+            )
+
+        # Message
+        with msg_col:
+            text_color = "#12283A" if tone == "info" else "#78350F"
+            st.markdown(
+                f"<p style='margin:0; font-size:13.5px; "
+                f"line-height:1.4; color:{text_color};'>"
+                f"{message}"
+                f"</p>",
+                unsafe_allow_html=True,
+            )
+
+        # Renew
+        with renew_col:
+            if st.button(
+                "Renew",
+                key=f"renew_inline_{tone}",
+                type="primary",
+                use_container_width=True,
+            ):
+                _start_renewal_flow()
+
+        # Dismiss
+        with dismiss_col:
+            if st.button(
+                "×",
+                key=f"renewal_dismiss_{tone}",
+                use_container_width=True,
+            ):
+                _dismiss_banner()
 
 
 # ============================================================
@@ -73,19 +250,6 @@ def show_renewal_confirmation_screen(
     amount=None,
     is_expired_screen=False,
 ):
-    """
-    Shown after the user clicks Renew. Confirms what they're
-    about to pay for, then sends them to PayMongo.
-
-    Args:
-        hospital_name:      str | None
-        plan_name:          str | None
-        billing_cycle:      str | None
-        amount:             float | None
-        is_expired_screen:  bool — if True, this is a takeover screen
-                                    (expired state); if False, it's a
-                                    full-page confirmation
-    """
 
     st.markdown(
         "<h2 style='text-align:center; margin-bottom:0.25rem;'>"
@@ -95,7 +259,6 @@ def show_renewal_confirmation_screen(
     )
 
     if hospital_name:
-
         st.markdown(
             "<p style='text-align:center; color:#5A6F7F; "
             "margin:0 0 1rem;'>"
@@ -106,49 +269,31 @@ def show_renewal_confirmation_screen(
 
     st.divider()
 
-    # --------------------------------------------------------
-    # Plan details
-    # --------------------------------------------------------
-
     col1, col2 = st.columns(2)
 
     with col1:
-
         st.write(f"**Plan:** {plan_name or '—'}")
 
     with col2:
-
         st.write(f"**Billing Cycle:** {billing_cycle or '—'}")
 
     if amount is not None:
-
-        st.metric(
-            "Amount Due",
-            f"₱{amount:,.2f}",
-        )
+        st.metric("Amount Due", f"₱{amount:,.2f}")
 
     st.divider()
-
-    # --------------------------------------------------------
-    # Actions
-    # --------------------------------------------------------
 
     col1, col2 = st.columns(2)
 
     with col1:
-
         if st.button(
             "Cancel",
             use_container_width=True,
             key="renewal_cancel",
         ):
-
             _reset_renewal_session()
-
             st.rerun()
 
     with col2:
-
         if st.button(
             "Proceed to PayMongo",
             type="primary",
@@ -156,16 +301,10 @@ def show_renewal_confirmation_screen(
             key="renewal_proceed",
             icon=":material/arrow_forward:",
         ):
-
             _create_and_show_checkout()
 
 
 def _create_and_show_checkout():
-    """
-    Calls create_renewal_checkout_session() and stores the
-    result in session state. Then reruns so the checkout
-    link screen renders.
-    """
 
     from backend.payments import create_renewal_checkout_session
 
@@ -173,26 +312,20 @@ def _create_and_show_checkout():
         "subscription_context", {}
     ).get("subscription_id")
 
-    # Fallback: if we don't have it cached, error out
     if not subscription_id:
-
         st.error(
             "Could not find your subscription. "
             "Please log out and log in again."
         )
-
         return
 
     with st.spinner("Preparing checkout..."):
-
         result = create_renewal_checkout_session(subscription_id)
 
     if not result.get("success"):
-
         st.error(
             result.get("message", "Failed to create checkout session.")
         )
-
         return
 
     st.session_state[SESSION_RENEWAL_PAYMENT] = result["payment_id"]
@@ -206,10 +339,6 @@ def _create_and_show_checkout():
 # ============================================================
 
 def show_checkout_link_screen():
-    """
-    Shown after the checkout session is created. Gives the
-    user a link to PayMongo and a Refresh Status button.
-    """
 
     from backend.payments import get_renewal_status
 
@@ -228,7 +357,6 @@ def show_checkout_link_screen():
     checkout_url = st.session_state.get(SESSION_RENEWAL_URL)
 
     if checkout_url:
-
         st.markdown(
             f"<div style='text-align:center; margin:1rem 0;'>"
             f"<a href='{checkout_url}' target='_blank' "
@@ -253,19 +381,15 @@ def show_checkout_link_screen():
     col1, col2 = st.columns(2)
 
     with col1:
-
         if st.button(
             "Cancel",
             use_container_width=True,
             key="renewal_checkout_cancel",
         ):
-
             _reset_renewal_session()
-
             st.rerun()
 
     with col2:
-
         if st.button(
             "Refresh Status",
             type="primary",
@@ -277,21 +401,15 @@ def show_checkout_link_screen():
             payment_id = st.session_state.get(SESSION_RENEWAL_PAYMENT)
 
             if not payment_id:
-
                 st.error("No payment in progress.")
-
                 return
 
             status = get_renewal_status(payment_id)
 
             if status.get("paid"):
-
                 st.session_state[SESSION_RENEWAL_SUCCESS] = True
-
                 st.rerun()
-
             else:
-
                 st.warning(
                     f"Payment status: **{status.get('status')}**. "
                     "Please wait a moment and try again."
@@ -303,9 +421,6 @@ def show_checkout_link_screen():
 # ============================================================
 
 def show_renewal_success_screen():
-    """
-    Shown after the payment is confirmed.
-    """
 
     st.markdown(
         "<div style='text-align:center; margin-bottom:0.5rem;'>"
@@ -319,8 +434,7 @@ def show_renewal_success_screen():
 
     st.markdown(
         "<h2 style='text-align:center; margin-bottom:0.25rem;'>"
-        "Subscription Renewed"
-        "</h2>",
+        "Subscription Renewed</h2>",
         unsafe_allow_html=True,
     )
 
@@ -330,8 +444,8 @@ def show_renewal_success_screen():
     )
 
     st.info(
-        "Your new billing period will be reflected "
-        "shortly. You can continue using LungSight."
+        "Your new billing period will be reflected shortly. "
+        "You can continue using LungSight."
     )
 
     st.divider()
@@ -339,7 +453,6 @@ def show_renewal_success_screen():
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
-
         if st.button(
             "Continue to Dashboard",
             type="primary",
@@ -347,19 +460,14 @@ def show_renewal_success_screen():
             key="renewal_continue",
             icon=":material/arrow_forward:",
         ):
-
             _reset_renewal_session()
-
-            # Force a fresh subscription context on next rerun
             st.session_state.pop("subscription_context", None)
-
             st.session_state.pop("grace_info", None)
-
             st.rerun()
 
 
 # ============================================================
-# EXPIRED SCREEN — FULL PAGE TAKEOVER
+# EXPIRED SCREEN — TAKEOVER
 # ============================================================
 
 def show_expired_screen(
@@ -368,33 +476,17 @@ def show_expired_screen(
     end_date=None,
     can_renew=False,
 ):
-    """
-    Full-page block shown when a hospital's subscription
-    has passed the grace period.
-    """
-
-    # --------------------------------------------------------
-    # Renewal sub-flow screens
-    # --------------------------------------------------------
 
     if st.session_state.get(SESSION_RENEWAL_SUCCESS):
-
         show_renewal_success_screen()
-
         return
 
     if st.session_state.get(SESSION_RENEWAL_PAYMENT):
-
         show_checkout_link_screen()
-
         return
 
     if st.session_state.get(SESSION_SHOW_RENEWAL):
-
-        # Get amount from cached context
-
         ctx = st.session_state.get("subscription_context", {})
-
         show_renewal_confirmation_screen(
             hospital_name=hospital_name,
             plan_name=plan_name,
@@ -402,36 +494,11 @@ def show_expired_screen(
             amount=ctx.get("amount"),
             is_expired_screen=True,
         )
-
         return
 
-    # --------------------------------------------------------
-    # Default expired screen
-    # --------------------------------------------------------
+    _inject_css()
 
     st.markdown(
-        "<style>"
-        "@import url('https://fonts.googleapis.com/css2"
-        "?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD"
-        "@20..48,100..700,0..1,-50..200');"
-        ".material-symbols-rounded {"
-        "  font-family: 'Material Symbols Rounded';"
-        "  font-weight: 400;"
-        "  font-style: normal;"
-        "  font-size: 24px;"
-        "  line-height: 1;"
-        "  letter-spacing: normal;"
-        "  text-transform: none;"
-        "  display: inline-flex;"
-        "  align-items: center;"
-        "  justify-content: center;"
-        "  white-space: nowrap;"
-        "  direction: ltr;"
-        "  font-feature-settings: 'liga';"
-        "  -webkit-font-smoothing: antialiased;"
-        "  vertical-align: middle;"
-        "}"
-        "</style>"
         "<div style='text-align:center; padding:2.5rem 1rem 0.5rem;'>"
         "<span class='material-symbols-rounded' "
         "style='font-size:64px; color:#B45309;'>lock</span>"
@@ -439,25 +506,20 @@ def show_expired_screen(
         unsafe_allow_html=True,
     )
 
-
     st.markdown(
         "<h2 style='text-align:center; margin-bottom:0.25rem;'>"
-        "Subscription Expired"
-        "</h2>",
+        "Subscription Expired</h2>",
         unsafe_allow_html=True,
     )
 
     if hospital_name:
-
         st.markdown(
             "<p style='text-align:center; color:#5A6F7F;'>"
             f"{hospital_name}'s LungSight subscription has expired."
             "</p>",
             unsafe_allow_html=True,
         )
-
     else:
-
         st.markdown(
             "<p style='text-align:center; color:#5A6F7F;'>"
             "Your hospital's LungSight subscription has expired."
@@ -465,20 +527,14 @@ def show_expired_screen(
             unsafe_allow_html=True,
         )
 
-    # --------------------------------------------------------
-    # Detail pills (plan + expiry date)
-    # --------------------------------------------------------
-
     details = []
 
     if plan_name:
         details.append(f"Plan: {plan_name}")
-
     if end_date:
         details.append(f"Expired on: {end_date}")
 
     if details:
-
         st.markdown(
             "<p style='text-align:center; color:#5A6F7F; "
             "margin-top:0.5rem;'>"
@@ -504,11 +560,8 @@ def show_expired_screen(
     with col2:
 
         if can_renew:
-
             _render_renew_button(key_suffix="expired")
-
         else:
-
             st.info(
                 "Please contact your Hospital Administrator "
                 "to renew."
@@ -520,18 +573,14 @@ def show_expired_screen(
             key="expired_logout",
             icon=":material/logout:",
         ):
-
             st.session_state.logged_in = False
-
             st.session_state.user = None
-
             _reset_renewal_session()
-
             st.rerun()
 
 
 # ============================================================
-# GRACE BANNER — YELLOW
+# GRACE PERIOD BANNER (single-row notification)
 # ============================================================
 
 def show_grace_banner(
@@ -540,82 +589,65 @@ def show_grace_banner(
     hospital_name=None,
     can_renew=False,
 ):
-    """
-    Yellow banner shown during the grace period.
-    """
-
-    # --------------------------------------------------------
-    # Renewal sub-flow screens
-    # --------------------------------------------------------
 
     if st.session_state.get(SESSION_RENEWAL_SUCCESS):
-
         show_renewal_success_screen()
-
         return
 
     if st.session_state.get(SESSION_RENEWAL_PAYMENT):
-
         show_checkout_link_screen()
-
         return
 
     if st.session_state.get(SESSION_SHOW_RENEWAL):
-
         ctx = st.session_state.get("subscription_context", {})
-
         show_renewal_confirmation_screen(
             hospital_name=hospital_name,
             plan_name=ctx.get("plan_name"),
             billing_cycle=ctx.get("billing_cycle"),
             amount=ctx.get("amount"),
         )
-
         return
 
-    # --------------------------------------------------------
-    # Default grace banner
-    # --------------------------------------------------------
+    if _is_banner_dismissed():
+        return
 
-    day_word = "day" if days_left == 1 else "days"
+    _inject_css()
 
-    st.markdown(
-        "<div style='display:flex; gap:0.6rem; align-items:flex-start; "
-        "padding:0.75rem 1rem; background:#FEF3C7; "
-        "border:1px solid #FCD34D; border-radius:10px; "
-        "margin-bottom:1rem;'>"
-        "<span class='material-symbols-rounded' "
-        "style='color:#B45309; font-size:20px;'>"
-        "warning"
-        "</span>"
-        "<div style='font-size:0.88rem; color:#78350F; "
-        "line-height:1.5;'>"
-        f"Your subscription expired on <b>{end_date}</b>. "
-        f"You have <b>{days_left} {day_word}</b> left in the "
-        "grace period. Renew now to avoid losing access."
-        "</div>"
-        "</div>",
-        unsafe_allow_html=True,
+    # NEW DISPLAY LOGIC
+    if days_left == 0:
+        time_text = "<b>Final day of grace period.</b>"
+    elif days_left == 1:
+        time_text = "<b>1 day</b> left in grace period."
+    else:
+        time_text = f"<b>{days_left} days</b> left in grace period."
+
+    message = (
+        f"Your subscription expired on "
+        f"<b>{end_date}</b> &mdash; {time_text}"
     )
 
-    col1, col2 = st.columns([3, 1])
+    if can_renew:
+        _render_inline_notification(
+            tone="grace",
+            icon="warning",
+            message=message,
+        )
+    else:
+        st.markdown(
+            f"<div class='rn-banner-grace-static'>"
+            f"<span class='material-symbols-rounded' "
+            f"style='color:#B45309;'>warning</span> "
+            f"Your subscription expired on <b>{end_date}</b>. "
+            f"Please contact your Hospital Administrator to renew."
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
-    with col2:
 
-        if can_renew:
-
-            _render_renew_button(key_suffix="grace")
-
-        else:
-
-            st.caption(
-                "Please contact your Hospital Administrator "
-                "to renew."
-            )
 
 
 # ============================================================
-# PRE-EXPIRY BANNER — BLUE
+# PRE-EXPIRY BANNER (single-row notification)
 # ============================================================
 
 def show_pre_expiry_banner(
@@ -624,79 +656,69 @@ def show_pre_expiry_banner(
     hospital_name=None,
     can_renew=False,
 ):
-    """
-    Blue banner shown in the days before a subscription expires.
-    """
 
     # --------------------------------------------------------
     # Renewal sub-flow screens
     # --------------------------------------------------------
 
     if st.session_state.get(SESSION_RENEWAL_SUCCESS):
-
         show_renewal_success_screen()
-
         return
 
     if st.session_state.get(SESSION_RENEWAL_PAYMENT):
-
         show_checkout_link_screen()
-
         return
 
     if st.session_state.get(SESSION_SHOW_RENEWAL):
-
         ctx = st.session_state.get("subscription_context", {})
-
         show_renewal_confirmation_screen(
             hospital_name=hospital_name,
             plan_name=ctx.get("plan_name"),
             billing_cycle=ctx.get("billing_cycle"),
             amount=ctx.get("amount"),
         )
-
         return
 
     # --------------------------------------------------------
-    # Default pre-expiry banner
+    # Dismissed?
     # --------------------------------------------------------
+
+    if _is_banner_dismissed():
+        return
+
+    # --------------------------------------------------------
+    # Inline notification
+    # --------------------------------------------------------
+
+    _inject_css()
 
     day_word = "day" if days_left == 1 else "days"
 
-    st.markdown(
-        "<div style='display:flex; gap:0.6rem; align-items:flex-start; "
-        "padding:0.75rem 1rem; background:#E8F4F6; "
-        "border:1px solid #CFE7EB; border-radius:10px; "
-        "margin-bottom:1rem;'>"
-        "<span class='material-symbols-rounded' "
-        "style='color:#0F7C88; font-size:20px;'>"
-        "notifications"
-        "</span>"
-        "<div style='font-size:0.88rem; color:#12283A; "
-        "line-height:1.5;'>"
-        f"Your subscription expires in "
-        f"<b>{days_left} {day_word}</b> "
-        f"(on <b>{end_date}</b>). "
-        "Renew now to avoid interruption."
-        "</div>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    if can_renew:
 
-    col1, col2 = st.columns([3, 1])
+        _render_inline_notification(
+            tone="info",
+            icon="notifications",
+            message=(
+                f"Your subscription expires in "
+                f"<b>{days_left} {day_word}</b> "
+                f"(on <b>{end_date}</b>). "
+                f"Renew now to avoid interruption."
+            ),
+        )
 
-    with col2:
+    else:
 
-        if can_renew:
-
-            _render_renew_button(key_suffix="pre_expiry")
-
-        else:
-
-            st.caption(
-                "Please contact your Hospital Administrator "
-                "to renew."
-            )
+        st.markdown(
+            f"<div class='rn-banner-info-static'>"
+            f"<span class='material-symbols-rounded' "
+            f"style='color:#0F7C88;'>notifications</span> "
+            f"Your subscription expires in <b>{days_left} {day_word}</b> "
+            f"(on <b>{end_date}</b>). Please contact your Hospital "
+            f"Administrator to renew."
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
 
 # ============================================================
@@ -704,35 +726,25 @@ def show_pre_expiry_banner(
 # ============================================================
 
 def render_subscription_warnings(can_renew=False):
-    """
-    Renders the appropriate banner based on the cached
-    subscription context in st.session_state.
-    """
 
     context = st.session_state.get("subscription_context")
 
     if not context:
-
         return
 
     state = context.get("state")
-
     days_left = context.get("days_left")
-
     end_date = context.get("end_date")
 
     if state == "grace":
-
         show_grace_banner(
             end_date=end_date,
             days_left=days_left,
             can_renew=can_renew,
         )
-
         return
 
     if state == "active" and days_left is not None and 0 <= days_left <= 7:
-
         show_pre_expiry_banner(
             end_date=end_date,
             days_left=days_left,

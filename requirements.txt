@@ -17,3 +17,4 @@ scikit-learn
 tqdm
 numpy
 transformers
+pydicom

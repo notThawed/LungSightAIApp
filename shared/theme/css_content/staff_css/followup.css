@@ -1,0 +1,161 @@
+/* =========================================================
+   LUNGSIGHT — STAFF
+   Follow-Ups
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+:root {
+    --sf-film:      #F2F6F7;
+    --sf-white:     #FFFFFF;
+    --sf-ink:       #12283A;
+    --sf-slate:     #5A6F7F;
+    --sf-mist:      #DDE8EB;
+    --sf-teal:      #0F7C88;
+    --sf-teal-soft: #E8F4F6;
+    --sf-green:     #2E8B6A;
+    --sf-amber:     #B45309;
+    --sf-red:       #B91C1C;
+    --sf-font-body: 'Manrope', system-ui, sans-serif;
+}
+
+.st-key-staff_followups_root {
+    font-family: var(--sf-font-body);
+    color: var(--sf-ink);
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.sf-search-label {
+    margin: 0 0 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--sf-slate);
+}
+
+.sf-search-results-label {
+    margin: 1rem 0 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--sf-slate);
+}
+
+[class*="st-key-sf_fu_card_"] {
+    padding: 0.9rem 1rem 0.6rem;
+    border: 1px solid var(--sf-mist);
+    border-radius: 10px;
+    background: var(--sf-white);
+    margin-bottom: 0.5rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[class*="st-key-sf_fu_card_"]:hover {
+    border-color: var(--sf-teal);
+    box-shadow: 0 4px 12px rgba(15, 124, 136, 0.08);
+}
+
+.sf-fu-code {
+    font-family: ui-monospace, monospace;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--sf-teal);
+    letter-spacing: -0.01em;
+}
+
+.sf-fu-patient {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--sf-ink);
+    line-height: 1.25;
+}
+
+.sf-fu-sub {
+    font-size: 0.76rem;
+    color: var(--sf-slate);
+    line-height: 1.4;
+}
+
+.sf-detail-header {
+    margin: 0.5rem 0 1.25rem;
+}
+
+.sf-detail-title {
+    margin: 0;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 1.55rem;
+    font-weight: 600;
+    color: var(--sf-ink);
+    letter-spacing: -0.01em;
+}
+
+.sf-detail-sub {
+    margin: 0.2rem 0 0;
+    font-size: 0.82rem;
+    color: var(--sf-slate);
+}
+
+.sf-card {
+    padding: 1rem 1.15rem;
+    background: var(--sf-white);
+    border: 1px solid var(--sf-mist);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(18, 40, 58, 0.04);
+    margin-bottom: 1rem;
+}
+
+.sf-card--info {
+    background: var(--sf-film);
+}
+
+.sf-card-eyebrow {
+    margin: 0 0 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--sf-teal);
+}
+
+.sf-card-title {
+    margin: 0 0 0.75rem;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--sf-ink);
+    line-height: 1.2;
+}
+
+.sf-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--sf-mist);
+    font-size: 0.82rem;
+}
+
+.sf-card-row:last-child {
+    border-bottom: none;
+}
+
+.sf-card-row span {
+    color: var(--sf-slate);
+    font-weight: 500;
+    flex-shrink: 0;
+    max-width: 40%;
+}
+
+.sf-card-row b {
+    color: var(--sf-ink);
+    font-weight: 600;
+    text-align: right;
+    word-break: break-word;
+    line-height: 1.4;
+}

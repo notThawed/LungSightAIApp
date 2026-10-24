@@ -621,6 +621,8 @@ def get_examinations_by_patient(patient_id):
             follow_up_notes,
             follow_up_sequence,
             status,
+            curb65_score,          
+            severity_status,       
             created_by,
             reviewed_by,
             reviewed_at,
@@ -633,6 +635,7 @@ def get_examinations_by_patient(patient_id):
     )
 
     return response.data or []
+
 
 
 
@@ -2178,33 +2181,10 @@ def get_hospital_patient_locations(hospital_id):
 
 def get_completed_patients_with_latest_ai(hospital_id=None):
     """
-    Return one row per patient who has at least one
-    completed examination with an uploaded X-ray.
-
-    Each row includes:
-      - patient info (name, DOB, sex, contact, hospital)
-      - latest_examination_date      (from the completed exam)
-      - latest_image_id              (for AI lookup)
-      - ai_findings                  ("positive" | "negative" | None)
-      - ai_confidence                (0–1 | None)
-      - pneumonia_type               ("bacterial_pneumonia" |
-                                      "viral_pneumonia" | None)
-      - classification_confidence    (0–1 | None)
-
-    Optimized: queries each table once and merges in Python,
-    so the physician list page makes ~4 queries total instead
-    of N queries per patient.
-
-    Returns:
-        list[dict]
+    Return one row per patient who has at least one completed examination.
     """
-
     try:
-
-        # ------------------------------------------
-        # 1. Completed examinations
-        # ------------------------------------------
-
+        # 1. Completed examinations (order by date descending)
         exam_query = (
             admin_supabase
             .table("examinations")
@@ -2214,6 +2194,10 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
                 status,
                 examination_date,
                 created_at,
+                curb65_score,
+                severity_status,
+                disposition_notes,
+                plans_orders,
 
                 patients!inner (
                     patient_id,
@@ -2240,193 +2224,119 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
         )
 
         if hospital_id:
-            exam_query = exam_query.eq(
-                "patients.hospital_id",
-                hospital_id,
-            )
+            exam_query = exam_query.eq("patients.hospital_id", hospital_id)
 
         exam_rows = exam_query.execute().data or []
-
         if not exam_rows:
             return []
 
-        # ------------------------------------------
-        # 2. Keep only the LATEST completed exam
-        #    per patient
-        # ------------------------------------------
-
+        # 2. Keep the LATEST completed exam that has a severity score.
+        # If none have a score, keep the latest exam.
         latest_by_patient = {}
-
+        
         for row in exam_rows:
-
             patient = row.get("patients") or {}
-
             if isinstance(patient, list):
                 patient = patient[0] if patient else None
-
             if not patient:
                 continue
-
+                
             patient_id = patient.get("patient_id")
-
             if not patient_id:
                 continue
 
+            has_score = (row.get("curb65_score") is not None) or (row.get("severity_status") not in (None, "Not Assessed"))
+            
             if patient_id not in latest_by_patient:
+                # First time we see this patient, save it
                 latest_by_patient[patient_id] = {
                     "patient": patient,
                     "exam": row,
+                    "has_score": has_score
                 }
+            else:
+                # We already have an exam for this patient. 
+                # If the new one has a score and the saved one doesn't, replace it.
+                if has_score and not latest_by_patient[patient_id]["has_score"]:
+                    latest_by_patient[patient_id] = {
+                        "patient": patient,
+                        "exam": row,
+                        "has_score": has_score
+                    }
 
-        # ------------------------------------------
         # 3. Fetch X-ray requests for those exams
-        # ------------------------------------------
-
-        exam_ids = [
-            item["exam"]["examination_id"]
-            for item in latest_by_patient.values()
-        ]
-
+        exam_ids = [item["exam"]["examination_id"] for item in latest_by_patient.values()]
         req_response = (
-            admin_supabase
-            .table("xray_requests")
+            admin_supabase.table("xray_requests")
             .select("request_id, examination_id")
             .in_("examination_id", exam_ids)
             .execute()
         )
+        request_by_exam = {r["examination_id"]: r["request_id"] for r in (req_response.data or [])}
 
-        req_rows = req_response.data or []
-
-        request_by_exam = {
-            r["examination_id"]: r["request_id"]
-            for r in req_rows
-        }
-
-        # ------------------------------------------
-        # 4. Fetch X-ray images for those requests
-        # ------------------------------------------
-
+        # 4. Fetch X-ray images
         request_ids = list(request_by_exam.values())
-
         latest_image_by_request = {}
-
         if request_ids:
-
             img_response = (
-                admin_supabase
-                .table("xray_images")
+                admin_supabase.table("xray_images")
                 .select("image_id, request_id, uploaded_at")
                 .in_("request_id", request_ids)
                 .order("uploaded_at", desc=True)
                 .execute()
             )
-
             for img in (img_response.data or []):
-
                 rid = img.get("request_id")
-
                 if rid and rid not in latest_image_by_request:
                     latest_image_by_request[rid] = img
 
-        # ------------------------------------------
-        # 5. Fetch AI results for those images
-        # ------------------------------------------
-
-        image_ids = [
-            img["image_id"]
-            for img in latest_image_by_request.values()
-        ]
-
+        # 5. Fetch AI results
+        image_ids = [img["image_id"] for img in latest_image_by_request.values()]
         ai_by_image = {}
-
         if image_ids:
-
             ai_response = (
-                admin_supabase
-                .table("xray_ai_results")
-                .select(
-                    "image_id, ai_findings, ai_confidence, "
-                    "pneumonia_type, classification_confidence, "
-                    "processed_at"
-                )
+                admin_supabase.table("xray_ai_results")
+                .select("image_id, ai_findings, ai_confidence, pneumonia_type, classification_confidence, processed_at")
                 .in_("image_id", image_ids)
                 .order("processed_at", desc=True)
                 .execute()
             )
-
             for ai in (ai_response.data or []):
-
                 iid = ai.get("image_id")
-
                 if iid and iid not in ai_by_image:
                     ai_by_image[iid] = ai
 
-        # ------------------------------------------
         # 6. Merge everything
-        # ------------------------------------------
-
         results = []
-
         for patient_id, item in latest_by_patient.items():
-
             patient = item["patient"]
             exam = item["exam"]
-
-            request_id = request_by_exam.get(
-                exam["examination_id"]
-            )
-
-            image = (
-                latest_image_by_request.get(request_id)
-                if request_id
-                else None
-            )
-
-            ai = (
-                ai_by_image.get(image["image_id"])
-                if image
-                else None
-            )
+            request_id = request_by_exam.get(exam["examination_id"])
+            image = latest_image_by_request.get(request_id) if request_id else None
+            ai = ai_by_image.get(image["image_id"]) if image else None
 
             results.append({
                 "patient": patient,
                 "examination_id": exam.get("examination_id"),
-                "examination_date": (
-                    exam.get("examination_date")
-                    or exam.get("created_at")
-                ),
+                "examination_date": exam.get("examination_date") or exam.get("created_at"),
                 "image_id": image.get("image_id") if image else None,
                 "ai_findings": ai.get("ai_findings") if ai else None,
-                "ai_confidence": (
-                    ai.get("ai_confidence") if ai else None
-                ),
-                "pneumonia_type": (
-                    ai.get("pneumonia_type") if ai else None
-                ),
-                "classification_confidence": (
-                    ai.get("classification_confidence")
-                    if ai else None
-                ),
+                "ai_confidence": ai.get("ai_confidence") if ai else None,
+                "pneumonia_type": ai.get("pneumonia_type") if ai else None,
+                "classification_confidence": ai.get("classification_confidence") if ai else None,
+                # Severity fields from the exam
+                "curb65_score": exam.get("curb65_score"),
+                "severity_status": exam.get("severity_status"),
+                "disposition_notes": exam.get("disposition_notes"),
+                "plans_orders": exam.get("plans_orders"),
             })
 
-        # ------------------------------------------
-        # 7. Sort by examination date (newest first)
-        # ------------------------------------------
-
-        results.sort(
-            key=lambda r: r.get("examination_date") or "",
-            reverse=True,
-        )
-
+        # 7. Sort by examination date
+        results.sort(key=lambda r: r.get("examination_date") or "", reverse=True)
         return results
 
     except Exception as exc:
-
-        print(
-            "Failed to fetch completed patients with AI: "
-            f"{exc}"
-        )
-
+        print(f"Failed to fetch completed patients with AI: {exc}")
         return []
 
 
@@ -2706,7 +2616,8 @@ def get_training_candidates_detailed(
                     status,
                     follow_up_sequence,
                     chief_complaint,
-                    diagnosis
+                    diagnosis,
+                    confirmed_label,
                 )
             """)
             .order("confirmed_at", desc=True)

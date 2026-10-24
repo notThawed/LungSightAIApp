@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from backend.supabase_client import admin_supabase
+from backend.fetches import generate_patient_id
 
 
 # ==========================================
@@ -344,6 +345,7 @@ def create_patient(
     try:
 
         patient_data = {
+            "patient_code": generate_patient_id(),
             "first_name": first_name,
             "middle_name": middle_name,
             "last_name": last_name,
@@ -1958,7 +1960,7 @@ def save_training_candidate(
     image_id,
     examination_id,
     patient_id,
-    confirmed_label,
+    confirmed_label, # We still accept this parameter
     confirmed_by,
     request_id=None,
     ai_result_id=None,
@@ -1970,18 +1972,14 @@ def save_training_candidate(
     ai_classification_model_version=None,
     doctor_notes=None,
 ):
-    """
-    Save a structured ground-truth label confirmed by a doctor.
-
-    Called when an examination is completed. The label is used
-    later to retrain the AI models.
-
-    If a candidate already exists for this image, updates it
-    instead of inserting a duplicate.
-    """
-
     try:
+        # 1. Save the confirmed label directly to the examination
+        update_examination(
+            examination_id=examination_id,
+            confirmed_label=confirmed_label,
+        )
 
+        # 2. Save the training candidate (without the confirmed_label)
         data = {
             "image_id": image_id,
             "examination_id": examination_id,
@@ -1992,55 +1990,36 @@ def save_training_candidate(
             "ai_findings": ai_findings,
             "ai_confidence": ai_confidence,
             "ai_pneumonia_type": ai_pneumonia_type,
-            "ai_classification_confidence": (
-                ai_classification_confidence
-            ),
+            "ai_classification_confidence": ai_classification_confidence,
             "ai_model_version": ai_model_version,
-            "ai_classification_model_version": (
-                ai_classification_model_version
-            ),
+            "ai_classification_model_version": ai_classification_model_version,
 
-            "confirmed_label": confirmed_label,
             "doctor_notes": doctor_notes,
             "confirmed_by": confirmed_by,
-
             "status": "pending_review",
-            "updated_at": datetime.now(
-                timezone.utc
-            ).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }
 
         response = (
             admin_supabase
             .table("xray_training_candidates")
-            .insert(data)  # <--- CHANGED FROM UPSERT TO INSERT
+            .insert(data)
             .execute()
         )
 
         if not response.data:
-            return {
-                "success": False,
-                "message": (
-                    "Training candidate was not saved."
-                ),
-            }
+            return {"success": False, "message": "Training candidate was not saved."}
 
         return {
             "success": True,
-            "message": "Training candidate saved.",
+            "message": "Training candidate saved and examination updated.",
             "data": response.data[0],
         }
 
     except Exception as exc:
+        print(f"Failed to save training candidate: {exc}")
+        return {"success": False, "message": str(exc)}
 
-        print(
-            f"Failed to save training candidate: {exc}"
-        )
-
-        return {
-            "success": False,
-            "message": str(exc),
-        }
 
 
 
