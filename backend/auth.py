@@ -64,7 +64,6 @@ def login_user(email, password):
             role_id,
             hospital_id,
             is_active,
-            theme_preference,
             roles (
                 role_id,
                 role_name
@@ -252,11 +251,6 @@ def login_user(email, password):
         "email":
             response.user.email,
 
-        "theme_preference":
-            profile.get(
-                "theme_preference"
-            )or "light",
-
         # ----------------------------------------------------
         # Name
         # ----------------------------------------------------
@@ -336,7 +330,6 @@ def login_user(email, password):
     print("Name:", user_data["name"])
     print("Role:", user_data["role"])
     print("Hospital:", user_data["hospital_name"])
-    print("Theme:", user_data["theme_preference"])
     print(
         "Profile Picture:",
         bool(user_data["profile_picture_url"]),
@@ -460,4 +453,3 @@ def logout_user():
     """Sign out from Supabase."""
 
     supabase.auth.sign_out()
-

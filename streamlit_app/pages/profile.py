@@ -30,6 +30,8 @@ from backend.backend_utils.storage_utils import (
     delete_profile_picture,
 )
 
+from backend.crud import update_hospital_theme_color
+
 from streamlit_app.components.ui import format_date
 
 
@@ -82,6 +84,27 @@ HOSPITAL_TYPES = [
     "Medical Center",
     "Other",
 ]
+
+# Preset theme colors the Hospital Admin can pick from.
+# Each tuple is (label, hex).
+HOSPITAL_THEME_COLORS = [
+    ("Teal (default)",  "#0f7c88"),
+    ("Blue",            "#2563eb"),
+    ("Violet",          "#7c3aed"),
+    ("Purple",          "#9333ea"),
+    ("Green",           "#16a34a"),
+    ("Emerald",         "#10b981"),
+    ("Red",             "#dc2626"),
+    ("Rose",            "#e11d48"),
+    ("Orange",          "#ea580c"),
+    ("Amber",           "#d97706"),
+    ("Pink",            "#db2777"),
+    ("Indigo",          "#4f46e5"),
+    ("Cyan",            "#0891b2"),
+    ("Slate",           "#475569"),
+]
+
+DEFAULT_THEME_COLOR = "#0f7c88"
 
 
 # ============================================================
@@ -237,6 +260,19 @@ def note(text):
     )
 
 
+def hex_to_label(hex_value):
+    """
+    Turn a hex color into its human-friendly preset label.
+    Falls back to the hex itself if not a preset.
+    """
+
+    for label, value in HOSPITAL_THEME_COLORS:
+        if value.lower() == str(hex_value or "").lower():
+            return label
+
+    return hex_value or DEFAULT_THEME_COLOR
+
+
 # ============================================================
 # CURRENT USER
 # ============================================================
@@ -341,6 +377,16 @@ def refresh_current_user():
     updated_user["last_login"] = (
         profile.get("last_login")
     )
+
+    # --------------------------------------------------------
+    # Hospital theme color (kept from previous session value
+    # if the profile row doesn't carry it — hospital row does)
+    # --------------------------------------------------------
+
+    if "hospital_theme_color" not in updated_user:
+        updated_user["hospital_theme_color"] = (
+            DEFAULT_THEME_COLOR
+        )
 
     # --------------------------------------------------------
     # Save refreshed user
@@ -1038,6 +1084,128 @@ def render_account_information_section(
 
 
 # ============================================================
+# HOSPITAL THEME PICKER
+# ============================================================
+
+def render_hospital_theme_picker(
+    hospital,
+    permissions,
+):
+    """
+    Color picker for the hospital's theme.
+
+    Only shown to users who have 'edit_hospital_theme'
+    permission (Hospital Admin).
+    """
+
+    if not permissions.get(
+        "edit_hospital_theme"
+    ):
+        return
+
+    hospital_id = hospital.get(
+        "hospital_id"
+    )
+
+    if not hospital_id:
+        return
+
+    current_color = (
+        hospital.get("theme_color")
+        or DEFAULT_THEME_COLOR
+    )
+
+    st.markdown(
+        "<div class='ls-security-title'>"
+        "Hospital Theme Color"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.caption(
+        "This color is applied across the whole app "
+        "for every user in your hospital."
+    )
+
+    labels = [
+        label for label, _ in HOSPITAL_THEME_COLORS
+    ]
+    values = [
+        value for _, value in HOSPITAL_THEME_COLORS
+    ]
+
+    # If the stored color isn't one of the presets,
+    # append it so it still shows correctly.
+    if current_color not in values:
+        labels.append(current_color)
+        values.append(current_color)
+
+    current_index = values.index(
+        current_color
+    )
+
+    selected_label = st.selectbox(
+        "Choose a color",
+        options=labels,
+        index=current_index,
+        key="hospital_theme_color_picker",
+    )
+
+    selected_color = values[
+        labels.index(selected_label)
+    ]
+
+    # Live preview swatch
+    st.markdown(
+        (
+            "<div style='display:flex;align-items:center;"
+            "gap:10px;margin-top:6px;'>"
+            f"<div style='width:28px;height:28px;"
+            f"border-radius:6px;background:{selected_color};"
+            "border:1px solid rgba(0,0,0,0.15);'></div>"
+            f"<span style='font-size:13px;color:#64748b;'>"
+            f"{selected_color}</span>"
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+    save_clicked = st.button(
+        "Save Theme Color",
+        key="hospital_theme_color_save",
+        type="primary",
+        width="stretch",
+        disabled=(selected_color == current_color),
+    )
+
+    if not save_clicked:
+        return
+
+    result = update_hospital_theme_color(
+        hospital_id=hospital_id,
+        theme_color=selected_color,
+    )
+
+    if not result["success"]:
+
+        st.error(result["message"])
+
+        return
+
+    # Update session state immediately so the new
+    # color is reflected right after rerun.
+    user = get_current_user()
+    user["hospital_theme_color"] = selected_color
+    st.session_state.user = user
+
+    st.success(
+        "Hospital theme color updated."
+    )
+
+    st.rerun()
+
+
+# ============================================================
 # HOSPITAL INFORMATION
 # ============================================================
 
@@ -1292,6 +1460,13 @@ def render_hospital_information_section(
                 )
 
         if not submitted:
+            # Even when the form isn't submitted, still
+            # show the theme picker below it.
+            render_hospital_theme_picker(
+                hospital,
+                permissions,
+            )
+
             return
 
         if not hospital_name.strip():
@@ -1613,6 +1788,10 @@ def show():
         else None
     )
 
+    # --------------------------------------------------------
+    # Store hospital info + theme color into session
+    # --------------------------------------------------------
+
     if hospital:
 
         user["hospital_name"] = (
@@ -1620,6 +1799,13 @@ def show():
                 "hospital_name"
             )
         )
+
+        user["hospital_theme_color"] = (
+            hospital.get("theme_color")
+            or DEFAULT_THEME_COLOR
+        )
+
+        st.session_state.user = user
 
     with st.container(
         key="profile_page"

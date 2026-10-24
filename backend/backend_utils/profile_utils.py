@@ -3,9 +3,6 @@ from backend.supabase_client import admin_supabase
 
 # ============================================================
 # ROLE PERMISSIONS
-# Single source of truth for what each role may see/edit on
-# the Profile Settings page. Add a new role here — profile.py
-# picks it up automatically. No new page file needed.
 # ============================================================
 
 ROLE_PERMISSIONS = {
@@ -15,6 +12,7 @@ ROLE_PERMISSIONS = {
         "edit_password": True,
         "show_hospital_info": True,
         "edit_hospital_info": True,
+        "edit_hospital_theme": True,
         "edit_preferences": True,
         "edit_system_settings": False,
     },
@@ -24,6 +22,7 @@ ROLE_PERMISSIONS = {
         "edit_password": True,
         "show_hospital_info": False,
         "edit_hospital_info": False,
+        "edit_hospital_theme": False,
         "edit_preferences": True,
         "edit_system_settings": False,
     },
@@ -33,6 +32,7 @@ ROLE_PERMISSIONS = {
         "edit_password": True,
         "show_hospital_info": False,
         "edit_hospital_info": False,
+        "edit_hospital_theme": False,
         "edit_preferences": True,
         "edit_system_settings": False,
     },
@@ -42,6 +42,7 @@ ROLE_PERMISSIONS = {
         "edit_password": True,
         "show_hospital_info": False,
         "edit_hospital_info": False,
+        "edit_hospital_theme": False,
         "edit_preferences": True,
         "edit_system_settings": False,
     },
@@ -51,19 +52,19 @@ ROLE_PERMISSIONS = {
         "edit_password": True,
         "show_hospital_info": False,
         "edit_hospital_info": False,
+        "edit_hospital_theme": False,
         "edit_preferences": True,
         "edit_system_settings": True,
     },
 }
 
-# Fallback for any role not listed above — safe defaults
-# (can edit their own basics, nothing hospital-wide or system-wide).
 DEFAULT_PERMISSIONS = {
     "edit_personal_info": True,
     "edit_profile_picture": True,
     "edit_password": True,
     "show_hospital_info": False,
     "edit_hospital_info": False,
+    "edit_hospital_theme": False,
     "edit_preferences": True,
     "edit_system_settings": False,
 }
@@ -92,9 +93,6 @@ def account_status_label(status):
 
 # ============================================================
 # PERSONAL INFORMATION
-# ASSUMPTION: user_profiles table has columns
-# user_fname, user_mname, user_lname, birthdate, sex,
-# user_contact_number, address — verify against your schema.
 # ============================================================
 
 def update_personal_information(
@@ -204,10 +202,21 @@ def remove_profile_picture(user_id):
 
 # ============================================================
 # PREFERENCES (notifications, date/time)
-# ASSUMPTION: user_profiles has notifications_enabled (bool),
-# date_format (text), time_format (text) columns.
-# If you'd rather keep these in a separate "user_preferences"
-# table, just change the table name below.
+#
+# NOTE: The user_profiles table does not yet have
+# notifications_enabled, date_format, or time_format columns.
+# These functions return defaults / soft failures until the
+# columns are added. To enable real persistence, run:
+#
+#   ALTER TABLE public.user_profiles
+#   ADD COLUMN IF NOT EXISTS notifications_enabled boolean
+#       NOT NULL DEFAULT true,
+#   ADD COLUMN IF NOT EXISTS date_format text
+#       NOT NULL DEFAULT 'MM/DD/YYYY',
+#   ADD COLUMN IF NOT EXISTS time_format text
+#       NOT NULL DEFAULT '12-hour';
+#
+# Then restore the DB read/write code in these two functions.
 # ============================================================
 
 DATE_FORMAT_OPTIONS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]
@@ -215,66 +224,43 @@ TIME_FORMAT_OPTIONS = ["12-hour", "24-hour"]
 
 
 def get_user_preferences(user_id):
-    """Returns {notifications_enabled, date_format, time_format} with safe defaults."""
+    """
+    Return preferences.
 
-    defaults = {
+    Preferences columns are not yet in the database,
+    so defaults are always returned.
+    """
+
+    return {
         "notifications_enabled": True,
         "date_format": DATE_FORMAT_OPTIONS[0],
         "time_format": TIME_FORMAT_OPTIONS[0],
     }
 
-    if not user_id:
-        return defaults
-
-    try:
-        response = (
-            admin_supabase.table("user_profiles")
-            .select("notifications_enabled, date_format, time_format")
-            .eq("user_id", user_id)
-            .limit(1)
-            .execute()
-        )
-
-        if not response.data:
-            return defaults
-
-        row = response.data[0]
-
-        return {
-            "notifications_enabled": row.get("notifications_enabled", True),
-            "date_format": row.get("date_format") or DATE_FORMAT_OPTIONS[0],
-            "time_format": row.get("time_format") or TIME_FORMAT_OPTIONS[0],
-        }
-
-    except Exception as e:
-        print(f"Preferences lookup error: {e}")
-        return defaults
-
 
 def update_user_preferences(user_id, notifications_enabled, date_format, time_format):
+    """
+    Preferences storage is not yet enabled.
+
+    Returns a soft failure so the UI shows a friendly
+    message instead of an exception.
+    """
 
     if not user_id:
         return {"success": False, "message": "User ID is required."}
 
-    try:
-        admin_supabase.table("user_profiles").update({
-            "notifications_enabled": notifications_enabled,
-            "date_format": date_format,
-            "time_format": time_format,
-        }).eq("user_id", user_id).execute()
-
-        return {"success": True, "message": "Preferences updated."}
-
-    except Exception as e:
-        return {"success": False, "message": f"Unable to update preferences: {e}"}
+    return {
+        "success": False,
+        "message": (
+            "Preferences cannot be saved yet — "
+            "the database columns have not been added. "
+            "Contact your system administrator."
+        ),
+    }
 
 
 # ============================================================
 # PASSWORD
-# ASSUMPTION: admin_supabase exposes the Supabase auth admin
-# API (admin_supabase.auth.admin.update_user_by_id). If your
-# backend/auth.py already wraps this differently, swap the
-# body of this function to call that instead.
 # ============================================================
 
 def change_password(user_id, new_password, confirm_password):
@@ -298,9 +284,6 @@ def change_password(user_id, new_password, confirm_password):
 
 # ============================================================
 # LAST LOGIN
-# ASSUMPTION: user_profiles has a last_login timestamp column,
-# updated elsewhere (e.g. in your login flow). If it isn't
-# tracked yet, this simply returns None and the UI shows "—".
 # ============================================================
 
 def get_last_login(user_id):

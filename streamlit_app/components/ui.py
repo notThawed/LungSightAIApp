@@ -226,25 +226,172 @@ def pill_cell(column, text, tone="grey"):
 
 
 # ============================================================
+# MODERN COMPONENTS (Ant Design & Shadcn UI)
+# ============================================================
+
+def modern_tabs(
+    items,
+    index=0,
+    variant="default",
+    size="sm",
+    color=None,
+    use_container_width=False,
+    key=None,
+):
+    """
+    Renders modern, clean tabs using streamlit-antd-components.
+
+    items can be:
+      - List of strings: ["Plans", "Add plan", "Inactive plans"]
+      - List of dicts: [
+            {"label": "Pending", "icon": "hourglass-split", "tag": 3, "tag_color": "orange"},
+            {"label": "Approved", "icon": "check-circle", "tag": 12, "tag_color": "green"}
+        ]
+      - List of sac.TabsItem objects
+
+    Returns the label of the currently selected tab.
+    """
+    try:
+        import streamlit_antd_components as sac
+
+        processed_items = []
+        for item in items:
+            if isinstance(item, str):
+                processed_items.append(sac.TabsItem(label=item))
+            elif isinstance(item, dict):
+                tag_obj = None
+                if "tag" in item and item["tag"] is not None:
+                    tag_obj = sac.Tag(
+                        label=str(item["tag"]),
+                        color=item.get("tag_color", "blue"),
+                        bordered=True,
+                    )
+                processed_items.append(
+                    sac.TabsItem(
+                        label=item.get("label", ""),
+                        icon=item.get("icon"),
+                        tag=tag_obj,
+                        disabled=item.get("disabled", False),
+                    )
+                )
+            elif isinstance(item, sac.TabsItem):
+                processed_items.append(item)
+
+        selected = sac.tabs(
+            items=processed_items,
+            index=index,
+            variant=variant,
+            size=size,
+            color=color,
+            use_container_width=use_container_width,
+            key=key,
+        )
+        return selected
+    except Exception:
+        import streamlit_shadcn_ui as ui
+        options = [
+            item if isinstance(item, str) else item.get("label", "")
+            for item in items
+        ]
+        return ui.tabs(options=options, default=options[index] if options else None, key=key)
+
+
+def modern_badge(text, tone="grey", icon=None, bordered=True, key=None):
+    """
+    Renders a modern, clean tag / badge using streamlit-antd-components.
+    tones: green, red, amber, orange, blue, teal, cyan, purple, grey, gray.
+    """
+    try:
+        import streamlit_antd_components as sac
+
+        tone_map = {
+            "green": "green",
+            "red": "red",
+            "amber": "orange",
+            "orange": "orange",
+            "blue": "blue",
+            "teal": "cyan",
+            "cyan": "cyan",
+            "purple": "purple",
+            "grey": "gray",
+            "gray": "gray",
+        }
+        color = tone_map.get(str(tone).lower(), "gray")
+        return sac.tags(
+            [
+                sac.Tag(
+                    label=str(text),
+                    color=color,
+                    icon=icon,
+                    bordered=bordered,
+                    radius="sm",
+                )
+            ],
+            key=key,
+        )
+    except Exception:
+        st.markdown(pill(text, tone), unsafe_allow_html=True)
+
+
+def modern_button(
+    label,
+    key=None,
+    variant="default",
+    size="default",
+    disabled=False,
+    width="stretch",
+    icon=None,
+):
+    """
+    Renders a modern Shadcn UI button with fallbacks.
+    variant: 'default', 'secondary', 'destructive', 'outline', 'ghost', 'link'.
+    """
+    try:
+        import streamlit_shadcn_ui as ui
+        return ui.button(
+            label,
+            key=key,
+            variant=variant,
+            size=size,
+            disabled=disabled,
+            width=width,
+        )
+    except Exception:
+        type_val = "primary" if variant in ("default", "destructive") else "secondary"
+        return st.button(
+            label,
+            key=key,
+            type=type_val,
+            disabled=disabled,
+            icon=f":material/{icon}:" if icon else None,
+            width=width,
+        )
+
+
+# ============================================================
 # DIALOG BUTTONS AND MESSAGES
 # ============================================================
 
 def close_button(key):
-    if st.button("Close", key=key, width="stretch"):
+    if modern_button("Close", key=key, variant="outline", width="stretch"):
         st.rerun()
 
 
-def confirm_buttons(key, confirm_label):
+def confirm_buttons(key, confirm_label, confirm_variant="default"):
     """Cancel + confirm. Returns True when confirm is clicked.
-    A key that starts with 'delete' makes the confirm button red."""
+    A key that starts with 'delete' or 'remove' makes the confirm button destructive red."""
     cancel_col, confirm_col = st.columns(2)
+    is_delete = "delete" in key.lower() or "remove" in key.lower()
 
-    if cancel_col.button("Cancel", key=f"cancel_{key}", width="stretch"):
-        st.rerun()
+    with cancel_col:
+        if modern_button("Cancel", key=f"cancel_{key}", variant="outline", width="stretch"):
+            st.rerun()
 
-    return confirm_col.button(
-        confirm_label, key=f"confirm_{key}", type="primary", width="stretch"
-    )
+    with confirm_col:
+        variant = "destructive" if is_delete else confirm_variant
+        return modern_button(
+            confirm_label, key=f"confirm_{key}", variant=variant, width="stretch"
+        )
 
 
 def remember(message):

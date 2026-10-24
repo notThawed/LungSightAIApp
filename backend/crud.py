@@ -1191,6 +1191,68 @@ def update_hospital(
 
         return []
 
+def update_hospital_theme_color(hospital_id, theme_color):
+    """
+    Update a hospital's theme color.
+
+    theme_color must be a valid hex color,
+    e.g. '#0ea5e9', '#7c3aed', '#ef4444'.
+    """
+
+    try:
+
+        if (
+            not theme_color
+            or not theme_color.startswith("#")
+            or len(theme_color) != 7
+        ):
+
+            return {
+                "success": False,
+                "message": (
+                    "Invalid color. Must be a hex "
+                    "color like '#0ea5e9'."
+                ),
+            }
+
+        response = (
+            admin_supabase
+            .table("hospitals")
+            .update({
+                "theme_color": theme_color,
+                "updated_at": datetime.now(
+                    timezone.utc
+                ).isoformat(),
+            })
+            .eq(
+                "hospital_id",
+                hospital_id,
+            )
+            .execute()
+        )
+
+        if not response.data:
+
+            return {
+                "success": False,
+                "message": (
+                    "Hospital not found or theme "
+                    "color could not be updated."
+                ),
+            }
+
+        return {
+            "success": True,
+            "message": "Hospital theme color updated.",
+            "data": response.data[0],
+        }
+
+    except Exception as exc:
+
+        return {
+            "success": False,
+            "message": str(exc),
+        }
 
 def deactivate_hospital(
     hospital_id,
