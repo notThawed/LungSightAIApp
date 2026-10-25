@@ -249,11 +249,6 @@ serve(async (req) => {
 
   if (!valid) {
     console.error("=== SIGNATURE MISMATCH ===");
-    console.error("Header:", signatureHeader);
-    console.error("Secret length:", PAYMONGO_WEBHOOK_SECRET.length);
-    console.error("Secret prefix:", PAYMONGO_WEBHOOK_SECRET.slice(0, 12));
-    console.error("Body length:", rawBody.length);
-    console.error("Body preview:", rawBody.slice(0, 200));
     return new Response("invalid signature", { status: 401 });
   }
 
