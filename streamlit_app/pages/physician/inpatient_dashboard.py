@@ -212,30 +212,36 @@ def render_ward_list():
         "Oversee admitted patients, record daily rounds, and evaluate clinical readiness for discharge.",
     )
 
+    hospital_id = current_user().get("hospital_id")
+
     admitted = []
     try:
-        res = (
-            admin_supabase.table("examinations")
-            .select("*, patients(*)")
-            .eq("disposition", "Admission")
-            .eq("status", "Admitted")
-            .execute()
-        )
-        admitted = res.data or []
+        if hospital_id:
+            res = (
+                admin_supabase.table("examinations")
+                .select("*, patients!inner(*)")
+                .eq("patients.hospital_id", hospital_id)
+                .eq("disposition", "Admission")
+                .eq("status", "Admitted")
+                .execute()
+            )
+            admitted = res.data or []
     except Exception as e:
         st.error(f"Failed to load admissions: {e}")
 
     rounds_today_count = 0
     try:
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        res_today = (
-            admin_supabase.table("examinations")
-            .select("examination_id")
-            .eq("examination_type", "Inpatient Round")
-            .gte("examination_date", today_start.isoformat())
-            .execute()
-        )
-        rounds_today_count = len(res_today.data) if res_today.data else 0
+        if hospital_id:
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            res_today = (
+                admin_supabase.table("examinations")
+                .select("examination_id, patients!inner(hospital_id)")
+                .eq("patients.hospital_id", hospital_id)
+                .eq("examination_type", "Inpatient Round")
+                .gte("examination_date", today_start.isoformat())
+                .execute()
+            )
+            rounds_today_count = len(res_today.data) if res_today.data else 0
     except Exception:
         rounds_today_count = 0
 
