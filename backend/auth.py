@@ -2,6 +2,17 @@ from backend.supabase_client import (
     supabase,
     admin_supabase,
 )
+from backend import audit
+
+
+def _record_login_denied(user_id, reason):
+    audit.record_event(
+        "auth.login_denied",
+        "denied",
+        target_id=user_id,
+        metadata={"reason": reason},
+        verified_actor_id=user_id,
+    )
 
 
 # ============================================================
@@ -28,14 +39,42 @@ def login_user(email, password):
     # 1. AUTHENTICATE WITH SUPABASE AUTH
     # --------------------------------------------------------
 
-    response = supabase.auth.sign_in_with_password(
-        {
-            "email": email,
-            "password": password,
-        }
-    )
+    try:
+
+        response = supabase.auth.sign_in_with_password(
+            {
+                "email": email,
+                "password": password,
+            }
+        )
+
+    except Exception as exc:
+
+        code = str(getattr(exc, "code", "") or "")
+
+        audit.record_event(
+            "auth.login_failed",
+            "failure",
+            metadata={
+                "reason": (
+                    "invalid_credentials"
+                    if code == "invalid_credentials"
+                    else "auth_error"
+                ),
+                "error_class": audit.error_class(exc),
+            },
+        )
+
+        raise
 
     if not response.user:
+
+        audit.record_event(
+            "auth.login_failed",
+            "failure",
+            metadata={"reason": "no_user_returned"},
+        )
+
         return None
 
     user_id = response.user.id
@@ -84,6 +123,8 @@ def login_user(email, password):
 
     if not profiles:
 
+        _record_login_denied(user_id, "no_profile")
+
         supabase.auth.sign_out()
 
         raise ValueError(
@@ -99,6 +140,8 @@ def login_user(email, password):
 
     if not profile.get("is_active", False):
 
+        _record_login_denied(user_id, "account_inactive")
+
         supabase.auth.sign_out()
 
         raise ValueError(
@@ -113,6 +156,8 @@ def login_user(email, password):
 
     if not role:
 
+        _record_login_denied(user_id, "no_role")
+
         supabase.auth.sign_out()
 
         raise ValueError(
@@ -122,6 +167,8 @@ def login_user(email, password):
     role_name = role.get("role_name")
 
     if not role_name:
+
+        _record_login_denied(user_id, "no_role")
 
         supabase.auth.sign_out()
 
@@ -169,6 +216,8 @@ def login_user(email, password):
 
             if not hospital:
 
+                _record_login_denied(user_id, "hospital_not_found")
+
                 supabase.auth.sign_out()
 
                 raise ValueError(
@@ -182,6 +231,8 @@ def login_user(email, password):
             # ------------------------------------------------
 
             if not hospital.get("is_active", False):
+
+                _record_login_denied(user_id, "hospital_inactive")
 
                 supabase.auth.sign_out()
 

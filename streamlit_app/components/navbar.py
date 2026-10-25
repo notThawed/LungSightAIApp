@@ -4,6 +4,8 @@ import html
 
 import streamlit as st
 
+from backend import audit
+
 
 # ============================================================
 # PATHS
@@ -202,6 +204,8 @@ def show_top_navbar(
 ) -> None:
 
     _load_navbar_css()
+
+    audit.flush_audit_warnings()
 
     user = (
         st.session_state.get("user")

@@ -2,6 +2,26 @@ from datetime import datetime, timezone
 
 from backend.supabase_client import admin_supabase
 from backend.fetches import generate_patient_id
+from backend import audit
+
+
+def _audit_previous(table, key, value, columns):
+    """Pre-update values for audit metadata; a failed read never blocks the update."""
+
+    try:
+        rows = (
+            admin_supabase
+            .table(table)
+            .select(columns)
+            .eq(key, value)
+            .limit(1)
+            .execute()
+            .data
+        )
+        return rows[0] if rows else {}
+
+    except Exception:
+        return {}
 
 
 # ==========================================
@@ -60,6 +80,12 @@ def create_user(
 
         if not auth_user:
 
+            audit.record_event(
+                "user.created",
+                "failure",
+                metadata={"reason": "auth_invite_failed", "role_id": role_id},
+            )
+
             return {
                 "success": False,
                 "message": (
@@ -102,6 +128,14 @@ def create_user(
 
         if not profile_response.data:
 
+            audit.record_event(
+                "user.created",
+                "failure",
+                target_id=user_id,
+                target_hospital_id=hospital_id,
+                metadata={"reason": "profile_insert_failed", "role_id": role_id},
+            )
+
             return {
                 "success": False,
                 "message": (
@@ -110,6 +144,12 @@ def create_user(
                     "not be created."
                 ),
             }
+
+        audit.record_event(
+            "user.created",
+            target_id=user_id,
+            metadata={"role_id": role_id, "source": "staff_invite"},
+        )
 
         return {
             "success": True,
@@ -120,6 +160,12 @@ def create_user(
         }
 
     except Exception as exc:
+
+        audit.record_event(
+            "user.created",
+            "failure",
+            metadata={"error_class": audit.error_class(exc), "role_id": role_id},
+        )
 
         return {
             "success": False,
@@ -151,6 +197,10 @@ def update_user(
     """
 
     try:
+
+        previous = _audit_previous(
+            "user_profiles", "user_id", user_id, "role_id, hospital_id",
+        )
 
         # ------------------------------------------
         # UPDATE AUTH ACCOUNT
@@ -205,12 +255,43 @@ def update_user(
             .execute()
         )
 
+        changed = ["profile"]
+        if email:
+            changed.append("auth_email")
+        if password:
+            changed.append("auth_password")
+        if previous and str(previous.get("hospital_id")) != str(hospital_id):
+            changed.append("hospital_id")
+
+        audit.record_event(
+            "user.updated",
+            target_id=user_id,
+            metadata={"changed_fields": changed},
+        )
+
+        if previous and previous.get("role_id") != role_id:
+            audit.record_event(
+                "user.role_changed",
+                target_id=user_id,
+                metadata={
+                    "old_role_id": previous.get("role_id"),
+                    "new_role_id": role_id,
+                },
+            )
+
         return {
             "success": True,
             "data": response.data,
         }
 
     except Exception as exc:
+
+        audit.record_event(
+            "user.updated",
+            "failure",
+            target_id=user_id,
+            metadata={"error_class": audit.error_class(exc)},
+        )
 
         return {
             "success": False,
@@ -244,6 +325,13 @@ def delete_user(user_id):
 
         if not response.data:
 
+            audit.record_event(
+                "user.deactivated",
+                "failure",
+                target_id=user_id,
+                metadata={"reason": "not_found"},
+            )
+
             return {
                 "success": False,
                 "message": (
@@ -251,6 +339,8 @@ def delete_user(user_id):
                     "not be deactivated."
                 ),
             }
+
+        audit.record_event("user.deactivated", target_id=user_id)
 
         return {
             "success": True,
@@ -260,6 +350,13 @@ def delete_user(user_id):
         }
 
     except Exception as exc:
+
+        audit.record_event(
+            "user.deactivated",
+            "failure",
+            target_id=user_id,
+            metadata={"error_class": audit.error_class(exc)},
+        )
 
         return {
             "success": False,
@@ -293,6 +390,13 @@ def reactivate_user(user_id):
 
         if not response.data:
 
+            audit.record_event(
+                "user.activated",
+                "failure",
+                target_id=user_id,
+                metadata={"reason": "not_found"},
+            )
+
             return {
                 "success": False,
                 "message": (
@@ -300,6 +404,8 @@ def reactivate_user(user_id):
                     "not be reactivated."
                 ),
             }
+
+        audit.record_event("user.activated", target_id=user_id)
 
         return {
             "success": True,
@@ -309,6 +415,13 @@ def reactivate_user(user_id):
         }
 
     except Exception as exc:
+
+        audit.record_event(
+            "user.activated",
+            "failure",
+            target_id=user_id,
+            metadata={"error_class": audit.error_class(exc)},
+        )
 
         return {
             "success": False,
@@ -379,12 +492,25 @@ def create_patient(
             .execute()
         )
 
+        if response.data:
+            audit.record_event(
+                "patient.created",
+                target_id=response.data[0].get("patient_id"),
+            )
+
         return response.data or []
 
     except Exception as exc:
 
         print(
             f"Failed to create patient: {exc}"
+        )
+
+        audit.record_event(
+            "patient.created",
+            "failure",
+            target_hospital_id=hospital_id,
+            metadata={"error_class": audit.error_class(exc)},
         )
 
         return []
@@ -454,6 +580,9 @@ def update_patient(
             .execute()
         )
 
+        if response.data:
+            audit.record_event("patient.updated", target_id=patient_id)
+
         return response.data or []
 
     except Exception as exc:
@@ -462,10 +591,19 @@ def update_patient(
             f"Failed to update patient: {exc}"
         )
 
+        audit.record_event(
+            "patient.updated",
+            "failure",
+            target_id=patient_id,
+            metadata={"error_class": audit.error_class(exc)},
+        )
+
         return []
 
 
 def delete_patient(patient_id):
+
+    owner_hospital_id = audit.resolve_target_hospital("patient", patient_id)
 
     try:
 
@@ -480,12 +618,27 @@ def delete_patient(patient_id):
             .execute()
         )
 
+        if response.data:
+            audit.record_event(
+                "patient.deleted",
+                target_id=patient_id,
+                target_hospital_id=owner_hospital_id,
+            )
+
         return response.data or []
 
     except Exception as exc:
 
         print(
             f"Failed to delete patient: {exc}"
+        )
+
+        audit.record_event(
+            "patient.deleted",
+            "failure",
+            target_id=patient_id,
+            target_hospital_id=owner_hospital_id,
+            metadata={"error_class": audit.error_class(exc)},
         )
 
         return []
@@ -670,12 +823,31 @@ def create_examination(
                 .execute()
             )
 
+        audit.record_event(
+            "examination.created",
+            target_id=examination_id,
+            metadata={
+                "patient_id": patient_id,
+                "examination_type": examination_type,
+            },
+        )
+
         return [examination]
 
     except Exception as exc:
 
         print(
             f"Failed to create examination: {exc}"
+        )
+
+        audit.record_event(
+            "examination.created",
+            "failure",
+            target_hospital_id=audit.resolve_target_hospital("patient", patient_id),
+            metadata={
+                "patient_id": patient_id,
+                "error_class": audit.error_class(exc),
+            },
         )
 
         return None
@@ -711,6 +883,13 @@ def update_examination(
 
         fields["updated_at"] = now
 
+        previous_status = None
+
+        if "status" in fields:
+            previous_status = _audit_previous(
+                "examinations", "examination_id", examination_id, "status",
+            ).get("status")
+
         response = (
             admin_supabase
             .table("examinations")
@@ -722,12 +901,41 @@ def update_examination(
             .execute()
         )
 
+        if response.data:
+
+            audit.record_event(
+                "examination.updated",
+                target_id=examination_id,
+                metadata={
+                    "changed_fields": [
+                        key for key in fields if key != "updated_at"
+                    ],
+                },
+            )
+
+            if "status" in fields and fields["status"] != previous_status:
+                audit.record_event(
+                    "examination.status_changed",
+                    target_id=examination_id,
+                    metadata={
+                        "from_status": previous_status,
+                        "to_status": fields["status"],
+                    },
+                )
+
         return response.data or []
 
     except Exception as exc:
 
         print(
             f"Failed to update examination: {exc}"
+        )
+
+        audit.record_event(
+            "examination.updated",
+            "failure",
+            target_id=examination_id,
+            metadata={"error_class": audit.error_class(exc)},
         )
 
         return []
@@ -883,12 +1091,22 @@ def cancel_examination(
             .execute()
         )
 
+        if response.data:
+            audit.record_event("examination.cancelled", target_id=examination_id)
+
         return response.data or []
 
     except Exception as exc:
 
         print(
             f"Failed to cancel examination: {exc}"
+        )
+
+        audit.record_event(
+            "examination.cancelled",
+            "failure",
+            target_id=examination_id,
+            metadata={"error_class": audit.error_class(exc)},
         )
 
         return []
@@ -909,6 +1127,8 @@ def delete_examination(
     with ON DELETE CASCADE.
     """
 
+    owner_hospital_id = audit.resolve_target_hospital("examination", examination_id)
+
     try:
 
         response = (
@@ -922,12 +1142,27 @@ def delete_examination(
             .execute()
         )
 
+        if response.data:
+            audit.record_event(
+                "examination.deleted",
+                target_id=examination_id,
+                target_hospital_id=owner_hospital_id,
+            )
+
         return response.data or []
 
     except Exception as exc:
 
         print(
             f"Failed to delete examination: {exc}"
+        )
+
+        audit.record_event(
+            "examination.deleted",
+            "failure",
+            target_id=examination_id,
+            target_hospital_id=owner_hospital_id,
+            metadata={"error_class": audit.error_class(exc)},
         )
 
         return []
@@ -1278,12 +1513,22 @@ def deactivate_hospital(
             .execute()
         )
 
+        if response.data:
+            audit.record_event("hospital.deactivated", target_id=hospital_id)
+
         return response.data or []
 
     except Exception as exc:
 
         print(
             f"Failed to deactivate hospital: {exc}"
+        )
+
+        audit.record_event(
+            "hospital.deactivated",
+            "failure",
+            target_id=hospital_id,
+            metadata={"error_class": audit.error_class(exc)},
         )
 
         return []
@@ -1311,12 +1556,22 @@ def reactivate_hospital(
             .execute()
         )
 
+        if response.data:
+            audit.record_event("hospital.reactivated", target_id=hospital_id)
+
         return response.data or []
 
     except Exception as exc:
 
         print(
             f"Failed to reactivate hospital: {exc}"
+        )
+
+        audit.record_event(
+            "hospital.reactivated",
+            "failure",
+            target_id=hospital_id,
+            metadata={"error_class": audit.error_class(exc)},
         )
 
         return []
@@ -1411,6 +1666,16 @@ def create_xray_request(
             .execute()
         )
 
+        if response.data:
+            audit.record_event(
+                "xray.request_created",
+                target_id=response.data[0].get("request_id"),
+                metadata={
+                    "examination_id": examination_id,
+                    "priority": priority,
+                },
+            )
+
         return (
             response.data[0]
             if response.data
@@ -1421,6 +1686,16 @@ def create_xray_request(
 
         print(
             f"Failed to create X-ray request: {exc}"
+        )
+
+        audit.record_event(
+            "xray.request_created",
+            "failure",
+            target_hospital_id=audit.resolve_target_hospital("examination", examination_id),
+            metadata={
+                "examination_id": examination_id,
+                "error_class": audit.error_class(exc),
+            },
         )
 
         return None
@@ -1482,6 +1757,21 @@ def upload_xray_image(
             .execute()
         )
 
+        if response.data:
+            audit.record_event(
+                "xray.image_uploaded",
+                target_id=response.data[0].get("image_id"),
+                metadata={
+                    "request_id": request_id,
+                    "file_type": (
+                        filename.rsplit(".", 1)[-1].lower()
+                        if filename and "." in filename
+                        else None
+                    ),
+                    "file_size": len(file_bytes) if file_bytes else None,
+                },
+            )
+
         return (
             response.data[0]
             if response.data
@@ -1492,6 +1782,16 @@ def upload_xray_image(
 
         print(
             f"Failed to upload X-ray: {exc}"
+        )
+
+        audit.record_event(
+            "xray.image_uploaded",
+            "failure",
+            target_hospital_id=audit.resolve_target_hospital("xray_request", request_id),
+            metadata={
+                "request_id": request_id,
+                "error_class": audit.error_class(exc),
+            },
         )
 
         return None
@@ -1511,6 +1811,10 @@ def update_xray_request_status(
 
     try:
 
+        previous_status = _audit_previous(
+            "xray_requests", "request_id", request_id, "status",
+        ).get("status")
+
         response = (
             admin_supabase
             .table("xray_requests")
@@ -1527,12 +1831,32 @@ def update_xray_request_status(
             .execute()
         )
 
+        if response.data and status != previous_status:
+            audit.record_event(
+                "xray.request_status_changed",
+                target_id=request_id,
+                metadata={
+                    "from_status": previous_status,
+                    "to_status": status,
+                },
+            )
+
         return response.data or []
 
     except Exception as exc:
 
         print(
             f"Failed to update X-ray request: {exc}"
+        )
+
+        audit.record_event(
+            "xray.request_status_changed",
+            "failure",
+            target_id=request_id,
+            metadata={
+                "to_status": status,
+                "error_class": audit.error_class(exc),
+            },
         )
 
         return []
@@ -1587,6 +1911,17 @@ def save_ai_result(
             .execute()
         )
 
+        if response.data:
+            audit.record_event(
+                "ai.analysis_completed",
+                target_id=response.data[0].get("ai_result_id"),
+                metadata={
+                    "image_id": image_id,
+                    "model_version": ai_model_version,
+                    "classification_model_version": classification_model_version,
+                },
+            )
+
         return (
             response.data[0]
             if response.data
@@ -1595,6 +1930,16 @@ def save_ai_result(
 
     except Exception as exc:
         print(f"Failed to save AI result: {exc}")
+        audit.record_event(
+            "ai.analysis_failed",
+            "failure",
+            target_hospital_id=audit.resolve_target_hospital("xray_image", image_id),
+            metadata={
+                "model_version": ai_model_version,
+                "stage": "save_result",
+                "error_class": audit.error_class(exc),
+            },
+        )
         return None
 
 
@@ -1642,12 +1987,30 @@ def update_xray_image_quality(
             .execute()
         )
 
+        if response.data:
+            audit.record_event(
+                "xray.quality_checked",
+                "success" if quality_status != "Failed" else "failure",
+                target_id=image_id,
+                metadata={"quality_status": quality_status},
+            )
+
         return response.data or []
 
     except Exception as exc:
 
         print(
             f"Failed to update X-ray quality: {exc}"
+        )
+
+        audit.record_event(
+            "xray.quality_checked",
+            "failure",
+            target_id=image_id,
+            metadata={
+                "quality_status": quality_status,
+                "error_class": audit.error_class(exc),
+            },
         )
 
         return []
@@ -1683,6 +2046,13 @@ def save_xray_review(
             .execute()
         )
 
+        if response.data:
+            audit.record_event(
+                "review.completed",
+                target_id=response.data[0].get("review_id"),
+                metadata={"request_id": request_id},
+            )
+
         return (
             response.data[0]
             if response.data
@@ -1693,6 +2063,16 @@ def save_xray_review(
 
         print(
             f"Failed to save X-ray review: {exc}"
+        )
+
+        audit.record_event(
+            "review.completed",
+            "failure",
+            target_hospital_id=audit.resolve_target_hospital("xray_request", request_id),
+            metadata={
+                "request_id": request_id,
+                "error_class": audit.error_class(exc),
+            },
         )
 
         return None
@@ -2066,10 +2446,22 @@ def review_training_candidate(
         )
 
         if not response.data:
+            audit.record_event(
+                "ai.training_candidate_reviewed",
+                "failure",
+                target_id=candidate_id,
+                metadata={"status": status, "reason": "not_found"},
+            )
             return {
                 "success": False,
                 "message": "Candidate not found.",
             }
+
+        audit.record_event(
+            "ai.training_candidate_reviewed",
+            target_id=candidate_id,
+            metadata={"status": status},
+        )
 
         return {
             "success": True,
@@ -2083,6 +2475,13 @@ def review_training_candidate(
 
         print(
             f"Failed to review candidate: {exc}"
+        )
+
+        audit.record_event(
+            "ai.training_candidate_reviewed",
+            "failure",
+            target_id=candidate_id,
+            metadata={"status": status, "error_class": audit.error_class(exc)},
         )
 
         return {
