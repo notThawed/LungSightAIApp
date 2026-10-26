@@ -322,6 +322,17 @@ HOSPITAL_ADMIN_NAV = [
     },
 
     {
+        "section": "Reports",
+        "items": [
+            (
+                "Hospital Reports",
+                "Hospital Reports",
+                "summarize",
+            ),
+        ],
+    },
+
+    {
         "section": "Security",
         "items": [
             (

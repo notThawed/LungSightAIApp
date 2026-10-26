@@ -114,6 +114,21 @@ EVENTS = {
     "subscription.cancelled": ("hospital_subscription", {}),
     "subscription.renewed": ("hospital_subscription", {"payment_id": ID, "end_date": STR}),
 
+    # ---- reports ---------------------------------------------
+    "report.generated": ("report", {
+        "report_type": STR,
+        "period_kind": STR,
+        "period_start": STR,
+        "period_end": STR,
+    }),
+    "report.exported": ("report", {
+        "report_type": STR,
+        "period_kind": STR,
+        "period_start": STR,
+        "period_end": STR,
+        "format": STR,
+    }),
+
     # ---- export ----------------------------------------------
     "audit.exported": (None, {
         "row_count": INT,
@@ -608,9 +623,9 @@ EXPORT_BATCH = 1_000
 _SEARCH = re.compile(r"^[A-Za-z0-9_.\-]{1,128}$")
 
 
-def get_viewer_scope():
+def get_viewer_scope(resource="audit_logs"):
     """
-    The audit-log scope of the signed-in user, derived from the database.
+    The admin scope of the signed-in user, derived from the database.
 
     Returns {"user_id", "role", "hospital_id", "platform"}; raises
     AuditAccessDenied for anyone who is not an active Hospital Admin (with a
@@ -640,10 +655,14 @@ def get_viewer_scope():
     record_event(
         "auth.permission_denied",
         "denied",
-        metadata={"resource": "audit_logs"},
+        metadata={"resource": resource},
     )
 
-    raise AuditAccessDenied("You do not have access to audit logs.")
+    raise AuditAccessDenied(
+        "You do not have access to audit logs."
+        if resource == "audit_logs"
+        else "You do not have access to this page."
+    )
 
 
 def _normalize_filters(filters, scope):
@@ -659,6 +678,11 @@ def _normalize_filters(filters, scope):
         clean["date_from"] = date_from
     if isinstance(date_to, date):
         clean["date_to"] = date_to
+
+    for key in ("created_from", "created_before"):
+        moment = filters.get(key)
+        if isinstance(moment, datetime) and moment.tzinfo is not None:
+            clean[key] = moment
 
     if filters.get("category") in CATEGORIES:
         clean["category"] = filters["category"]
@@ -689,8 +713,8 @@ def _normalize_filters(filters, scope):
     return clean
 
 
-def _build_query(filters, count=None):
-    query = _get_client().table("audit_logs").select("*", count=count)
+def _build_query(filters, count=None, columns="*"):
+    query = _get_client().table("audit_logs").select(columns, count=count)
 
     scope_hospital = filters.get("scope_hospital_id")
 
@@ -708,6 +732,12 @@ def _build_query(filters, count=None):
     if filters.get("date_to"):
         end = datetime.combine(filters["date_to"] + timedelta(days=1), dtime.min, tzinfo=timezone.utc)
         query = query.lt("created_at", end.isoformat())
+
+    if filters.get("created_from"):
+        query = query.gte("created_at", filters["created_from"].astimezone(timezone.utc).isoformat())
+
+    if filters.get("created_before"):
+        query = query.lt("created_at", filters["created_before"].astimezone(timezone.utc).isoformat())
 
     if filters.get("category"):
         query = query.eq("event_category", filters["category"])
@@ -757,6 +787,40 @@ def query_audit_logs(filters=None, page=1, page_size=25):
         "page_size": page_size,
         "scope": scope,
     }
+
+
+AGGREGATE_ROW_LIMIT = 50_000
+
+
+def fetch_scoped_event_rows(filters=None, resource="audit_logs"):
+    """
+    event_type / outcome / created_at of every row matching the filters, within
+    the viewer's scope (same scope as the page and CSV export). Used for
+    aggregate reports. Raises ValueError past AGGREGATE_ROW_LIMIT.
+    """
+
+    scope = get_viewer_scope(resource)
+    clean = _normalize_filters(filters, scope)
+
+    rows = []
+    offset = 0
+
+    while True:
+        batch = (
+            _build_query(clean, columns="event_type, outcome, created_at, hospital_id")
+            .range(offset, offset + EXPORT_BATCH - 1)
+            .execute()
+            .data
+            or []
+        )
+        rows.extend(_enforce_scope(batch, clean))
+        if len(batch) < EXPORT_BATCH:
+            break
+        offset += EXPORT_BATCH
+        if len(rows) > AGGREGATE_ROW_LIMIT:
+            raise ValueError("Too many audit events in this period; choose a shorter period.")
+
+    return rows
 
 
 _CSV_COLUMNS = [
