@@ -194,6 +194,11 @@ ADMIN_NAV = [
                 "Audit Logs",
                 "history",
             ),
+            (
+                "Email Notifications",
+                "Email Notifications",
+                "mail",
+            ),
         ],
     },
 
@@ -339,6 +344,11 @@ HOSPITAL_ADMIN_NAV = [
                 "Audit Logs",
                 "Audit Logs",
                 "history",
+            ),
+            (
+                "Email Notifications",
+                "Email Notifications",
+                "mail",
             ),
         ],
     },

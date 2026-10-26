@@ -380,17 +380,34 @@ serve(async (req) => {
       // Payment is recorded; app update can be retried manually
     }
 
-    await recordAudit({
-      event_type: "hospital_application.payment_received",
-      outcome: appErr ? "failure" : "success",
-      hospital_id: payment.hospital_id ?? null,
-      target_type: "hospital_application",
-      target_id: applicationId ?? null,
-      metadata: appErr
-        ? { payment_id: payment.payment_id, reason: "application_update_failed" }
-        : { payment_id: payment.payment_id },
-      idempotency_key: `hospital_application.payment_received:payment:${payment.payment_id}`,
-    });
+    if (applicationId) {
+      await recordAudit({
+        event_type: "hospital_application.payment_received",
+        outcome: appErr ? "failure" : "success",
+        hospital_id: payment.hospital_id ?? null,
+        target_type: "hospital_application",
+        target_id: applicationId,
+        metadata: appErr
+          ? { payment_id: payment.payment_id, reason: "application_update_failed" }
+          : { payment_id: payment.payment_id },
+        idempotency_key: `hospital_application.payment_received:payment:${payment.payment_id}`,
+      });
+    } else {
+      // Not an application payment (e.g. payment_type "upgrade"): this branch
+      // does not apply it. Recorded so the gap is visible; behaviour unchanged.
+      await recordAudit({
+        event_type: "payment.unhandled",
+        outcome: "failure",
+        hospital_id: payment.hospital_id ?? null,
+        target_type: "payment",
+        target_id: payment.payment_id,
+        metadata: {
+          payment_id: payment.payment_id,
+          payment_type: String(payment.payment_type ?? "unknown").slice(0, 32),
+        },
+        idempotency_key: `payment.unhandled:payment:${payment.payment_id}`,
+      });
+    }
 
     console.log(`✅ Payment processed for application ${applicationId}`);
   }

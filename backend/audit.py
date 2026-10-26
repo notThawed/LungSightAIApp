@@ -114,6 +114,15 @@ EVENTS = {
     "subscription.cancelled": ("hospital_subscription", {}),
     "subscription.renewed": ("hospital_subscription", {"payment_id": ID, "end_date": STR}),
 
+    # ---- email (sent/failed/bounced are written by the database) ----
+    "email.queued": ("email", {"notification_event": STR, "status": STR}),
+    "email.sent": ("email", {"notification_event": STR, "attempts": INT}),
+    "email.failed": ("email", {"notification_event": STR, "attempts": INT}),
+    "email.bounced": ("email", {"notification_event": STR}),
+    "email.complained": ("email", {"notification_event": STR}),
+    "email.retry_requested": ("email", {"notification_event": STR, "attempts": INT}),
+    "payment.unhandled": ("payment", {"payment_id": ID, "payment_type": STR}),
+
     # ---- reports ---------------------------------------------
     "report.generated": ("report", {
         "report_type": STR,
@@ -355,6 +364,8 @@ _HOSPITAL_LOOKUPS = {
     "user_profile": ("user_profiles", "user_id", "hospital_id", ["hospital_id"]),
     "hospital_subscription": ("hospital_subscriptions", "hospital_subscription_id", "hospital_id", ["hospital_id"]),
     "hospital_application": ("hospital_applications", "application_id", "hospital_id", ["hospital_id"]),
+    "email": ("email_outbox", "email_id", "hospital_id", ["hospital_id"]),
+    "payment": ("payments", "payment_id", "hospital_id", ["hospital_id"]),
 }
 
 

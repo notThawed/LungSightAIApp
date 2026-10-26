@@ -64,6 +64,15 @@ class Query:
         self.payload = payload
         return self
 
+    def update(self, payload):
+        self.ops = "update"
+        self.payload = payload
+        return self
+
+    def neq(self, col, val):
+        self.filters.append(lambda r: str(r.get(col)) != str(val))
+        return self
+
     def eq(self, col, val):
         self.filters.append(lambda r: str(r.get(col)) == str(val))
         return self
@@ -137,6 +146,11 @@ class Query:
             return Result([row])
 
         matched = [r for r in rows if all(f(r) for f in self.filters)]
+
+        if self.ops == "update":
+            for r in matched:
+                r.update(self.payload)
+            return Result([dict(r) for r in matched])
 
         for col, desc in reversed(self.order_keys):
             matched.sort(key=lambda r: str(r.get(col)), reverse=desc)
