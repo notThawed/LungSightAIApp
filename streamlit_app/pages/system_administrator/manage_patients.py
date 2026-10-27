@@ -364,13 +364,13 @@ def show_view_patient(patient):
                         ),
                     ),
                     (
-                        "Emergency contact",
+                        "Guardian / emergency contact",
                         patient.get(
                             "emergency_contact_name"
                         ),
                     ),
                     (
-                        "Emergency number",
+                        "Guardian / emergency number",
                         patient.get(
                             "emergency_contact_no"
                         ),
@@ -409,6 +409,7 @@ def render_patient_form(
 ):
 
     is_edit = patient is not None
+    form_prefix = "edit_" if is_edit else "new_"
 
     patient = patient or {}
 
@@ -464,26 +465,20 @@ def render_patient_form(
         else 0
     )
 
+    # ==========================================
+    # DOB PARSING FOR SELECTBOXES
+    # ==========================================
     try:
-
-        dob_start = date.fromisoformat(
-            str(
-                patient.get(
-                    "date_of_birth"
-                )
-            )[:10]
+        existing_dob = date.fromisoformat(
+            str(patient.get("date_of_birth"))[:10]
         )
-
-    except (
-        ValueError,
-        TypeError,
-    ):
-
-        dob_start = date(
-            2000,
-            1,
-            1,
-        )
+        dob_day = existing_dob.day
+        dob_month = existing_dob.month
+        dob_year = existing_dob.year
+    except (ValueError, TypeError):
+        dob_day = 1
+        dob_month = 1
+        dob_year = 1950
 
     civil_start = (
         patient.get(
@@ -495,7 +490,7 @@ def render_patient_form(
     errors = st.container()
 
     with st.form(
-        "patient_form",
+        f"patient_form_{form_prefix}",
         clear_on_submit=False,
     ):
 
@@ -505,171 +500,154 @@ def render_patient_form(
 
         first_name = first_col.text_input(
             "First name *",
-            value=patient.get(
-                "first_name"
-            )
-            or "",
+            value=patient.get("first_name") or "",
+            key=f"{form_prefix}first_name",
         )
 
         middle_name = middle_col.text_input(
             "Middle name",
-            value=patient.get(
-                "middle_name"
-            )
-            or "",
+            value=patient.get("middle_name") or "",
+            key=f"{form_prefix}middle_name",
         )
 
         last_name = last_col.text_input(
             "Last name *",
-            value=patient.get(
-                "last_name"
-            )
-            or "",
+            value=patient.get("last_name") or "",
+            key=f"{form_prefix}last_name",
         )
 
         suffix = suffix_col.text_input(
             "Suffix",
-            value=patient.get(
-                "suffix"
-            )
-            or "",
+            value=patient.get("suffix") or "",
             placeholder="Jr.",
+            key=f"{form_prefix}suffix",
         )
 
-        dob_col, sex_col, civil_col = st.columns(
-            3
+        # ==========================================
+        # DOB VIA 3 SELECTBOXES
+        # ==========================================
+        st.markdown("**Date of birth** *")
+
+        dob_col1, dob_col2, dob_col3 = st.columns(3)
+
+        days = list(range(1, 32))
+        months = list(range(1, 13))
+        years = list(range(date.today().year, 1899, -1))
+
+        selected_day = dob_col1.selectbox(
+            "Day",
+            days,
+            index=days.index(dob_day) if dob_day in days else 0,
+            key=f"{form_prefix}dob_day",
         )
 
-        birthdate = dob_col.date_input(
-            "Date of birth *",
-            value=dob_start,
-            min_value=date(
-                1900,
-                1,
-                1,
-            ),
-            max_value=date.today(),
-            format="YYYY-MM-DD",
+        selected_month = dob_col2.selectbox(
+            "Month",
+            months,
+            index=months.index(dob_month) if dob_month in months else 0,
+            format_func=lambda m: date(2000, m, 1).strftime("%B"),
+            key=f"{form_prefix}dob_month",
         )
+
+        selected_year = dob_col3.selectbox(
+            "Year",
+            years,
+            index=years.index(dob_year) if dob_year in years else years.index(1950),
+            key=f"{form_prefix}dob_year",
+        )
+
+        # ==========================================
+        # SEX AND CIVIL STATUS
+        # ==========================================
+        sex_col, civil_col = st.columns(2)
 
         sex = sex_col.selectbox(
             "Sex",
-            [
-                "Male",
-                "Female",
-            ],
-            index=(
-                1
-                if patient.get(
-                    "sex"
-                )
-                == "Female"
-                else 0
-            ),
+            ["Male", "Female"],
+            index=1 if patient.get("sex") == "Female" else 0,
+            key=f"{form_prefix}sex",
         )
 
         civil_status = civil_col.selectbox(
             "Civil status",
             CIVIL_STATUS_OPTIONS,
             index=(
-                CIVIL_STATUS_OPTIONS.index(
-                    civil_start
-                )
-                if civil_start
-                in CIVIL_STATUS_OPTIONS
+                CIVIL_STATUS_OPTIONS.index(civil_start)
+                if civil_start in CIVIL_STATUS_OPTIONS
                 else 0
             ),
+            key=f"{form_prefix}civil_status",
         )
 
-        job_col, nation_col, religion_col = st.columns(
-            3
-        )
+        # Validate date
+        try:
+            birthdate = date(selected_year, selected_month, selected_day)
+        except ValueError:
+            errors.error("Invalid date selected (e.g., February 30 does not exist).")
+            birthdate = None
+
+        job_col, nation_col, religion_col = st.columns(3)
 
         occupation = job_col.text_input(
             "Occupation",
-            value=patient.get(
-                "occupation"
-            )
-            or "",
+            value=patient.get("occupation") or "",
+            key=f"{form_prefix}occupation",
         )
 
         nationality = nation_col.text_input(
             "Nationality",
-            value=patient.get(
-                "nationality"
-            )
-            or "Filipino",
+            value=patient.get("nationality") or "Filipino",
+            key=f"{form_prefix}nationality",
         )
 
         religion = religion_col.text_input(
             "Religion",
-            value=patient.get(
-                "religion"
-            )
-            or "",
+            value=patient.get("religion") or "",
+            key=f"{form_prefix}religion",
         )
 
-        contact_col, address_col = st.columns(
-            [1, 2]
-        )
+        contact_col, address_col = st.columns([1, 2])
 
         contact_number = contact_col.text_input(
             "Contact number",
-            value=patient.get(
-                "contact_number"
-            )
-            or "",
+            value=patient.get("contact_number") or "",
+            key=f"{form_prefix}contact",
         )
 
         address = address_col.text_input(
             "Address",
-            value=patient.get(
-                "address"
-            )
-            or "",
+            value=patient.get("address") or "",
+            key=f"{form_prefix}address",
         )
 
-        emergency_name_col, emergency_number_col = st.columns(
-            2
-        )
+        emergency_name_col, emergency_number_col = st.columns(2)
 
         emergency_name = emergency_name_col.text_input(
-            "Emergency contact name",
-            value=patient.get(
-                "emergency_contact_name"
-            )
-            or "",
+            "Guardian / emergency contact name",
+            value=patient.get("emergency_contact_name") or "",
+            key=f"{form_prefix}emergency_name",
         )
 
         emergency_number = emergency_number_col.text_input(
-            "Emergency contact number",
-            value=patient.get(
-                "emergency_contact_no"
-            )
-            or "",
+            "Guardian / emergency contact number",
+            value=patient.get("emergency_contact_no") or "",
+            key=f"{form_prefix}emergency_number",
         )
 
         selected_hospital = None
 
         if is_superadmin:
-
             if hospital_names:
-
                 selected_hospital = st.selectbox(
                     "Hospital *",
                     hospital_names,
                     index=hospital_index,
+                    key=f"{form_prefix}hospital",
                 )
-
             else:
+                st.warning("No hospitals registered yet.")
 
-                st.warning(
-                    "No hospitals registered yet."
-                )
-
-        cancel_col, save_col = st.columns(
-            2
-        )
+        cancel_col, save_col = st.columns(2)
 
         cancel = cancel_col.form_submit_button(
             "Cancel",
@@ -677,9 +655,7 @@ def render_patient_form(
         )
 
         submitted = save_col.form_submit_button(
-            "Save changes"
-            if is_edit
-            else "Register patient",
+            "Save changes" if is_edit else "Register patient",
             type="primary",
             width="stretch",
         )
@@ -690,128 +666,60 @@ def render_patient_form(
     if not submitted:
         return
 
+    if birthdate is None:
+        return
+
     if (
         not first_name.strip()
         or not last_name.strip()
     ):
-
-        errors.error(
-            "First name and last name are required."
-        )
-
+        errors.error("First name and last name are required.")
         return
 
     if is_superadmin:
-
         if selected_hospital:
-
-            hospital_id = hospital_options[
-                selected_hospital
-            ]
-
+            hospital_id = hospital_options[selected_hospital]
         elif is_edit:
-
-            hospital_id = patient.get(
-                "hospital_id"
-            )
-
+            hospital_id = patient.get("hospital_id")
         else:
-
-            errors.error(
-                "Please select a hospital."
-            )
-
+            errors.error("Please select a hospital.")
             return
-
     else:
-
         if editor_hospital_id is None:
-
             errors.error(
-                "Your account is not assigned "
-                "to a hospital. Please contact "
-                "your Superadmin."
+                "Your account is not assigned to a hospital. "
+                "Please contact your Superadmin."
             )
-
             return
-
         hospital_id = editor_hospital_id
 
     details = {
-
-        "first_name":
-            first_name.strip(),
-
-        "middle_name":
-            middle_name.strip()
-            or None,
-
-        "last_name":
-            last_name.strip(),
-
-        "suffix":
-            suffix.strip()
-            or None,
-
-        "date_of_birth":
-            birthdate,
-
-        "sex":
-            sex,
-
-        "civil_status":
-            civil_status
-            or None,
-
-        "occupation":
-            occupation.strip()
-            or None,
-
-        "nationality":
-            nationality.strip()
-            or None,
-
-        "religion":
-            religion.strip()
-            or None,
-
-        "contact_number":
-            contact_number.strip()
-            or None,
-
-        "address":
-            address.strip()
-            or None,
-
-        "emergency_contact_name":
-            emergency_name.strip()
-            or None,
-
-        "emergency_contact_no":
-            emergency_number.strip()
-            or None,
-
-        "hospital_id":
-            hospital_id,
+        "first_name": first_name.strip(),
+        "middle_name": middle_name.strip() or None,
+        "last_name": last_name.strip(),
+        "suffix": suffix.strip() or None,
+        "date_of_birth": birthdate,
+        "sex": sex,
+        "civil_status": civil_status or None,
+        "occupation": occupation.strip() or None,
+        "nationality": nationality.strip() or None,
+        "religion": religion.strip() or None,
+        "contact_number": contact_number.strip() or None,
+        "address": address.strip() or None,
+        "emergency_contact_name": emergency_name.strip() or None,
+        "emergency_contact_no": emergency_number.strip() or None,
+        "hospital_id": hospital_id,
     }
 
     try:
 
         if is_edit:
-
             update_patient(
-                patient_id=patient[
-                    "patient_id"
-                ],
+                patient_id=patient["patient_id"],
                 **details,
             )
-
-            remember(
-                "Patient updated."
-            )
-
+            remember("Patient updated.")
         else:
-
             duplicate = find_duplicate_patient(
                 get_all_patients() or [],
                 first_name,
@@ -820,22 +728,15 @@ def render_patient_form(
                 birthdate,
                 hospital_id,
             )
-
             if duplicate:
-
                 errors.error(
-                    "A patient with the same "
-                    "name and date of birth "
-                    "already exists: "
-                    f"{patient_name(duplicate)} "
-                    f"(code "
-                    f"{duplicate.get('patient_code') or '—'})."
+                    "A patient with the same name and date of birth "
+                    f"already exists: {patient_name(duplicate)} "
+                    f"(code {duplicate.get('patient_code') or '—'})."
                 )
-
                 return
 
             subscription_check = can_register_patient(hospital_id)
-
             if not subscription_check.get("allowed"):
                 errors.error(
                     subscription_check.get(
@@ -846,23 +747,15 @@ def render_patient_form(
                 return
 
             create_patient(
-                created_by=current_user.get(
-                    "user_id"
-                ),
+                created_by=current_user.get("user_id"),
                 **details,
             )
-
-            remember(
-                "Patient registered."
-            )
+            remember("Patient registered.")
 
         st.rerun()
 
     except Exception as error:
-
-        errors.error(
-            f"Failed to save patient: {error}"
-        )
+        errors.error(f"Failed to save patient: {error}")
 
 
 # ============================================================

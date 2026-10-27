@@ -892,77 +892,77 @@ def render_personal_information_section(
                     ),
                 )
 
-            birth_col, sex_col = st.columns(
-                2
-            )
+            # ==========================================
+            # BIRTHDATE VIA 3 SELECTBOXES (BYPASSES BUG)
+            # ==========================================
+            current_birthdate = user.get("birthdate")
 
-            current_birthdate = (
-                user.get(
-                    "birthdate"
-                )
-            )
-
-            birth_value = None
-
+            # Parse the existing birthdate into day/month/year
+            dob_day, dob_month, dob_year = 1, 1, 1990
             if current_birthdate:
-
                 try:
-
-                    if isinstance(
-                        current_birthdate,
-                        date,
-                    ):
-
-                        birth_value = (
-                            current_birthdate
-                        )
-
+                    if isinstance(current_birthdate, date):
+                        parsed = current_birthdate
                     else:
+                        parsed = date.fromisoformat(str(current_birthdate)[:10])
+                    dob_day = parsed.day
+                    dob_month = parsed.month
+                    dob_year = parsed.year
+                except (ValueError, TypeError):
+                    pass
 
-                        birth_value = date.fromisoformat(
-                            str(
-                                current_birthdate
-                            )[:10]
-                        )
-
-                except (
-                    ValueError,
-                    TypeError,
-                ):
-
-                    birth_value = None
-
-            with birth_col:
-
-                birthdate = st.date_input(
-                    "Birthdate",
-                    value=birth_value,
-                    min_value=date(
-                        1900,
-                        1,
-                        1,
-                    ),
-                    max_value=date.today(),
-                )
-
-            current_sex = user.get(
-                "sex"
+            st.markdown("**Birthdate** *")
+            birth_col1, birth_col2, birth_col3, sex_col = st.columns(
+                [1, 1.2, 1, 1.5]
             )
 
+            days = list(range(1, 32))
+            months = list(range(1, 13))
+            years = list(range(date.today().year, 1899, -1))
+
+            selected_day = birth_col1.selectbox(
+                "Day",
+                days,
+                index=days.index(dob_day) if dob_day in days else 0,
+                key="profile_dob_day",
+            )
+
+            selected_month = birth_col2.selectbox(
+                "Month",
+                months,
+                index=months.index(dob_month) if dob_month in months else 0,
+                format_func=lambda m: date(2000, m, 1).strftime("%B"),
+                key="profile_dob_month",
+            )
+
+            selected_year = birth_col3.selectbox(
+                "Year",
+                years,
+                index=years.index(dob_year) if dob_year in years else years.index(1990),
+                key="profile_dob_year",
+            )
+
+            # Build the birthdate, validating Feb 30 etc.
+            try:
+                birthdate = date(selected_year, selected_month, selected_day)
+            except ValueError:
+                st.error("Invalid date selected. Please check the day/month combination.")
+                birthdate = None
+
+            # Sex picker
+            current_sex = user.get("sex")
             sex_index = (
-                SEX_OPTIONS.index(
-                    current_sex
-                )
+                SEX_OPTIONS.index(current_sex)
                 if current_sex in SEX_OPTIONS
                 else 0
             )
 
             with sex_col:
-
                 sex = st.selectbox(
                     "Sex",
                     SEX_OPTIONS,
                     index=sex_index,
+                    key="profile_sex",
                 )
 
             contact_number = st.text_input(

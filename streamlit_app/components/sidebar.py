@@ -110,7 +110,7 @@ PHYSICIAN_NAV = [
             (
                 "Inpatient Dashboard",
                 "Inpatient dashboard",
-                "assignment",
+                "bedroom_parent",
             ),
             (
                 "Follow-Ups",
@@ -502,6 +502,12 @@ def show_header(role_label):
         user.get("hospital_logo_url")
         or ""
     )
+    profile_picture_url = (
+        user.get("profile_picture_url")
+        or user.get("profile_picture")
+        or user.get("avatar_url")
+        or ""
+    )
 
     # ---- logo: the hospital's logo, or a hospital icon as a fallback ----
 
@@ -521,6 +527,16 @@ def show_header(role_label):
             "</div>"
         )
 
+    avatar_html = (
+        '<img class="ls-sidebar-avatar ls-sidebar-avatar-image" '
+        f'src="{html.escape(profile_picture_url)}" alt="Profile picture">'
+        if profile_picture_url
+        else (
+            '<div class="ls-sidebar-avatar">'
+            f'{safe_text(get_initials(user_name))}</div>'
+        )
+    )
+
     # ---- everything is written as one HTML string (no blank lines) ----
 
     with st.container(
@@ -533,7 +549,7 @@ def show_header(role_label):
             '<div class="ls-sidebar-brand">LungSight</div>'
             "</div>"
             '<div class="ls-sidebar-usercard">'
-            f'<div class="ls-sidebar-avatar">{safe_text(get_initials(user_name))}</div>'
+            f"{avatar_html}"
             '<div class="ls-sidebar-usertext">'
             f'<div class="ls-sidebar-username" title="{safe_text(user_name)}">'
             f"{safe_text(user_name)}</div>"

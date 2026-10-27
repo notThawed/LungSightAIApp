@@ -269,24 +269,23 @@
     background: var(--ip-surface);
     border: 1px solid var(--ip-border);
     border-radius: 10px;
-    padding: 1rem 1rem 0.4rem;
-    margin-top: 0.4rem;
+    padding: 0.5rem 0.75rem !important;
+    margin-bottom: 1rem !important;
+    overflow: hidden;
 }
 
-.st-key-physician_inpatient_page div[data-testid="stVegaLiteChart"] + div p {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ip-muted);
-    text-align: center;
-    margin-top: 0.4rem;
-    margin-bottom: 0.5rem;
+.st-key-physician_inpatient_page div[data-testid="stVegaLiteChart"] > div {
+    padding: 0 !important;
+    width: 100% !important;
 }
 
-.st-key-physician_inpatient_page div[data-testid="stCaptionContainer"] p:empty {
-    display: none;
+.st-key-physician_inpatient_page div[data-testid="stVegaLiteChart"] canvas,
+.st-key-physician_inpatient_page div[data-testid="stVegaLiteChart"] svg {
+    display: block;
+    max-width: 100% !important;
+    height: auto !important;
 }
+
 
 /* ----------------------------------------------------------
    PRIMARY / SECONDARY BUTTONS
@@ -448,3 +447,143 @@
 .st-key-physician_inpatient_page div[data-testid="stAlert"] svg {
     display: none !important;
 }
+
+/* ----------------------------------------------------------
+   WARD CENSUS REFRESH
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page [class*="st-key-ip_card_"] {
+    background: linear-gradient(120deg, #FFFFFF 0%, #FBFDFE 100%);
+    border: 1px solid #D8E5E9;
+    border-radius: 16px;
+    padding: 1.15rem 1.25rem;
+    margin: 0.4rem 0 0.75rem;
+    box-shadow: 0 5px 18px rgba(11, 31, 46, 0.045);
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.st-key-physician_inpatient_page [class*="st-key-ip_card_"]:hover {
+    border-color: #9BCBD0;
+    box-shadow: 0 10px 24px rgba(11, 31, 46, 0.08);
+    transform: translateY(-1px);
+}
+
+.ip-admission-identity { display: flex; align-items: center; gap: 1rem; min-width: 0; }
+
+.ip-avatar {
+    display: flex;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #E6F4F5, #D8ECEE);
+    color: #0B6873;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.ip-admission-copy { min-width: 0; }
+.ip-name-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.75rem; }
+.ip-patient-name { color: var(--ip-ink); font-size: 1.02rem; font-weight: 750; letter-spacing: -0.02em; }
+.ip-code { color: #526E7D; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.73rem; font-weight: 650; }
+
+.ip-diagnosis {
+    overflow: hidden;
+    max-width: 52rem;
+    margin: 0.28rem 0;
+    color: #415D6D;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ip-patient-meta { color: #758D9A; font-size: 0.74rem; font-weight: 550; }
+.ip-day-wrap { display: flex; align-items: baseline; justify-content: center; gap: 0.4rem; margin: 0 0 0.6rem; color: #0B6873; }
+.ip-day-number { font-size: 1.22rem; font-weight: 800; }
+.ip-day-label { color: #6C8492; font-size: 0.61rem; font-weight: 800; letter-spacing: 0.08em; }
+
+.st-key-physician_inpatient_page [class*="st-key-ip_card_"] .stButton button {
+    min-height: 2.55rem;
+    border-radius: 9px;
+    font-size: 0.8rem;
+}
+
+.st-key-physician_inpatient_page div[data-testid="stTextInput"] input {
+    min-height: 2.8rem;
+    border-color: #D8E5E9;
+    border-radius: 10px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(11, 31, 46, 0.025);
+}
+
+.st-key-physician_inpatient_page .st-key-ip_patient_banner { margin: 0.65rem 0 1.5rem; }
+
+.ip-detail-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 1.4rem 1.55rem;
+    border: 1px solid #D8E5E9;
+    border-radius: 16px;
+    background: linear-gradient(120deg, #FFFFFF 0%, #F0F8F8 100%);
+    box-shadow: 0 6px 20px rgba(11, 31, 46, 0.045);
+}
+
+.ip-banner-eyebrow { color: #0F7C88; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.11em; }
+.ip-detail-banner h2 { margin: 0.3rem 0 0.2rem; color: #0B1F2E; font-size: 1.35rem; font-weight: 750; letter-spacing: -0.025em; }
+.ip-detail-banner p { margin: 0; color: #526E7D; font-size: 0.84rem; }
+
+.ip-banner-meta {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    gap: 0.35rem 1.1rem;
+    min-width: 11.5rem;
+    padding-left: 1.4rem;
+    border-left: 1px solid #D8E5E9;
+}
+
+.ip-banner-meta span { color: #718896; font-size: 0.71rem; font-weight: 600; }
+.ip-banner-meta b { color: #153747; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.77rem; text-align: right; }
+
+/* ----------------------------------------------------------
+   CLINICAL TREND CHARTS
+   ---------------------------------------------------------- */
+.st-key-physician_inpatient_page div[data-testid="stVegaLiteChart"] {
+    background: var(--ip-surface);
+    border: 1px solid var(--ip-border);
+    border-radius: 10px;
+    padding: 1.5rem 1.5rem 1rem 1.5rem !important; /* More padding inside the box */
+    margin-top: 0.5rem;
+    margin-bottom: 1.5rem !important; /* Space below the box */
+}
+
+/* Ensure the canvas inside doesn't overflow */
+.st-key-physician_inpatient_page div[data-testid="stVegaLiteChart"] canvas {
+    max-width: 100% !important;
+    height: auto !important;
+}
+
+.st-key-physician_inpatient_page div[data-testid="stVegaLiteChart"] + div p {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ip-muted);
+    text-align: center;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 720px) {
+    .st-key-physician_inpatient_page { padding: 1.25rem 1rem 3rem; }
+    .ip-detail-banner { align-items: flex-start; flex-direction: column; gap: 1rem; }
+    .ip-banner-meta { width: 100%; padding: 0.85rem 0 0; border-top: 1px solid #D8E5E9; border-left: 0; }
+    .ip-diagnosis { white-space: normal; }
+}
+
+

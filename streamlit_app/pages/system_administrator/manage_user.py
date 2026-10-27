@@ -64,8 +64,10 @@ def validate_birthdate(birthdate):
 
     today = date.today()
 
-    if birthdate > today:
-        return False, "Birthdate cannot be in the future."
+    latest_birthdate = _latest_adult_birthdate(today)
+
+    if birthdate > latest_birthdate:
+        return False, "User must be at least 18 years old."
 
     if birthdate < date(1900, 1, 1):
         return False, "Please enter a valid birthdate."
@@ -79,6 +81,15 @@ def validate_birthdate(birthdate):
         return False, "Please enter a valid birthdate. The calculated age is over 120 years."
 
     return True, ""
+
+
+def _latest_adult_birthdate(today=None):
+    """Latest birthdate that meets the 18-year minimum age."""
+    today = today or date.today()
+    try:
+        return today.replace(year=today.year - 18)
+    except ValueError:  # February 29 in a leap year
+        return today.replace(year=today.year - 18, day=28)
 
 
 def calculate_age(birthdate):
@@ -144,6 +155,7 @@ def render_user_form(user=None):
     """user=None adds a new user; otherwise edits that user."""
 
     is_edit = user is not None
+    form_prefix = "edit_" if is_edit else "new_"
 
     current_user, is_hospital_admin, editor_hospital_id, editor_hospital_name = get_current_user_info()
 
@@ -188,13 +200,19 @@ def render_user_form(user=None):
         else 0
     )
 
-    birthdate_start = None
-
-    if is_edit:
-        try:
-            birthdate_start = date.fromisoformat(str(user.get("user_birthdate"))[:10])
-        except ValueError:
-            birthdate_start = date(1990, 1, 1)
+    # ==========================================
+    # DOB PARSING FOR SELECTBOXES
+    # ==========================================
+    try:
+        existing_dob = date.fromisoformat(str(user.get("user_birthdate"))[:10])
+        dob_day = existing_dob.day
+        dob_month = existing_dob.month
+        dob_year = existing_dob.year
+    except (ValueError, TypeError):
+        # Default for new user: Jan 1, 1990
+        dob_day = 1
+        dob_month = 1
+        dob_year = 1990
 
     employee_id = user.get("employee_id") if is_edit else generate_employee_id()
 
@@ -202,13 +220,13 @@ def render_user_form(user=None):
 
     # ---- the form ----
 
-    with st.form("user_form", clear_on_submit=False):
+    with st.form(f"user_form_{form_prefix}", clear_on_submit=False):
 
         id_col, email_col = st.columns([1, 2])
 
-        id_col.text_input("Employee ID", value=employee_id or "", disabled=True)
+        id_col.text_input("Employee ID", value=employee_id or "", disabled=True, key=f"{form_prefix}employee_id")
         email = email_col.text_input(
-            "Email *", value=user.get("email") or "", placeholder="user@hospital.com"
+            "Email *", value=user.get("email") or "", placeholder="user@hospital.com", key=f"{form_prefix}email"
         )
 
         password = ""
@@ -218,43 +236,76 @@ def render_user_form(user=None):
                 "New password",
                 type="password",
                 placeholder="Leave blank to keep the current password",
+                key=f"{form_prefix}password",
             )
 
         first_col, middle_col, last_col = st.columns(3)
 
-        first_name = first_col.text_input("First name *", value=user.get("user_fname") or "")
-        middle_name = middle_col.text_input("Middle name", value=user.get("user_mname") or "")
-        last_name = last_col.text_input("Last name *", value=user.get("user_lname") or "")
+        first_name = first_col.text_input("First name *", value=user.get("user_fname") or "", key=f"{form_prefix}first_name")
+        middle_name = middle_col.text_input("Middle name", value=user.get("user_mname") or "", key=f"{form_prefix}middle_name")
+        last_name = last_col.text_input("Last name *", value=user.get("user_lname") or "", key=f"{form_prefix}last_name")
 
-        birth_col, sex_col, contact_col = st.columns(3)
+        # ==========================================
+        # DOB VIA 3 SELECTBOXES (BYPASSES BUG)
+        # ==========================================
+        st.markdown("**Birthdate** *")
+        
+        birth_col1, birth_col2, birth_col3, sex_col = st.columns([1, 1.2, 1, 1.5])
 
-        birthdate = birth_col.date_input(
-            "Birthdate *",
-            value=birthdate_start,
-            min_value=date(1900, 1, 1),
-            max_value=date.today(),
-            format="YYYY-MM-DD",
+        days = list(range(1, 32))
+        months = list(range(1, 13))
+        years = list(range(date.today().year, 1899, -1))
+
+        selected_day = birth_col1.selectbox(
+            "Day",
+            days,
+            index=days.index(dob_day) if dob_day in days else 0,
+            key=f"{form_prefix}dob_day",
+        )
+
+        selected_month = birth_col2.selectbox(
+            "Month",
+            months,
+            index=months.index(dob_month) if dob_month in months else 0,
+            format_func=lambda m: date(2000, m, 1).strftime("%B"),
+            key=f"{form_prefix}dob_month",
+        )
+
+        selected_year = birth_col3.selectbox(
+            "Year",
+            years,
+            index=years.index(dob_year) if dob_year in years else years.index(1990),
+            key=f"{form_prefix}dob_year",
         )
 
         current_sex = user.get("user_sex")
-
         sex = sex_col.selectbox(
             "Sex",
             SEX_OPTIONS,
             index=SEX_OPTIONS.index(current_sex) if current_sex in SEX_OPTIONS else 0,
+            key=f"{form_prefix}sex",
         )
 
-        contact_number = contact_col.text_input(
+        # Validate date
+        try:
+            birthdate = date(selected_year, selected_month, selected_day)
+        except ValueError:
+            errors.error("Invalid date selected.")
+            birthdate = None
+        # ==========================================
+
+        contact_number = st.text_input(
             "Contact number",
             value=user.get("user_contact_number") or "",
             placeholder="+63 912 345 6789",
+            key=f"{form_prefix}contact",
         )
 
-        address = st.text_area("Address", value=user.get("user_address") or "", height=80)
+        address = st.text_area("Address", value=user.get("user_address") or "", height=80, key=f"{form_prefix}address")
 
         role_col, hospital_col = st.columns(2)
 
-        selected_role = role_col.selectbox("Role *", role_names, index=role_index)
+        selected_role = role_col.selectbox("Role *", role_names, index=role_index, key=f"{form_prefix}role")
 
         selected_hospital = None
 
@@ -264,9 +315,10 @@ def render_user_form(user=None):
                     "Hospital",
                     value=editor_hospital_name or str(editor_hospital_id or "—"),
                     disabled=True,
+                    key=f"{form_prefix}hospital_disabled",
                 )
             elif hospital_names:
-                selected_hospital = st.selectbox("Hospital *", hospital_names, index=hospital_index)
+                selected_hospital = st.selectbox("Hospital *", hospital_names, index=hospital_index, key=f"{form_prefix}hospital")
             else:
                 st.warning("No hospitals registered yet.")
 
@@ -284,6 +336,9 @@ def render_user_form(user=None):
         return
 
     # ---- validation ----
+
+    if birthdate is None:
+        return
 
     if not is_edit and not email.strip():
         errors.error("Email is required.")
@@ -366,6 +421,7 @@ def render_user_form(user=None):
         st.rerun()
     else:
         errors.error(result.get("message", fail_message))
+
 
 
 @st.dialog("Add user", width="medium")

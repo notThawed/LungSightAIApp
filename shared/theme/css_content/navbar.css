@@ -124,6 +124,15 @@ section[data-testid="stAppViewBlockContainer"] {
 	text-overflow: ellipsis;
 }
 
+.ls-nav-hospital-logo {
+	width: 2.25rem;
+	height: 2.25rem;
+	flex: 0 0 auto;
+	object-fit: contain;
+	margin-right: 0.65rem;
+	border-radius: 0.4rem;
+}
+
 /* ============================================================
    RIGHT — USER PROFILE
    ============================================================ */

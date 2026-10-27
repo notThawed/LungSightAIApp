@@ -13,7 +13,7 @@ Session keys:
 
 import streamlit as st
 
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from backend.supabase_client import admin_supabase
@@ -1344,6 +1344,10 @@ def render_report_actions(
     if not save_clicked:
         return
 
+    # ==========================================
+    # VALIDATION
+    # ==========================================
+
     if not form_values["findings"].strip():
         st.error("X-Ray Findings is required.")
         return
@@ -1365,6 +1369,32 @@ def render_report_actions(
         st.error("⚠️ Disposition Notes are required when admitting a patient.")
         return
 
+    # ==========================================
+    # NEW: DUPLICATE ADMISSION GUARD
+    # ==========================================
+    if form_values["disposition"] == "Admission":
+        try:
+            existing_admissions = (
+                admin_supabase.table("examinations")
+                .select("examination_id")
+                .eq("patient_id", patient["patient_id"])
+                .eq("disposition", "Admission")
+                .eq("status", "Admitted")
+                .execute()
+            )
+            # If the patient already has an active admission record
+            if existing_admissions.data and len(existing_admissions.data) > 0:
+                st.error(
+                    "⚠️ This patient is already admitted. Please go to the "
+                    "Inpatient Dashboard to log rounds, or discharge them "
+                    "before creating a new admission."
+                )
+                return
+        except Exception as e:
+            st.error(f"Failed to verify admission status: {e}")
+            return
+    # ==========================================
+
     image_id = None
     try:
         imgs = get_xray_images_by_request(request["request_id"]) or []
@@ -1384,7 +1414,10 @@ def render_report_actions(
         # Set status to Admitted if disposition is Admission
         exam_status = "Admitted" if form_values["disposition"] == "Admission" else "Completed"
         
-        exam_updated = update_examination(
+        # NEW: Capture the exact admission timestamp
+        now_utc = datetime.now(timezone.utc).isoformat()
+        
+        update_examination(
             examination_id=exam_id,
             status=exam_status,
             reviewed_by=user_id,
@@ -1396,27 +1429,9 @@ def render_report_actions(
             ),
             curb65_score=form_values["curb65_score"],
             severity_status=form_values["severity_status"],
+            time_in=now_utc if form_values["disposition"] == "Admission" else None,
         )
 
-        if exam_updated:
-            ai_result_id = (ai or {}).get("ai_result_id")
-            overrode_ai = bool(training_values.get("overrode_ai"))
-
-            audit.record_event(
-                "review.diagnosis_confirmed",
-                target_id=exam_id,
-                metadata={
-                    "overrode_ai": overrode_ai,
-                    "ai_result_id": ai_result_id,
-                },
-            )
-
-            if overrode_ai and ai_result_id:
-                audit.record_event(
-                    "ai.result_corrected",
-                    target_id=ai_result_id,
-                    metadata={"examination_id": exam_id},
-                )
 
         if image_id:
             consented = patient.get("ai_consent_granted", False)
