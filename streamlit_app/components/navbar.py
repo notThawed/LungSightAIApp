@@ -228,6 +228,13 @@ def show_top_navbar(
         user.get("hospital_name"),
         "-",
     )
+    hospital_logo_url = user.get("hospital_logo_url") or ""
+    hospital_logo_html = (
+        '<img class="ls-nav-hospital-logo" '
+        f'src="{html.escape(hospital_logo_url)}" alt="Hospital logo">'
+        if hospital_logo_url
+        else ""
+    )
 
     # --------------------------------------------------------
     # Avatar
@@ -299,6 +306,7 @@ def show_top_navbar(
 
             st.markdown(
                 f"""<div class="ls-nav-hospital-wrap">
+{hospital_logo_html}
 <div class="ls-nav-hospital-name">
 {hospital_name}
 </div>

@@ -258,6 +258,11 @@
     letter-spacing: 0.02em;
 }
 
+.st-key-sidebar_header .ls-sidebar-avatar-image {
+    object-fit: cover;
+    border: 1px solid var(--sb-border);
+}
+
 
 /* ============================================================
    USER TEXT

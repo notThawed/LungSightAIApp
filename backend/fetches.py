@@ -603,37 +603,9 @@ def get_examinations_by_patient(patient_id):
     response = (
         admin_supabase
         .table("examinations")
-        .select("""
-            examination_id,
-            patient_id,
-            examination_type,
-            examination_date,
-            history_of_present_illness,
-            chief_complaint,
-            physical_examination,
-            diagnosis,
-            plans_orders,
-            time_in,
-            disposition,
-            disposition_notes,
-            time_of_discharge,
-            follow_up_date,
-            follow_up_notes,
-            follow_up_sequence,
-            status,
-            curb65_score,          
-            severity_status,       
-            clinical_status,
-            discharged_by,
-            discharge_notes,
-            post_discharge_followup_status,
-            parent_examination_id,
-            created_by,
-            reviewed_by,
-            reviewed_at,
-            created_at,
-            updated_at
-        """)
+        # Fetch the complete row so views that use newer examination
+        # fields do not silently render them as blank.
+        .select("*")
         .eq("patient_id", patient_id)
         .order("examination_date", desc=True)
         .execute()

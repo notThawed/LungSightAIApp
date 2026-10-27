@@ -1546,6 +1546,7 @@ def show_examination_form(
                     ).get(
                         "guardian_name"
                     )
+                    or patient.get("emergency_contact_name")
                     or ""
                 ),
                 key=(
