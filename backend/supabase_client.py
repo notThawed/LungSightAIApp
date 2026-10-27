@@ -20,9 +20,13 @@ from dotenv import load_dotenv
 # Streamlit Cloud will use st.secrets instead.
 # ============================================================
 
-load_dotenv(
-    Path(__file__).parent / ".env"
-)
+from pathlib import Path
+from dotenv import load_dotenv
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ENV_PATH = PROJECT_ROOT / ".env"
+
+load_dotenv(ENV_PATH)
 
 
 # ============================================================

@@ -5,3 +5,4 @@ __pycache__/
 data/database.db
 datasets/
 Microsoft/Windows/PowerShell/ModuleAnalysisCache
+resend.env
