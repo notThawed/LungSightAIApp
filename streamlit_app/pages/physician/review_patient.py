@@ -46,7 +46,6 @@ from streamlit_app.components.ui import (
     page_header,
     empty_state,
     section_title,
-    show_rows,
     full_name,
     format_date,
     pill,

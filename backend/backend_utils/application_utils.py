@@ -1,4 +1,4 @@
-from backend.supabase_client import supabase, admin_supabase
+from backend.supabase_client import admin_supabase
 from datetime import datetime, timezone
 
 from backend.backend_utils.subscription_utils import create_hospital_subscription

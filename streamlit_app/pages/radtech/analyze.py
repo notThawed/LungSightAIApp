@@ -7,10 +7,6 @@ from datetime import datetime, timezone
 
 from backend.fetches import (
     get_xray_request_by_examination,
-    get_xray_images_by_request,
-    get_xray_image_url,
-    get_xray_ai_result,
-    get_all_patients,
 )
 
 from backend.crud import (
@@ -38,11 +34,8 @@ from backend import audit
 
 from streamlit_app.components.ui import (
     page_header,
-    section_title,
     show_rows,
     full_name,
-    format_date,
-    pill,
     show_flash_message,
 )
 
