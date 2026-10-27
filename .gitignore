@@ -4,4 +4,6 @@ __pycache__/
 .env
 data/database.db
 datasets/
+hybrid_negative_positive/
+international_classification/
 Microsoft/Windows/PowerShell/ModuleAnalysisCache

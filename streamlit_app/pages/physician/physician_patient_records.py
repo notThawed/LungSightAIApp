@@ -5,7 +5,6 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
 from backend.supabase_client import admin_supabase
-
 from backend.fetches import (
     get_completed_patients_with_latest_ai,
     get_examinations_by_patient,
@@ -20,18 +19,20 @@ from backend.fetches import (
     get_medications_by_examination,
     get_referral_by_examination,
 )
-
 from backend.backend_utils.severity_utils import get_latest_severity, get_severity_alert
 
 from streamlit_app.components.ui import (
-    page_header, empty_state, section_title, show_rows, full_name, format_date, pill, show_flash_message,
+    page_header, empty_state, section_title, show_rows, full_name,
+    format_date, pill, show_flash_message,
 )
 
 from shared.assets import load_css
 
+
 # ============================================================
 # CONFIG
 # ============================================================
+
 ROLE_SUPERADMIN = 1
 ROLE_RADIOLOGIST = 3
 ROLE_HOSPITAL_ADMIN = 6
@@ -49,9 +50,11 @@ KEY_EXAM = "physician_selected_examination"
 KEY_EXTERNAL = "pr_external_record"
 KEY_EXTERNAL_SHOWN = "pr_external_displayed"
 
+
 # ============================================================
 # HELPERS
 # ============================================================
+
 def current_user():
     return st.session_state.get("user") or {}
 
@@ -62,7 +65,12 @@ def current_hospital_id():
     return current_user().get("hospital_id")
 
 def patient_name(patient):
-    return full_name(patient.get("first_name"), patient.get("middle_name"), patient.get("last_name"), patient.get("suffix"))
+    return full_name(
+        patient.get("first_name"),
+        patient.get("middle_name"),
+        patient.get("last_name"),
+        patient.get("suffix"),
+    )
 
 def patient_code(patient):
     return patient.get("patient_code") or patient.get("patient_id")
@@ -139,9 +147,11 @@ def confidence_percent(value):
     except (TypeError, ValueError):
         return None
 
+
 # ============================================================
 # EXAMINATION HELPERS
 # ============================================================
+
 def is_follow_up_examination(exam):
     sequence = exam.get("follow_up_sequence")
     if sequence is not None:
@@ -154,17 +164,32 @@ def is_follow_up_examination(exam):
     normalized = str(exam_type).strip().lower().replace("_", " ").replace("-", " ")
     return "follow up" in normalized or "followup" in normalized
 
+def is_inpatient_round(exam):
+    """Check if this is a ward round record (child of admission)."""
+    exam_type = (exam.get("examination_type") or "").strip().lower()
+    return exam_type == "inpatient round"
+
 def split_examination_history(examinations):
-    general, follow_ups = [], []
+    """
+    Split examinations into General Consults, Follow-Ups, and Inpatient Rounds.
+    
+    Inpatient Rounds are explicitly excluded from the General Consults list
+    because they're rendered nested inside their parent admission record.
+    """
+    general, follow_ups, rounds = [], [], []
     for exam in examinations:
-        if is_follow_up_examination(exam):
+        if is_inpatient_round(exam):
+            rounds.append(exam)
+        elif is_follow_up_examination(exam):
             follow_ups.append(exam)
         else:
             general.append(exam)
     follow_ups.sort(key=lambda e: (e.get("follow_up_sequence") is None, e.get("follow_up_sequence") or 999999))
-    return general, follow_ups
+    return general, follow_ups, rounds
 
 def display_exam_type(exam):
+    if is_inpatient_round(exam):
+        return "Inpatient Round"
     if not is_follow_up_examination(exam):
         return exam.get("examination_type") or "General Consultation"
     seq = exam.get("follow_up_sequence")
@@ -185,9 +210,21 @@ def exam_has_xray(exam):
     except Exception:
         return False
 
+def admission_status_badge(exam):
+    """Return (label, tone) for the admission status."""
+    if exam.get("status") == "Discharged":
+        return ("Discharged", "green")
+    if exam.get("status") == "Admitted":
+        return ("Currently Admitted", "amber")
+    if exam.get("disposition") == "Admission":
+        return ("Admission Decision", "amber")
+    return None
+
+
 # ============================================================
 # NAVIGATION
 # ============================================================
+
 def go_to_patient_overview(patient):
     st.session_state[KEY_PATIENT] = patient
     st.session_state.pop(KEY_CATEGORY, None)
@@ -219,9 +256,11 @@ def back_to_category():
     st.session_state.pop(KEY_EXAM, None)
     st.rerun()
 
+
 # ============================================================
 # DATA LOADING
 # ============================================================
+
 def load_patient_rows():
     role_id = current_role_id()
     hospital_id = current_hospital_id()
@@ -237,21 +276,18 @@ def load_patient_rows():
         st.error(f"Failed to load patient records: {error}")
         return []
 
+
 # ============================================================
 # LEVEL 0 — PATIENT RECORDS LIST
 # ============================================================
+
 def render_patient_row(row):
     patient = row["patient"]
     patient_id = patient.get("patient_id")
-    
-    # AI Risk (from latest X-ray)
     risk_label, risk_tone = risk_from_ai_findings(row.get("ai_findings"))
-    
-    # Severity (from latest exam)
     curb_score = row.get("curb65_score")
     phys_sev = row.get("severity_status")
 
-    # Format CURB Pill
     if curb_score is not None:
         if curb_score <= 1: curb_tone, curb_text = "green", f"{curb_score}/5"
         elif curb_score == 2: curb_tone, curb_text = "amber", f"{curb_score}/5"
@@ -259,43 +295,33 @@ def render_patient_row(row):
     else:
         curb_tone, curb_text = "slate", "—"
 
-    # Format Clinical Pill
     if phys_sev and phys_sev != "Not Assessed":
         if "Low" in phys_sev: phys_tone = "green"
         elif "Moderate" in phys_sev: phys_tone = "amber"
         elif "High" in phys_sev: phys_tone = "red"
         else: phys_tone = "slate"
-        phys_text = phys_sev.replace(" Risk", "") # Shorten "Low Risk" to "Low"
+        phys_text = phys_sev.replace(" Risk", "")
     else:
         phys_tone, phys_text = "slate", "—"
 
     with st.container(key=f"pr_row_{patient_id}"):
-        # Adjusted columns to fit the two severity columns
         cols = st.columns([1.2, 2.0, 0.6, 1.2, 1.0, 1.0, 0.8])
-        
         with cols[0]:
             st.markdown(f"<div class='pr-cell pr-cell-id'>{patient_code(patient)}</div>", unsafe_allow_html=True)
-        
         with cols[1]:
-            # Show AI risk as a small subtitle under the name
             st.markdown(
                 f"<div class='pr-cell pr-cell-name'>{patient_name(patient)}</div>"
-                f"<div class='pr-cell' style='font-size:0.7rem; padding-top:0;'>AI: {risk_label}</div>", 
-                unsafe_allow_html=True
+                f"<div class='pr-cell' style='font-size:0.7rem; padding-top:0;'>AI: {risk_label}</div>",
+                unsafe_allow_html=True,
             )
-            
         with cols[2]:
             st.markdown(f"<div class='pr-cell'>{calculate_age(patient.get('date_of_birth'))}</div>", unsafe_allow_html=True)
-            
         with cols[3]:
             st.markdown(f"<div class='pr-cell'>{format_date_only(row.get('examination_date'))}</div>", unsafe_allow_html=True)
-            
         with cols[4]:
             st.markdown(f"<div class='pr-cell'>{pill(curb_text, curb_tone)}</div>", unsafe_allow_html=True)
-            
         with cols[5]:
             st.markdown(f"<div class='pr-cell'>{pill(phys_text, phys_tone)}</div>", unsafe_allow_html=True)
-            
         with cols[6]:
             if st.button("View", key=f"view_pr_{patient_id}", icon=":material/visibility:", width="stretch"):
                 go_to_patient_overview(patient)
@@ -304,12 +330,18 @@ def render_patient_row(row):
 def render_patient_list(rows):
     with st.container(key="physician_patient_records_page"):
         page_header("Patient Records", "View completed patient X-ray analyses and clinical history.")
-        
-        search = st.text_input("Search patient", placeholder="Search by patient ID, name, or contact number", key="physician_patient_records_search", label_visibility="collapsed").strip().lower()
-        
+        search = st.text_input(
+            "Search patient",
+            placeholder="Search by patient ID, name, or contact number",
+            key="physician_patient_records_search",
+            label_visibility="collapsed",
+        ).strip().lower()
+
         if search:
             filtered = [r for r in rows if search in " ".join([
-                str(patient_code(r["patient"]) or ""), str(patient_name(r["patient"]) or ""), str(r["patient"].get("contact_number") or "")
+                str(patient_code(r["patient"]) or ""),
+                str(patient_name(r["patient"]) or ""),
+                str(r["patient"].get("contact_number") or ""),
             ]).lower()]
         else:
             filtered = rows
@@ -319,42 +351,38 @@ def render_patient_list(rows):
             empty_state("No completed patient records found.")
             return
 
-        # Updated headers
         with st.container(key="pr_table_header"):
             cols = st.columns([1.2, 2.0, 0.6, 1.2, 1.0, 1.0, 0.8])
-            headers = [
-                "Patient ID", 
-                "Patient Name", 
-                "Age", 
-                "Latest Exam", 
-                "CURB-65",     
-                "Clinical",    
-                "Action"
-            ]
+            headers = ["Patient ID", "Patient Name", "Age", "Latest Exam", "CURB-65", "Clinical", "Action"]
             for col, label in zip(cols, headers):
                 with col:
                     st.markdown(f"<div class='pr-header-cell'>{label}</div>", unsafe_allow_html=True)
 
         for row in filtered:
             render_patient_row(row)
-            
+
         st.caption(f"Showing {len(filtered)} of {len(rows)} records")
 
 
 # ============================================================
 # LEVEL 1 — PATIENT OVERVIEW
 # ============================================================
+
 def count_category_items(patient):
     patient_id = patient.get("patient_id")
     exams = get_examinations_by_patient(patient_id) or []
-    completed = [e for e in exams if e.get("status") == "Completed"]
-    general, follow_ups = split_examination_history(completed)
+    
+    # IMPORTANT: Include Admitted and Discharged exams (not just Completed)
+    # so admissions show up in the General Consults list.
+    eligible = [e for e in exams if e.get("status") in ("Completed", "Admitted", "Discharged")]
+    general, follow_ups, _rounds = split_examination_history(eligible)
     records = get_medical_records_by_patient(patient_id) or []
     return {
         CATEGORY_GENERAL: len(general),
         CATEGORY_FOLLOWUP: len(follow_ups),
         CATEGORY_EXTERNAL: len(records),
     }
+
 
 def render_category_card(patient, category, title, icon, count):
     with st.container(key=f"pr_cat_{category}"):
@@ -368,6 +396,7 @@ def render_category_card(patient, category, title, icon, count):
         )
         if st.button("View", key=f"pr_cat_view_{category}", icon=":material/arrow_forward:", type="primary", width="stretch"):
             go_to_category(patient, category)
+
 
 def render_patient_overview(patient):
     if st.button("Back to Patient Records", key="pr_back_to_list", icon=":material/arrow_back:"):
@@ -400,7 +429,7 @@ def render_patient_overview(patient):
         unsafe_allow_html=True,
     )
 
-    # NEW: LATEST SEVERITY CARD
+    # Latest severity assessment
     exams = get_examinations_by_patient(patient.get("patient_id")) or []
     latest = get_latest_severity(exams)
     alert_level, alert_msg = get_severity_alert(exams, latest)
@@ -409,12 +438,9 @@ def render_patient_overview(patient):
     phys_sev = latest.get("severity_status") if latest else None
 
     if curb_score is not None:
-        if curb_score <= 1:
-            curb_tone, curb_label = "green", "Low Risk"
-        elif curb_score == 2:
-            curb_tone, curb_label = "amber", "Moderate Risk"
-        else:
-            curb_tone, curb_label = "red", "High Risk"
+        if curb_score <= 1: curb_tone, curb_label = "green", "Low Risk"
+        elif curb_score == 2: curb_tone, curb_label = "amber", "Moderate Risk"
+        else: curb_tone, curb_label = "red", "High Risk"
         curb_pill = pill(f"Score: {curb_score} - {curb_label}", curb_tone)
     else:
         curb_pill = pill("Not Assessed", "slate")
@@ -430,27 +456,24 @@ def render_patient_overview(patient):
 
     alert_html = ""
     if alert_level == "warning":
-        alert_html = f"<div style='margin-top: 1rem; padding: 0.75rem; background: #FEE2E2; color: #B91C1C; border-radius: 8px; font-size: 0.8rem; font-weight: 500;'>⚠️ {alert_msg}</div>"
+        alert_html = f"<div style='margin-top: 1rem; padding: 0.75rem; background: #FEE2E2; color: #B91C1C; border-radius: 8px; font-size: 0.8rem; font-weight: 500;'>{alert_msg}</div>"
     elif alert_level == "info":
-        alert_html = f"<div style='margin-top: 1rem; padding: 0.75rem; background: #E8F4F6; color: #0F7C88; border-radius: 8px; font-size: 0.8rem; font-weight: 500;'>ℹ️ {alert_msg}</div>"
+        alert_html = f"<div style='margin-top: 1rem; padding: 0.75rem; background: #E8F4F6; color: #0F7C88; border-radius: 8px; font-size: 0.8rem; font-weight: 500;'>{alert_msg}</div>"
 
     st.markdown(
         "<div class='pr-hero-card'>"
         "<p class='pr-hero-eyebrow'>Latest Severity Assessment</p>"
         f"<p class='pr-hero-name' style='font-size:0.9rem; color:#5A6F7F; margin-bottom:0.75rem; font-weight:500;'>Based on examination: {format_date_only(latest.get('examination_date')) if latest else 'None'}</p>"
-        
-        # Side by side layout
         "<div style='display: flex; gap: 2rem; margin-top: 0.5rem;'>"
-        "  <div style='flex: 1;'>"
-        "    <p style='color:#0F7C88; font-weight:700; font-size:0.75rem; text-transform:uppercase; margin-bottom:0.25rem;'>CURB-65 (Calculated)</p>"
-        f"    <div>{curb_pill}</div>"
-        "  </div>"
-        "  <div style='flex: 1;'>"
-        "    <p style='color:#B45309; font-weight:700; font-size:0.75rem; text-transform:uppercase; margin-bottom:0.25rem;'>Physician Manual (Clinical)</p>"
-        f"    <div>{phys_pill}</div>"
-        "  </div>"
+        "<div style='flex: 1;'>"
+        "<p style='color:#0F7C88; font-weight:700; font-size:0.75rem; text-transform:uppercase; margin-bottom:0.25rem;'>CURB-65 (Calculated)</p>"
+        f"<div>{curb_pill}</div>"
         "</div>"
-        
+        "<div style='flex: 1;'>"
+        "<p style='color:#B45309; font-weight:700; font-size:0.75rem; text-transform:uppercase; margin-bottom:0.25rem;'>Physician Manual (Clinical)</p>"
+        f"<div>{phys_pill}</div>"
+        "</div>"
+        "</div>"
         f"{alert_html}"
         "</div>",
         unsafe_allow_html=True,
@@ -467,9 +490,11 @@ def render_patient_overview(patient):
     with col3:
         render_category_card(patient, CATEGORY_EXTERNAL, "External Records", "folder_shared", counts[CATEGORY_EXTERNAL])
 
+
 # ============================================================
 # LEVEL 2 — CATEGORY LIST
 # ============================================================
+
 def render_exam_list_card(exam):
     exam_id = exam.get("examination_id")
     exam_date = exam.get("examination_date") or exam.get("created_at")
@@ -485,6 +510,13 @@ def render_exam_list_card(exam):
     diagnosis = (exam.get("diagnosis") or "—").strip()
     if len(diagnosis) > 80: diagnosis = diagnosis[:80] + "…"
 
+    # Admission status badge
+    adm_badge = admission_status_badge(exam)
+    badge_html = ""
+    if adm_badge:
+        badge_label, badge_tone = adm_badge
+        badge_html = f"<div style='margin-bottom:0.4rem;'>{pill(badge_label, badge_tone)}</div>"
+
     with st.container(key=f"pr_exam_card_{exam_id}"):
         st.markdown(
             "<div class='pr-exam-card'>"
@@ -492,6 +524,7 @@ def render_exam_list_card(exam):
             f"<p class='pr-exam-title'>{display_exam_type(exam)}</p>"
             f"<span class='pr-exam-date'>{format_date_only(exam_date)} · {format_time_only(exam_date)}</span>"
             "</div>"
+            f"{badge_html}"
             "<div class='pr-exam-row'>"
             f"<span>Chief Complaint</span><b>{chief}</b>"
             "</div>"
@@ -507,6 +540,7 @@ def render_exam_list_card(exam):
         )
         if st.button("View Details", key=f"pr_exam_view_{exam_id}", icon=":material/arrow_forward:", type="primary", width="stretch"):
             go_to_examination(exam)
+
 
 def render_record_list_card(record):
     record_id = record.get("medical_record_id") or record.get("record_id")
@@ -531,6 +565,7 @@ def render_record_list_card(record):
             st.session_state.pop(KEY_EXTERNAL_SHOWN, None)
             st.rerun()
 
+
 def render_category_list(patient, category):
     category_titles = {
         CATEGORY_GENERAL: "General Consults",
@@ -551,8 +586,9 @@ def render_category_list(patient, category):
     patient_id = patient.get("patient_id")
     if category in (CATEGORY_GENERAL, CATEGORY_FOLLOWUP):
         exams = get_examinations_by_patient(patient_id) or []
-        completed = [e for e in exams if e.get("status") == "Completed"]
-        general, follow_ups = split_examination_history(completed)
+        # Include Admitted and Discharged so admission records show up
+        eligible = [e for e in exams if e.get("status") in ("Completed", "Admitted", "Discharged")]
+        general, follow_ups, _rounds = split_examination_history(eligible)
         items = general if category == CATEGORY_GENERAL else follow_ups
         if not items:
             empty_state(f"No completed {category_titles.get(category, 'records').lower()}.")
@@ -568,9 +604,11 @@ def render_category_list(patient, category):
     for record in records:
         render_record_list_card(record)
 
+
 # ============================================================
 # EXTERNAL RECORD DIALOG
 # ============================================================
+
 @st.dialog("External Medical Record", width="medium")
 def show_external_record_dialog(record):
     st.markdown(
@@ -599,9 +637,11 @@ def show_external_record_dialog(record):
         st.session_state.pop(KEY_EXTERNAL_SHOWN, None)
         st.rerun()
 
+
 # ============================================================
 # LEVEL 3 — EXAMINATION REPORT
 # ============================================================
+
 def render_patient_info_card(patient, exam):
     exam_date = exam.get("examination_date") or exam.get("created_at")
     st.markdown(
@@ -622,6 +662,7 @@ def render_patient_info_card(patient, exam):
         "</div>",
         unsafe_allow_html=True,
     )
+
 
 def render_risk_card(ai_findings, ai_conf, pneumonia_type=None):
     risk_label, risk_tone = risk_from_ai_findings(ai_findings)
@@ -649,6 +690,7 @@ def render_risk_card(ai_findings, ai_conf, pneumonia_type=None):
         "</div>",
         unsafe_allow_html=True,
     )
+
 
 def render_severity_card(exam):
     curb_score = exam.get("curb65_score")
@@ -683,6 +725,7 @@ def render_severity_card(exam):
         unsafe_allow_html=True,
     )
 
+
 def render_examination_details_card(exam):
     exam_date = exam.get("examination_date") or exam.get("created_at")
     rows = [
@@ -704,6 +747,7 @@ def render_examination_details_card(exam):
         + "</div>",
         unsafe_allow_html=True,
     )
+
 
 def render_xray_analysis(exam):
     section_title("X-Ray Analysis", "Chest X-ray submitted for this examination.")
@@ -762,6 +806,7 @@ def render_xray_analysis(exam):
             )
     return request, image, ai
 
+
 def ai_findings_narrative(ai_findings, pneumonia_type):
     if not ai_findings: return None
     normalized = str(ai_findings).strip().lower()
@@ -775,6 +820,7 @@ def ai_findings_narrative(ai_findings, pneumonia_type):
         return "The AI model has <b>not</b> detected patterns consistent with pneumonia. Continue standard clinical evaluation."
     return None
 
+
 def ai_recommendations(ai_findings, pneumonia_type):
     if not ai_findings: return []
     normalized = str(ai_findings).strip().lower()
@@ -787,6 +833,7 @@ def ai_recommendations(ai_findings, pneumonia_type):
     if normalized == "negative":
         return ["Continue standard clinical evaluation", "Reassess if symptoms worsen"]
     return []
+
 
 def render_ai_summary(ai, ai_findings, pneumonia_type, ai_conf):
     section_title("AI Findings Summary")
@@ -813,9 +860,153 @@ def render_ai_summary(ai, ai_findings, pneumonia_type, ai_conf):
         unsafe_allow_html=True,
     )
 
+
+def render_admission_banner(exam):
+    """
+    Show admission status prominently at the top of the admission consult.
+    This is the parent consult that triggered the admission.
+    """
+    if exam.get("disposition") != "Admission":
+        return
+
+    status = exam.get("status")
+    if status == "Discharged":
+        discharge_date = format_date_only(exam.get("time_of_discharge"))
+        st.markdown(
+            f"<div style='padding: 1rem 1.25rem; background: #EAF6F1; border-left: 4px solid #2E8B6A; border-radius: 8px; margin-bottom: 1.5rem;'>"
+            f"<p style='margin: 0 0 0.25rem 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #2E8B6A;'>"
+            f"Admission Episode — Discharged"
+            f"</p>"
+            f"<p style='margin: 0; font-size: 0.9rem; color: #12283A; font-weight: 600;'>"
+            f"Discharged on {discharge_date}. This admission episode is closed."
+            f"</p>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+    elif status == "Admitted":
+        admitted_at = format_date_only(exam.get("time_in") or exam.get("examination_date"))
+        st.markdown(
+            f"<div style='padding: 1rem 1.25rem; background: #FEF3C7; border-left: 4px solid #B45309; border-radius: 8px; margin-bottom: 1.5rem;'>"
+            f"<p style='margin: 0 0 0.25rem 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #B45309;'>"
+            f"Admission Episode — Currently Admitted"
+            f"</p>"
+            f"<p style='margin: 0; font-size: 0.9rem; color: #12283A; font-weight: 600;'>"
+            f"Admitted on {admitted_at}. Patient is currently under inpatient care."
+            f"</p>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def render_inpatient_timeline(exam):
+    """
+    Show the inpatient rounds and discharge info nested inside the parent admission.
+    """
+    if exam.get("disposition") != "Admission":
+        return
+
+    exam_id = exam.get("examination_id")
+    st.divider()
+    section_title("Inpatient Monitoring")
+
+    # Fetch rounds
+    try:
+        res = (
+            admin_supabase.table("examinations")
+            .select("*")
+            .eq("parent_examination_id", exam_id)
+            .order("examination_date", desc=True)
+            .execute()
+        )
+        rounds = res.data or []
+    except Exception as e:
+        st.error(f"Failed to load inpatient rounds: {e}")
+        rounds = []
+
+    # Fetch vitals for all rounds
+    v_map = {}
+    if rounds:
+        round_ids = [r["examination_id"] for r in rounds]
+        try:
+            v_res = (
+                admin_supabase.table("examination_vitals")
+                .select("*")
+                .in_("examination_id", round_ids)
+                .order("recorded_at", desc=True)
+                .execute()
+            )
+            for v in v_res.data or []:
+                v_map.setdefault(v.get("examination_id"), v)
+        except Exception:
+            pass
+
+    # Summary banner
+    if not rounds:
+        st.info("No daily rounds have been logged for this admission yet.")
+    else:
+        total_rounds = len(rounds)
+        st.caption(f"{total_rounds} inpatient round(s) recorded for this admission.")
+
+        # Table-style rendering
+        widths = [1.5, 0.8, 0.8, 0.8, 0.9, 3.0]
+        with st.container(key=f"pr_inpatient_header_{exam_id}"):
+            h1, h2, h3, h4, h5, h6 = st.columns(widths)
+            h1.markdown("<span class='ip-th'>Date & Time</span>", unsafe_allow_html=True)
+            h2.markdown("<span class='ip-th'>Day</span>", unsafe_allow_html=True)
+            h3.markdown("<span class='ip-th'>SpO₂</span>", unsafe_allow_html=True)
+            h4.markdown("<span class='ip-th'>Temp</span>", unsafe_allow_html=True)
+            h5.markdown("<span class='ip-th'>Resp. Rate</span>", unsafe_allow_html=True)
+            h6.markdown("<span class='ip-th'>Clinical Notes</span>", unsafe_allow_html=True)
+
+        # Admission day for Hospital Day calc
+        admit_day = parse_datetime(exam.get("time_in") or exam.get("examination_date"))
+        admit_day = admit_day.date() if admit_day else date.today()
+
+        for r in rounds:
+            v = v_map.get(r["examination_id"], {})
+            r_dt = parse_datetime(r.get("examination_date"))
+            if r_dt:
+                date_str = r_dt.strftime("%b %d, %I:%M %p")
+                r_day = max(1, (r_dt.date() - admit_day).days + 1)
+            else:
+                date_str = "—"
+                r_day = 1
+
+            with st.container(key=f"pr_inpatient_row_{r['examination_id']}"):
+                c1, c2, c3, c4, c5, c6 = st.columns(widths, vertical_alignment="center")
+                c1.markdown(f"<span class='ip-cell-strong'>{date_str}</span>", unsafe_allow_html=True)
+                c2.markdown(f"<span class='ip-cell'>Day {r_day}</span>", unsafe_allow_html=True)
+                c3.markdown(f"<span class='ip-cell'>{v.get('spo2') or '—'}%</span>", unsafe_allow_html=True)
+                c4.markdown(f"<span class='ip-cell'>{v.get('temperature') or '—'}°C</span>", unsafe_allow_html=True)
+                c5.markdown(f"<span class='ip-cell'>{v.get('respiratory_rate') or '—'}/min</span>", unsafe_allow_html=True)
+                c6.markdown(f"<span class='ip-cell-notes'>{r.get('diagnosis') or '—'}</span>", unsafe_allow_html=True)
+
+    # Linked follow-up
+    if exam.get("status") == "Discharged":
+        from backend.backend_utils.followup_utils import get_upcoming_follow_ups_by_patient
+        try:
+            patient_id = (exam.get("patients") or {}).get("patient_id") or exam.get("patient_id")
+            follow_ups = get_upcoming_follow_ups_by_patient(patient_id) or []
+            linked_fu = next((fu for fu in follow_ups if fu.get("source_examination_id") == exam_id), None)
+            if linked_fu:
+                st.markdown(
+                    f"<div class='pr-hero-card' style='padding: 1rem; margin-top: 1rem; border-left: 3px solid #0F7C88;'>"
+                    f"<p class='pr-hero-eyebrow' style='font-size: 0.7rem;'>Linked Post-Discharge Follow-Up</p>"
+                    f"<p style='font-size: 0.85rem; color: #12283A; font-weight: 600; margin: 0;'>"
+                    f"Scheduled for {format_date_only(linked_fu.get('follow_up_date'))}</p>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+        except Exception:
+            pass
+
+
 def render_examination_report(patient, exam):
     if st.button("Back to Records", key="pr_back_to_category", icon=":material/arrow_back:"):
         back_to_category()
+
+    # Admission banner if this is an admission
+    render_admission_banner(exam)
 
     exam_date = exam.get("examination_date") or exam.get("created_at")
     st.markdown(
@@ -854,77 +1045,16 @@ def render_examination_report(patient, exam):
         render_xray_analysis(exam)
         render_ai_summary(ai, ai_findings, pneumonia_type, ai_conf)
 
-    # ============================================================
-    # NEW: INPATIENT TIMELINE
-    # ============================================================
-    # Only show this section if the patient was admitted based on this exam.
-    if exam.get("disposition") == "Admission":
-        st.divider()
-        section_title("Inpatient Monitoring")
-
-        # Fetch all daily rounds linked to this specific admission
-        try:
-            res = (
-                admin_supabase
-                .table("examinations")
-                .select("*")
-                .eq("parent_examination_id", exam_id)
-                .order("examination_date", desc=True)
-                .execute()
-            )
-            rounds = res.data or []
-        except Exception as e:
-            st.error(f"Failed to load inpatient rounds: {e}")
-            rounds = []
-
-        # Show Discharge Status
-        if exam.get("status") == "Discharged":
-            st.markdown(
-                f"<div style='padding: 0.75rem; background: #EAF6F1; border-left: 4px solid #2E8B6A; border-radius: 8px; margin-bottom: 1rem; color: #12283A; font-weight: 500; font-size: 0.85rem;'>"
-                f"✅ Patient was discharged on {format_date_only(exam.get('time_of_discharge'))}."
-                f"</div>", 
-                unsafe_allow_html=True
-            )
-
-        # Show the daily rounds
-        if not rounds:
-            empty_state("No daily rounds logged for this admission.")
-        else:
-            for r in rounds:
-                r_date = format_date_only(r.get("examination_date"))
-                r_diagnosis = r.get("diagnosis") or "No clinical notes."
-                
-                st.markdown(
-                    f"<div class='pr-hero-card' style='padding: 1rem;'>"
-                    f"<p class='pr-hero-name' style='font-size: 1rem; margin-bottom: 0.25rem;'>Daily Round - {r_date}</p>"
-                    f"<p style='font-size: 0.85rem; color: #5A6F7F; margin: 0;'>{r_diagnosis}</p>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-
-        # Optional: Show the follow-up if it's been scheduled post-discharge
-        if exam.get("status") == "Discharged":
-            from backend.backend_utils.followup_utils import get_upcoming_follow_ups_by_patient
-            follow_ups = get_upcoming_follow_ups_by_patient(patient.get("patient_id")) or []
-            # Find if one is linked to this exam
-            linked_fu = next((fu for fu in follow_ups if fu.get("source_examination_id") == exam_id), None)
-            
-            if linked_fu:
-                st.markdown(
-                    f"<div class='pr-hero-card' style='padding: 1rem; margin-top: 0.5rem; border-left: 3px solid #0F7C88;'>"
-                    f"<p class='pr-hero-eyebrow' style='font-size: 0.7rem;'>Linked Follow-Up</p>"
-                    f"<p style='font-size: 0.85rem; color: #12283A; font-weight: 600; margin: 0;'>"
-                    f"Scheduled for {format_date_only(linked_fu.get('follow_up_date'))}</p>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
+    # Inpatient timeline (only for admissions)
+    render_inpatient_timeline(exam)
 
 
 # ============================================================
 # PAGE
 # ============================================================
+
 def show():
-    load_css("patient_records.css")
+    load_css("patient_records.css", "inpatient_dashboard.css")
     show_flash_message()
 
     role_id = current_role_id()

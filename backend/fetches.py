@@ -623,6 +623,11 @@ def get_examinations_by_patient(patient_id):
             status,
             curb65_score,          
             severity_status,       
+            clinical_status,
+            discharged_by,
+            discharge_notes,
+            post_discharge_followup_status,
+            parent_examination_id,
             created_by,
             reviewed_by,
             reviewed_at,
@@ -1699,28 +1704,6 @@ def get_pending_xray_requests(
     """
     Get pending X-Ray requests for the physician
     Patient Queue.
-
-    Returns one flattened dictionary per pending
-    X-Ray request.
-
-    Structure:
-
-        {
-            "request_id": "...",
-            "examination_id": "...",
-            "hospital_id": "...",
-            "requested_by": "...",
-            "body_part": "Chest",
-            "clinical_indication": "...",
-            "priority": "Routine",
-            "status": "Pending",
-            "requested_at": "...",
-            "updated_at": "...",
-
-            "examination": {...},
-
-            "patients": {...}
-        }
     """
 
     try:
@@ -1773,10 +1756,6 @@ def get_pending_xray_requests(
             )
         )
 
-        # ------------------------------------------
-        # HOSPITAL FILTER
-        # ------------------------------------------
-
         if hospital_id:
 
             query = query.eq(
@@ -1788,31 +1767,13 @@ def get_pending_xray_requests(
 
         rows = response.data or []
 
-        print(
-            "PENDING X-RAY REQUESTS FOUND:",
-            len(rows),
-        )
-
-        print(
-            "PENDING X-RAY RAW DATA:",
-            rows,
-        )
-
         pending_requests = []
-
-        # ------------------------------------------
-        # PROCESS REQUESTS
-        # ------------------------------------------
 
         for request in rows:
 
             examination = (
                 request.get("examinations")
             )
-
-            # --------------------------------------
-            # SUPABASE MAY RETURN A LIST
-            # --------------------------------------
 
             if isinstance(
                 examination,
@@ -1826,18 +1787,7 @@ def get_pending_xray_requests(
                 )
 
             if not examination:
-
-                print(
-                    "Skipping X-Ray request "
-                    f"{request.get('request_id')}: "
-                    "missing examination."
-                )
-
                 continue
-
-            # --------------------------------------
-            # GET PATIENT
-            # --------------------------------------
 
             patient = (
                 examination.get("patients")
@@ -1855,22 +1805,10 @@ def get_pending_xray_requests(
                 )
 
             if not patient:
-
-                print(
-                    "Skipping X-Ray request "
-                    f"{request.get('request_id')}: "
-                    "missing patient."
-                )
-
                 continue
-
-            # --------------------------------------
-            # FLATTEN DATA
-            # --------------------------------------
 
             flattened = {
 
-                # X-Ray request
                 "request_id": request.get(
                     "request_id"
                 ),
@@ -1913,21 +1851,14 @@ def get_pending_xray_requests(
                     "updated_at"
                 ),
 
-                # Examination
                 "examination": examination,
 
-                # Patient
                 "patients": patient,
             }
 
             pending_requests.append(
                 flattened
             )
-
-        print(
-            "PENDING X-RAY REQUESTS RETURNED:",
-            len(pending_requests),
-        )
 
         return pending_requests
 
@@ -1946,15 +1877,7 @@ def get_completed_patient_records(
 ):
     """
     Get unique patients who have at least one
-    completed examination.
-
-    A patient appears only once even when the
-    patient has multiple completed examinations.
-
-    The returned patient dictionaries contain
-    basic patient information only. Detailed
-    examination history is loaded separately
-    using get_examinations_by_patient().
+    completed, admitted, or discharged examination.
     """
 
     try:
@@ -1987,9 +1910,9 @@ def get_completed_patient_records(
                     )
                 )
             """)
-            .eq(
+            .in_(
                 "status",
-                "Completed",
+                ["Completed", "Admitted", "Discharged"],
             )
             .order(
                 "created_at",
@@ -2039,10 +1962,6 @@ def get_completed_patient_records(
             if not patient_id:
                 continue
 
-            # --------------------------------------
-            # KEEP ONLY ONE PATIENT ENTRY
-            # --------------------------------------
-
             if patient_id not in unique_patients:
 
                 unique_patients[
@@ -2073,15 +1992,6 @@ def get_completed_patient_records(
 def get_hospital_locations(hospital_id=None):
     """
     Return hospitals that have coordinates.
-
-    If hospital_id is given, returns a single-item list
-    containing just that hospital.
-
-    If hospital_id is None, returns every hospital with
-    latitude and longitude set (used by the system admin).
-
-    Hospitals without coordinates are excluded — they
-    simply don't appear on the map.
     """
 
     query = (
@@ -2118,9 +2028,6 @@ def get_hospital_locations(hospital_id=None):
 def get_hospital_without_coordinates():
     """
     Return hospitals that still lack coordinates.
-
-    Useful for showing an admin which hospitals
-    need geocoding.
     """
 
     response = (
@@ -2143,35 +2050,11 @@ def get_hospital_without_coordinates():
 
 # ==========================================
 # HOSPITAL PATIENT LOCATIONS
-# (placeholder — will be enabled once the
-# patients table has lat/lon columns)
 # ==========================================
 
 def get_hospital_patient_locations(hospital_id):
     """
     Return patients with coordinates for a hospital.
-
-    Currently returns an empty list because the
-    patients table does not yet have latitude /
-    longitude columns.
-
-    Once those columns are added, replace the body
-    with the actual query (kept in the comment below).
-
-    Expected future query:
-        response = (
-            admin_supabase
-            .table("patients")
-            .select(
-                "patient_id, patient_code, first_name, "
-                "last_name, address, latitude, longitude"
-            )
-            .eq("hospital_id", hospital_id)
-            .not_.is_("latitude", "null")
-            .not_.is_("longitude", "null")
-            .execute()
-        )
-        return response.data or []
     """
 
     if not hospital_id:
@@ -2179,12 +2062,16 @@ def get_hospital_patient_locations(hospital_id):
 
     return []
 
+
 def get_completed_patients_with_latest_ai(hospital_id=None):
     """
-    Return one row per patient who has at least one completed examination.
+    Return one row per patient who has at least one
+    completed, admitted, or discharged examination.
     """
+
     try:
-        # 1. Completed examinations (order by date descending)
+
+        # 1. Eligible examinations (order by date descending)
         exam_query = (
             admin_supabase
             .table("examinations")
@@ -2219,65 +2106,86 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
                     )
                 )
             """)
-            .eq("status", "Completed")
+            .in_(
+                "status",
+                ["Completed", "Admitted", "Discharged"],
+            )
             .order("examination_date", desc=True)
         )
 
         if hospital_id:
-            exam_query = exam_query.eq("patients.hospital_id", hospital_id)
+            exam_query = exam_query.eq(
+                "patients.hospital_id",
+                hospital_id,
+            )
 
         exam_rows = exam_query.execute().data or []
+
         if not exam_rows:
             return []
 
-        # 2. Keep the LATEST completed exam that has a severity score.
-        # If none have a score, keep the latest exam.
+        # 2. Keep the LATEST eligible exam per patient.
+        # Prefer exams that have a severity score.
         latest_by_patient = {}
-        
+
         for row in exam_rows:
+
             patient = row.get("patients") or {}
+
             if isinstance(patient, list):
                 patient = patient[0] if patient else None
+
             if not patient:
                 continue
-                
+
             patient_id = patient.get("patient_id")
+
             if not patient_id:
                 continue
 
-            has_score = (row.get("curb65_score") is not None) or (row.get("severity_status") not in (None, "Not Assessed"))
-            
+            has_score = (
+                (row.get("curb65_score") is not None)
+                or (row.get("severity_status") not in (None, "Not Assessed"))
+            )
+
             if patient_id not in latest_by_patient:
-                # First time we see this patient, save it
                 latest_by_patient[patient_id] = {
                     "patient": patient,
                     "exam": row,
-                    "has_score": has_score
+                    "has_score": has_score,
                 }
             else:
-                # We already have an exam for this patient. 
-                # If the new one has a score and the saved one doesn't, replace it.
                 if has_score and not latest_by_patient[patient_id]["has_score"]:
                     latest_by_patient[patient_id] = {
                         "patient": patient,
                         "exam": row,
-                        "has_score": has_score
+                        "has_score": has_score,
                     }
 
         # 3. Fetch X-ray requests for those exams
-        exam_ids = [item["exam"]["examination_id"] for item in latest_by_patient.values()]
+        exam_ids = [
+            item["exam"]["examination_id"]
+            for item in latest_by_patient.values()
+        ]
+
         req_response = (
             admin_supabase.table("xray_requests")
             .select("request_id, examination_id")
             .in_("examination_id", exam_ids)
             .execute()
         )
-        request_by_exam = {r["examination_id"]: r["request_id"] for r in (req_response.data or [])}
+
+        request_by_exam = {
+            r["examination_id"]: r["request_id"]
+            for r in (req_response.data or [])
+        }
 
         # 4. Fetch X-ray images
         request_ids = list(request_by_exam.values())
         latest_image_by_request = {}
+
         if request_ids:
+
             img_response = (
                 admin_supabase.table("xray_images")
                 .select("image_id, request_id, uploaded_at")
@@ -2285,22 +2193,33 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
                 .order("uploaded_at", desc=True)
                 .execute()
             )
+
             for img in (img_response.data or []):
                 rid = img.get("request_id")
                 if rid and rid not in latest_image_by_request:
                     latest_image_by_request[rid] = img
 
         # 5. Fetch AI results
-        image_ids = [img["image_id"] for img in latest_image_by_request.values()]
+        image_ids = [
+            img["image_id"]
+            for img in latest_image_by_request.values()
+        ]
         ai_by_image = {}
+
         if image_ids:
+
             ai_response = (
                 admin_supabase.table("xray_ai_results")
-                .select("image_id, ai_findings, ai_confidence, pneumonia_type, classification_confidence, processed_at")
+                .select(
+                    "image_id, ai_findings, ai_confidence, "
+                    "pneumonia_type, classification_confidence, "
+                    "processed_at"
+                )
                 .in_("image_id", image_ids)
                 .order("processed_at", desc=True)
                 .execute()
             )
+
             for ai in (ai_response.data or []):
                 iid = ai.get("image_id")
                 if iid and iid not in ai_by_image:
@@ -2308,35 +2227,67 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
 
         # 6. Merge everything
         results = []
+
         for patient_id, item in latest_by_patient.items():
+
             patient = item["patient"]
             exam = item["exam"]
-            request_id = request_by_exam.get(exam["examination_id"])
-            image = latest_image_by_request.get(request_id) if request_id else None
-            ai = ai_by_image.get(image["image_id"]) if image else None
+
+            request_id = request_by_exam.get(
+                exam["examination_id"]
+            )
+
+            image = (
+                latest_image_by_request.get(request_id)
+                if request_id
+                else None
+            )
+
+            ai = (
+                ai_by_image.get(image["image_id"])
+                if image
+                else None
+            )
 
             results.append({
                 "patient": patient,
                 "examination_id": exam.get("examination_id"),
-                "examination_date": exam.get("examination_date") or exam.get("created_at"),
+                "examination_date": (
+                    exam.get("examination_date")
+                    or exam.get("created_at")
+                ),
                 "image_id": image.get("image_id") if image else None,
                 "ai_findings": ai.get("ai_findings") if ai else None,
-                "ai_confidence": ai.get("ai_confidence") if ai else None,
-                "pneumonia_type": ai.get("pneumonia_type") if ai else None,
-                "classification_confidence": ai.get("classification_confidence") if ai else None,
-                # Severity fields from the exam
+                "ai_confidence": (
+                    ai.get("ai_confidence") if ai else None
+                ),
+                "pneumonia_type": (
+                    ai.get("pneumonia_type") if ai else None
+                ),
+                "classification_confidence": (
+                    ai.get("classification_confidence")
+                    if ai else None
+                ),
                 "curb65_score": exam.get("curb65_score"),
                 "severity_status": exam.get("severity_status"),
                 "disposition_notes": exam.get("disposition_notes"),
                 "plans_orders": exam.get("plans_orders"),
             })
 
-        # 7. Sort by examination date
-        results.sort(key=lambda r: r.get("examination_date") or "", reverse=True)
+        results.sort(
+            key=lambda r: r.get("examination_date") or "",
+            reverse=True,
+        )
+
         return results
 
     except Exception as exc:
-        print(f"Failed to fetch completed patients with AI: {exc}")
+
+        print(
+            "Failed to fetch completed patients with AI: "
+            f"{exc}"
+        )
+
         return []
 
 
@@ -2347,8 +2298,6 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
 def get_xray_ai_heatmap(ai_result_id):
     """
     Retrieve the saved Grad-CAM heatmap for an AI result.
-
-    Returns the PNG image bytes, or None if unavailable.
     """
 
     if not ai_result_id:
@@ -2356,15 +2305,11 @@ def get_xray_ai_heatmap(ai_result_id):
 
     try:
 
-        # 1. Find the saved heatmap file path.
         response = (
             admin_supabase
             .table("xray_ai_heatmaps")
             .select("heatmap_path")
-            .eq(
-                "ai_result_id",
-                ai_result_id,
-            )
+            .eq("ai_result_id", ai_result_id)
             .limit(1)
             .execute()
         )
@@ -2374,14 +2319,11 @@ def get_xray_ai_heatmap(ai_result_id):
         if not rows:
             return None
 
-        heatmap_path = rows[0].get(
-            "heatmap_path"
-        )
+        heatmap_path = rows[0].get("heatmap_path")
 
         if not heatmap_path:
             return None
 
-        # 2. Download the PNG from private Storage.
         image_bytes = (
             admin_supabase
             .storage
@@ -2400,7 +2342,6 @@ def get_xray_ai_heatmap(ai_result_id):
         return None
 
 
-
 # ==========================================
 # X-RAY TRAINING CANDIDATES
 # ==========================================
@@ -2412,20 +2353,6 @@ def get_training_candidates(
 ):
     """
     Fetch training candidates for review or analysis.
-
-    Parameters
-    ----------
-    status : str | None
-        Filter by workflow status:
-            "pending_review" | "approved" | "rejected" | "used_in_training"
-        None = return all statuses.
-
-    hospital_id : str | None
-        Filter by patient's hospital.
-        None = return all hospitals.
-
-    limit : int
-        Maximum rows to return. Default 500.
     """
 
     try:
@@ -2472,11 +2399,6 @@ def get_training_candidates(
 
         rows = response.data or []
 
-        # ------------------------------------------
-        # Optional hospital filter
-        # (patient's hospital_id, not candidate's)
-        # ------------------------------------------
-
         if hospital_id and rows:
 
             patient_ids = list({
@@ -2521,9 +2443,6 @@ def get_training_candidates(
 def get_training_candidate_stats():
     """
     Return counts of candidates grouped by status.
-
-    Useful for showing badges like
-    "12 pending review" on an admin dashboard.
     """
 
     try:
@@ -2569,17 +2488,14 @@ def get_training_candidate_stats():
         }
 
 
-
 def get_training_candidates_detailed(
     status=None,
     hospital_id=None,
     limit=200,
 ):
     """
-    Return training candidates joined with patient, examination,
-    X-ray image, and doctor info.
-
-    ONLY returns candidates where the patient has consented to AI training.
+    Return training candidates joined with patient,
+    examination, X-ray image, and doctor info.
     """
 
     try:
@@ -2617,7 +2533,7 @@ def get_training_candidates_detailed(
                     follow_up_sequence,
                     chief_complaint,
                     diagnosis,
-                    confirmed_label,
+                    confirmed_label
                 )
             """)
             .order("confirmed_at", desc=True)
@@ -2630,13 +2546,8 @@ def get_training_candidates_detailed(
         response = query.execute()
         rows = response.data or []
 
-        # ------------------------------------------
-        # Resolve image + user info in bulk
-        # ------------------------------------------
-
         if rows:
 
-            # Images
             image_ids = list({
                 r.get("image_id")
                 for r in rows
@@ -2658,7 +2569,6 @@ def get_training_candidates_detailed(
                     for img in (img_response.data or [])
                 }
 
-            # Confirmers
             user_ids = list({
                 r.get("confirmed_by")
                 for r in rows
@@ -2683,25 +2593,17 @@ def get_training_candidates_detailed(
                     for u in (user_response.data or [])
                 }
 
-            # Attach
             for row in rows:
                 row["image"] = image_map.get(row.get("image_id"))
                 row["confirming_user"] = user_map.get(
                     row.get("confirmed_by")
                 )
 
-        # ------------------------------------------
-        # FILTER: ONLY SHOW CONSENTED PATIENTS
-        # ------------------------------------------
         if rows:
             rows = [
                 r for r in rows
                 if (r.get("patients") or {}).get("ai_consent_granted") is True
             ]
-
-        # ------------------------------------------
-        # Optional hospital filter
-        # ------------------------------------------
 
         if hospital_id and rows:
             rows = [

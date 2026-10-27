@@ -1,15 +1,22 @@
 # streamlit_app/pages/physician/inpatient_dashboard.py
 
 import streamlit as st
-from datetime import datetime, timezone, date, timedelta
+from datetime import datetime, timezone, date, timedelta, time
+from zoneinfo import ZoneInfo
 
 from backend.supabase_client import admin_supabase
 from backend.backend_utils.inpatient_utils import calculate_discharge_readiness
+from backend.backend_utils.followup_utils import create_follow_up
 from streamlit_app.components.ui import (
     page_header, empty_state, section_title, pill, remember, show_flash_message
 )
 from shared.assets import load_css
 
+ROLE_SUPERADMIN = 1
+ROLE_RADIOLOGIST = 3
+ROLE_HOSPITAL_ADMIN = 6
+MANILA_TZ = ZoneInfo("Asia/Manila")
+UTC = timezone.utc
 
 # ============================================================
 # HELPERS
@@ -18,414 +25,515 @@ from shared.assets import load_css
 def current_user():
     return st.session_state.get("user") or {}
 
-
 def current_user_id():
     return current_user().get("user_id")
 
+def current_role_id():
+    try: return int(current_user().get("role_id"))
+    except: return None
+
+def current_hospital_id():
+    return current_user().get("hospital_id")
+
+def current_role_label():
+    return {ROLE_SUPERADMIN: "superadmin", ROLE_RADIOLOGIST: "radiologist", ROLE_HOSPITAL_ADMIN: "hospital_admin"}.get(current_role_id(), "unknown")
 
 def patient_name(p):
-    if not p:
-        return "—"
-    return f"{p.get('first_name', '')} {p.get('last_name', '')}".strip()
-
+    if not p: return "—"
+    parts = [p.get("first_name"), p.get("middle_name"), p.get("last_name"), p.get("suffix")]
+    return " ".join(part for part in parts if part).strip() or "—"
 
 def format_date(v):
-    if not v:
-        return "—"
+    if not v: return "—"
     return datetime.fromisoformat(str(v)[:10]).strftime("%b %d, %Y")
 
+def parse_datetime(v):
+    if not v: return None
+    if isinstance(v, datetime): return v
+    try: return datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+    except: return None
 
-def go_to_discharge(p, exam):
+def format_datetime(v):
+    dt = parse_datetime(v)
+    if not dt: return "—"
+    return dt.astimezone(MANILA_TZ).strftime("%b %d, %Y · %I:%M %p")
+
+def as_date(v):
+    dt = parse_datetime(v)
+    if dt: return dt.astimezone(MANILA_TZ).date()
+    try: return date.fromisoformat(str(v)[:10])
+    except: return date.today()
+
+def to_utc_iso(day, t=None):
+    t = t or datetime.now(MANILA_TZ).time().replace(tzinfo=None)
+    return datetime.combine(day, t).replace(tzinfo=MANILA_TZ).astimezone(UTC).isoformat()
+
+def go_to_admission(p, e):
     st.session_state["ip_p"] = p
-    st.session_state["ip_e"] = exam
+    st.session_state["ip_e"] = e
     st.session_state["ip_mode"] = "detail"
     st.rerun()
 
-
-def back_to_ward():
+def back_to_admissions():
     st.session_state.pop("ip_p", None)
     st.session_state.pop("ip_e", None)
     st.session_state["ip_mode"] = "list"
     st.rerun()
 
-
 # ============================================================
-# DIALOGS
+# HOSPITAL SCOPING & DATA FETCHING
 # ============================================================
 
-@st.dialog("Log Inpatient Round")
-def show_log_round_dialog(patient, parent_exam, admit_date):
-
-    st.markdown(f"**{patient_name(patient)}**")
-    st.caption(parent_exam.get("diagnosis") or "—")
-    st.divider()
-
-    # ==========================================
-    # MANUAL DATE SELECTOR
-    # ==========================================
-    st.markdown("**Round Date**")
-    st.caption("Defaults to today. Cannot be before admission.")
-    
-    # Force admit_date to be a date object for the min_value
+def accessible_patient_ids():
+    role = current_role_id()
+    if role == ROLE_SUPERADMIN: return None
+    if role not in (ROLE_RADIOLOGIST, ROLE_HOSPITAL_ADMIN): return []
+    hosp = current_hospital_id()
+    if not hosp: return []
     try:
-        if isinstance(admit_date, str):
-            min_date = date.fromisoformat(str(admit_date)[:10])
-        else:
-            min_date = admit_date
-    except Exception:
-        min_date = date.today()
+        res = admin_supabase.table("patients").select("patient_id").eq("hospital_id", hosp).execute()
+        return [r["patient_id"] for r in (res.data or []) if r.get("patient_id")]
+    except: return []
 
-    selected_date = st.date_input(
-        "Date of Round",
-        value=date.today(),
-        min_value=min_date,
-        label_visibility="collapsed",
-        key=f"round_date_{parent_exam['examination_id']}"
-    )
+def load_admissions():
+    pids = accessible_patient_ids()
+    if pids == []: return []
+    q = admin_supabase.table("examinations").select("*, patients(*)").eq("disposition", "Admission").eq("status", "Admitted")
+    if pids is not None: q = q.in_("patient_id", pids)
+    return q.order("examination_date", desc=True).execute().data or []
 
-    
-    st.divider()
+def get_admission_record(exam_id):
+    for r in load_admissions():
+        if r.get("examination_id") == exam_id: return r
+    return None
 
-    # Fetch last round's vitals to pre-fill
-    last_vitals = {}
+def load_rounds(exam_id):
+    res = admin_supabase.table("examinations").select("*").eq("parent_examination_id", exam_id).eq("examination_type", "Inpatient Round").order("examination_date", desc=True).execute()
+    return res.data or []
+
+def load_vitals(exam_ids):
+    if not exam_ids: return {}
+    res = admin_supabase.table("examination_vitals").select("*").in_("examination_id", exam_ids).order("recorded_at", desc=True).execute()
+    v_map = {}
+    for r in res.data or []:
+        v_map.setdefault(r.get("examination_id"), r)
+    return v_map
+
+def load_user_name(user_id):
+    if not user_id: return "—"
     try:
-        res = (
-            admin_supabase.table("examinations")
-            .select("examination_id")
-            .eq("parent_examination_id", parent_exam["examination_id"])
-            .order("examination_date", desc=True)
-            .limit(1)
-            .execute()
-        )
+        res = admin_supabase.table("user_profiles").select("user_fname, user_lname").eq("user_id", user_id).execute()
         if res.data:
-            last_exam_id = res.data[0]["examination_id"]
-            v_res = (
-                admin_supabase.table("examination_vitals")
-                .select("*")
-                .eq("examination_id", last_exam_id)
-                .execute()
-            )
-            if v_res.data:
-                last_vitals = v_res.data[0]
-    except Exception:
-        last_vitals = {}
+            u = res.data[0]
+            return f"{u.get('user_fname', '')} {u.get('user_lname', '')}".strip()
+    except: pass
+    return "—"
 
-    default_spo2 = int(last_vitals.get("spo2") or 95)
-    default_temp = float(last_vitals.get("temperature") or 36.8)
-    default_rr = int(last_vitals.get("respiratory_rate") or 18)
-    default_bp = int(last_vitals.get("bp_systolic") or 120)
+# ============================================================
+# ROUND DIALOG
+# ============================================================
+
+@st.dialog("Log Inpatient Round", width="large")
+def show_log_round_dialog(patient, admission):
+    exam_id = admission["examination_id"]
+    admit_day = as_date(admission.get("time_in") or admission.get("examination_date"))
+    
+    st.markdown(f"**{patient_name(patient)}**")
+    # Fetch and display diagnosis
+    st.caption(f"Diagnosis: {admission.get('diagnosis') or '—'}")
+    st.caption(f"Admitted {format_date(admit_day)}")
+    st.divider()
+
+    selected_date = st.date_input("Round Date", value=date.today(), min_value=admit_day, key=f"ip_round_date_{exam_id}")
+    
+    status = st.selectbox("Clinical Status", ["Improving", "Stable", "Worsening", "Needs Further Assessment"], key=f"ip_round_status_{exam_id}")
 
     c1, c2 = st.columns(2)
     with c1:
-        spo2 = st.number_input("SpO₂ (%)", min_value=0, max_value=100, value=default_spo2)
-        temp = st.number_input("Temperature (°C)", min_value=30.0, max_value=45.0, value=default_temp, step=0.1)
+        spo2 = st.number_input("SpO₂ (%)", 0, 100, 95)
+        temp = st.number_input("Temperature (°C)", 30.0, 45.0, 36.8, 0.1)
     with c2:
-        rr = st.number_input("Respiratory Rate (/min)", min_value=0, max_value=100, value=default_rr)
-        bp = st.number_input("BP Systolic", min_value=0, max_value=300, value=default_bp)
+        rr = st.number_input("Respiratory Rate (/min)", 0, 100, 18)
+        oxygen = st.selectbox("Oxygen Support", ["Unknown", "Room air", "Supplemental oxygen"], key=f"ip_oxygen_{exam_id}")
 
-    notes = st.text_area("Clinical Observations")
+    notes = st.text_area("Clinical Observations", key=f"ip_notes_{exam_id}")
+    
+    # Display who is logging it
     st.divider()
-
+    st.caption(f"Recorded by: {current_user().get('first_name', '')} {current_user().get('last_name', '')} ({current_role_label().replace('_', ' ').title()})")
+    
     if st.button("Save Round", type="primary", use_container_width=True):
+        if not notes.strip():
+            st.error("Please enter clinical observations.")
+            return
+        
         try:
-            # Combine the selected date with the current time
-            now_utc = datetime.now(timezone.utc)
-            combined_datetime = datetime.combine(selected_date, now_utc.time(), tzinfo=timezone.utc)
-
-            e_data = {
+            now_iso = to_utc_iso(selected_date)
+            r_data = {
                 "patient_id": patient["patient_id"],
                 "examination_type": "Inpatient Round",
-                "examination_date": combined_datetime.isoformat(),
+                "examination_date": now_iso,
                 "status": "Completed",
-                "parent_examination_id": parent_exam["examination_id"],
+                "parent_examination_id": exam_id,
                 "created_by": current_user_id(),
                 "reviewed_by": current_user_id(),
-                "diagnosis": notes,
-                "chief_complaint": "Ward Round",
+                "clinical_status": status,
+                "diagnosis": notes.strip(),
+                "chief_complaint": f"Ward Round — {status}",
             }
-            res = admin_supabase.table("examinations").insert(e_data).execute()
-            if not res.data:
-                st.error("Failed to create round.")
-                return
-
-            new_id = res.data[0]["examination_id"]
-            admin_supabase.table("examination_vitals").insert({
+            ins = admin_supabase.table("examinations").insert(r_data).execute()
+            if not ins.data: 
+                st.error("Failed to save round."); return
+            
+            new_id = ins.data[0]["examination_id"]
+            v_data = {
                 "examination_id": new_id,
                 "spo2": spo2,
                 "temperature": temp,
                 "respiratory_rate": rr,
-                "bp_systolic": bp,
+                "oxygen_support": oxygen,
                 "recorded_by": current_user_id(),
-                "recorded_by_role": "doctor",
-            }).execute()
-
-            remember("Round logged.")
+                "recorded_by_role": current_role_label(),
+            }
+            admin_supabase.table("examination_vitals").insert(v_data).execute()
+            remember("Round saved.")
             st.rerun()
         except Exception as e:
-            st.error(f"Failed: {e}")
-
-
-@st.dialog("Discharge Patient & Schedule Follow-Up")
-def show_discharge_dialog(patient, exam):
-
-    st.markdown(f"**{patient_name(patient)}**")
-    st.caption(
-        "Patient meets discharge criteria. Schedule a post-discharge "
-        "follow-up X-ray in 4 to 6 weeks to confirm radiological clearance."
-    )
-    st.divider()
-
-    if st.button("Mark as Discharged & Schedule Follow-Up", type="primary", use_container_width=True):
-        admin_supabase.table("examinations").update({
-            "status": "Discharged",
-            "time_of_discharge": datetime.now(timezone.utc).isoformat(),
-        }).eq("examination_id", exam["examination_id"]).execute()
-
-        st.session_state["ip_mode"] = "list"
-        st.session_state["review_examination"] = exam
-        st.session_state["review_patient"] = patient
-        st.session_state["review_schedule_followup_open"] = True
-        st.rerun()
-
+            st.error(f"Error: {e}")
 
 # ============================================================
-# WARD LIST VIEW
+# DISCHARGE DIALOG
+# ============================================================
+
+@st.dialog("Physician Discharge Review", width="large")
+def show_discharge_dialog(patient, admission, review):
+    exam_id = admission["examination_id"]
+    st.markdown(f"**{patient_name(patient)}**")
+    st.caption("LungSight does not automatically discharge patients. The physician must confirm the clinical decision.")
+    
+    st.info("Review the latest trends and confirm the hospital's discharge criteria before approving.")
+    
+    c1 = st.checkbox("I reviewed the latest observations and their timestamps.")
+    c2 = st.checkbox("I reviewed oxygen support and the patient's prescribed target.")
+    c3 = st.checkbox("I reviewed fever history and the overall clinical course.")
+    c4 = st.checkbox("I reviewed the treatment plan and post-discharge needs.")
+    
+    decision = st.radio("Decision", ["Continue admission", "Further assessment required", "Approve discharge"], index=0)
+    discharge_notes = st.text_area("Discharge notes / instructions")
+    
+    schedule_fu = st.checkbox("Schedule post-discharge follow-up", value=True)
+    fu_date = None
+    fu_time = None
+    
+    if schedule_fu:
+        st.markdown("**Follow-Up Appointment**")
+        c_date, c_time = st.columns(2)
+        
+        with c_date:
+            fu_date = st.date_input(
+                "Follow-up Date (2-4 weeks)", 
+                value=date.today() + timedelta(days=21), # Default to 3 weeks (middle of 2-4)
+                min_value=date.today() + timedelta(days=14), # 2 weeks minimum
+                max_value=date.today() + timedelta(days=28)  # 4 weeks maximum
+            )
+        with c_time:
+            fu_time = st.time_input(
+                "Follow-up Time", 
+                value=time(9, 0) # Default 9:00 AM
+            )
+    
+    st.divider()
+    
+    btn_disabled = (decision != "Approve discharge") or not all([c1, c2, c3, c4]) or not discharge_notes.strip()
+    
+    if st.button("Confirm Discharge", type="primary", disabled=btn_disabled, use_container_width=True):
+        try:
+            now_iso = datetime.now(UTC).isoformat()
+            
+            # Format time as HH:MM:SS for the database
+            fu_time_str = fu_time.strftime("%H:%M:%S") if fu_time else None
+            
+            u_data = {
+                "status": "Discharged",
+                "time_of_discharge": now_iso,
+                "discharged_by": current_user_id(),
+                "discharge_notes": discharge_notes.strip(),
+                "post_discharge_followup_status": "Pending" if schedule_fu else "Not Required",
+                "follow_up_date": fu_date.isoformat() if schedule_fu else None,
+            }
+            upd = admin_supabase.table("examinations").update(u_data).eq("examination_id", exam_id).execute()
+            if not upd.data: 
+                st.error("Failed to update admission."); 
+                return
+            
+            if schedule_fu:
+                try:
+                    existing = admin_supabase.table("follow_ups").select("*").eq("source_examination_id", exam_id).execute().data or []
+                    active = [f for f in existing if f.get("status") not in ("Cancelled", "canceled")]
+                    
+                    if not active:
+                        create_follow_up(
+                            patient_id=patient["patient_id"],
+                            examination_id=exam_id,
+                            follow_up_date=fu_date,
+                            follow_up_time=fu_time_str, # <-- PASSING THE TIME HERE
+                            notes=f"Post-discharge follow-up. Confirm requirements with the treating physician.",
+                            created_by=current_user_id(),
+                        )
+                    admin_supabase.table("examinations").update({"post_discharge_followup_status": "Scheduled"}).eq("examination_id", exam_id).execute()
+                except Exception as e:
+                    st.warning(f"Discharge saved, but follow-up failed: {e}")
+            
+            remember("Patient discharged.")
+            st.session_state["ip_mode"] = "list"
+            st.session_state.pop("ip_p", None)
+            st.session_state.pop("ip_e", None)
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error: {e}")
+
+# ============================================================
+# ADMISSION LIST
 # ============================================================
 
 def render_ward_list():
-
-    page_header(
-        "Inpatient Monitoring",
-        "Oversee admitted patients, record daily rounds, and evaluate clinical readiness for discharge.",
-    )
-
-    admitted = []
+    page_header("Admission Tracking", "Track admitted patients, log rounds, and evaluate clinical readiness for discharge.")
+    
     try:
-        res = (
-            admin_supabase.table("examinations")
-            .select("*, patients(*)")
-            .eq("disposition", "Admission")
-            .eq("status", "Admitted")
-            .execute()
-        )
-        admitted = res.data or []
+        raw_admissions = load_admissions()
     except Exception as e:
-        st.error(f"Failed to load admissions: {e}")
+        st.error(f"Failed to load admissions: {e}"); return
 
-    rounds_today_count = 0
+    # ==========================================
+    # DEDUPLICATION GUARD
+    # ==========================================
+    # If a patient has multiple active admission rows, keep only the newest one.
+    admissions_dict = {}
+    for a in raw_admissions:
+        p_id = a.get("patient_id")
+        if not p_id:
+            continue
+        # If we haven't seen this patient yet, add them
+        if p_id not in admissions_dict:
+            admissions_dict[p_id] = a
+        else:
+            # If we HAVE seen them, compare dates and keep the newer admission
+            current_newest = admissions_dict[p_id].get("examination_date") or ""
+            new_candidate = a.get("examination_date") or ""
+            if new_candidate > current_newest:
+                admissions_dict[p_id] = a
+                
+    admissions = list(admissions_dict.values())
+    # ==========================================
+
+    # Metrics
+    rounds_today = 0
     try:
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        res_today = (
-            admin_supabase.table("examinations")
-            .select("examination_id")
-            .eq("examination_type", "Inpatient Round")
-            .gte("examination_date", today_start.isoformat())
-            .execute()
-        )
-        rounds_today_count = len(res_today.data) if res_today.data else 0
-    except Exception:
-        rounds_today_count = 0
+        ids = [r["examination_id"] for r in admissions]
+        if ids:
+            today_start = datetime.now(MANILA_TZ).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(UTC).isoformat()
+            r_today = admin_supabase.table("examinations").select("examination_id").eq("examination_type", "Inpatient Round").in_("parent_examination_id", ids).gte("examination_date", today_start).execute()
+            rounds_today = len(r_today.data or [])
+    except: pass
 
     m1, m2, m3 = st.columns(3)
-    m1.metric("Currently Admitted", len(admitted))
-    m2.metric("Needs Review", len(admitted))
-    m3.metric("Rounds Today", rounds_today_count)
+    m1.metric("Currently Admitted", len(admissions))
+    m2.metric("Needs Review", len(admissions))
+    m3.metric("Rounds Today", rounds_today)
 
     section_title("Current Admissions")
-
-    if not admitted:
+    if not admissions:
         empty_state("No patients are currently admitted.")
         return
 
-    for e in admitted:
-        p = e.get("patients") or {}
-
-        admit_date_str = e.get("updated_at") or e.get("examination_date")
-        try:
-            db_date_part = str(admit_date_str)[:10]
-            admit_day = date.fromisoformat(db_date_part)
-            today = date.today()
-            days_admitted = (today - admit_day).days + 1
-            if days_admitted < 1:
-                days_admitted = 1
-        except Exception as ex:
-            days_admitted = 1
-            print(f"Date parse error: {ex}")
-
-        with st.container(key=f"ip_card_{p.get('patient_id')}"):
+    for a in admissions:
+        p = a.get("patients") or {}
+        admit_id = a.get("examination_id")  # Use unique exam ID for keys
+        admit_day = as_date(a.get("time_in") or a.get("examination_date"))
+        h_day = max(1, (date.today() - admit_day).days + 1)
+        
+        with st.container(key=f"ip_card_{admit_id}"):  # <-- Unique key
             st.markdown(
                 f"<p class='ip-patient-name'>{patient_name(p)}</p>"
-                f"<p class='ip-patient-meta'>Hospital Day {days_admitted} "
-                f"· Admitted {format_date(admit_date_str)}</p>",
+                f"<p class='ip-patient-meta'>Hospital Day {h_day} · Admitted {format_date(admit_day)}</p>",
                 unsafe_allow_html=True,
             )
-
-        if st.button(
-            "Open Monitoring",
-            key=f"ip_btn_{p.get('patient_id')}",
-            use_container_width=True,
-        ):
-            go_to_discharge(p, e)
+        if st.button("Open Monitoring", key=f"ip_btn_{admit_id}", use_container_width=True): # <-- Unique key
+            go_to_admission(p, a)
 
 
 # ============================================================
-# PATIENT DETAIL VIEW
+# ADMISSION DETAIL
 # ============================================================
 
 def render_patient_detail():
+    e_id = (st.session_state.get("ip_e") or {}).get("examination_id")
+    if not e_id: back_to_admissions(); return
+    
+    admission = get_admission_record(e_id)
+    if not admission:
+        st.error("Admission not found."); return
+    
+    p = admission.get("patients") or {}
+    if st.button("← Back to Ward", key="ip_back"): back_to_admissions()
 
-    if st.button("← Back to Ward", key="ip_back"):
-        back_to_ward()
+    admit_day = as_date(admission.get("time_in") or admission.get("examination_date"))
+    page_header("Inpatient Monitoring", f"{patient_name(p)} · Admitted {format_date(admit_day)}")
 
-    p = st.session_state["ip_p"]
-    e = st.session_state["ip_e"]
-    exam_id = e["examination_id"]
-
-    # Get admission date for Hospital Day calculation
-    admit_date_str = e.get("updated_at") or e.get("examination_date")
+    # Fetch Rounds & Vitals
     try:
-        db_date_part = str(admit_date_str)[:10]
-        admit_day = date.fromisoformat(db_date_part)
-    except Exception:
-        admit_day = date.today()
-
-    try:
-        res = (
-            admin_supabase.table("examinations")
-            .select("*")
-            .eq("parent_examination_id", exam_id)
-            .order("examination_date", desc=True)
-            .execute()
-        )
-        rounds = res.data or []
-        v_map = {}
-        for r in rounds:
-            v = (
-                admin_supabase.table("examination_vitals")
-                .select("*")
-                .eq("examination_id", r["examination_id"])
-                .execute()
-            )
-            if v.data:
-                v_map[r["examination_id"]] = v.data[0]
-        history = [v_map[r["examination_id"]] for r in rounds if r["examination_id"] in v_map]
-
+        rounds = load_rounds(e_id)
+        v_map = load_vitals([r["examination_id"] for r in rounds])
+        history = []
         chart_data = []
-        for r in reversed(rounds):
+        
+        for r in rounds:
             v = v_map.get(r["examination_id"])
             if v:
-                chart_data.append({
-                    "Date": format_date(r.get("examination_date")),
-                    "SpO2": v.get("spo2"),
-                    "Temp": v.get("temperature"),
-                    "RR": v.get("respiratory_rate"),
-                })
+                merged = dict(v)
+                merged["examination_date"] = r.get("examination_date")
+                history.append(merged)
+        
+        for h in reversed(history):
+            chart_data.append({
+                "Date": format_date(h.get("examination_date")),
+                "SpO2": h.get("spo2"),
+                "Temp": h.get("temperature"),
+                "RR": h.get("respiratory_rate"),
+            })
     except Exception:
         rounds, v_map, history, chart_data = [], {}, [], []
 
-    page_header(
-        "Inpatient Monitoring",
-        f"{patient_name(p)} · Admitted {format_date(admit_date_str)}",
-    )
-
     readiness = calculate_discharge_readiness(history)
+    
+    # Clinical Decision Support
     section_title("Clinical Decision Support")
-
     if not readiness["alerts"]:
-        st.success("No red flags detected. Patient is trending in the correct direction.")
+        st.success("No clinical flags detected from the latest observation.")
     else:
         for a in readiness["alerts"]:
-            st.error(a)
+            st.warning(a)
 
     section_title("Discharge Readiness Checklist")
-
     c1, c2, c3 = st.columns(3)
-    c1.checkbox("Afebrile for > 24 hours", value=readiness["checklist"].get("afebrile", False), disabled=True)
+    c1.checkbox("Afebrile for > 24h", value=readiness["checklist"].get("afebrile", False), disabled=True)
     c2.checkbox("SpO₂ ≥ 92% on room air", value=readiness["checklist"].get("spo2_stable", False), disabled=True)
     c3.checkbox("Respiratory rate < 24 / min", value=readiness["checklist"].get("rr_normal", False), disabled=True)
+    
+    st.markdown(f"<p class='ip-status-line'>Overall Status: {pill(readiness['status'], readiness['tone'])}</p>", unsafe_allow_html=True)
 
-    st.markdown(
-        f"<p class='ip-status-line'>Overall Status: {pill(readiness['status'], readiness['tone'])}</p>",
-        unsafe_allow_html=True,
-    )
-
-    # -------- Daily Rounds Table --------
+    # Table
     section_title("Daily Rounds")
-
     if not rounds:
-        st.info("No rounds have been logged for this admission.")
+        st.info("No rounds logged.")
     else:
-        widths = [1.3, 0.7, 0.7, 0.7, 0.9, 3.0]
-        
+        # Adjusted widths to include Clinical Status and Recorded By
+        widths = [1.2, 0.6, 1.0, 0.7, 0.7, 0.8, 2.0, 1.0]
         with st.container(key="ip_rounds_header"):
-            h1, h2, h3, h4, h5, h6 = st.columns(widths)
+            h1, h2, h3, h4, h5, h6, h7, h8 = st.columns(widths)
             h1.markdown("<span class='ip-th'>Date & Time</span>", unsafe_allow_html=True)
             h2.markdown("<span class='ip-th'>Day</span>", unsafe_allow_html=True)
-            h3.markdown("<span class='ip-th'>SpO₂</span>", unsafe_allow_html=True)
-            h4.markdown("<span class='ip-th'>Temp</span>", unsafe_allow_html=True)
-            h5.markdown("<span class='ip-th'>Resp. Rate</span>", unsafe_allow_html=True)
-            h6.markdown("<span class='ip-th'>Clinical Notes</span>", unsafe_allow_html=True)
+            h3.markdown("<span class='ip-th'>Status</span>", unsafe_allow_html=True)
+            h4.markdown("<span class='ip-th'>SpO₂</span>", unsafe_allow_html=True)
+            h5.markdown("<span class='ip-th'>Temp</span>", unsafe_allow_html=True)
+            h6.markdown("<span class='ip-th'>RR</span>", unsafe_allow_html=True)
+            h7.markdown("<span class='ip-th'>Notes</span>", unsafe_allow_html=True)
+            h8.markdown("<span class='ip-th'>Recorded By</span>", unsafe_allow_html=True)
 
         for r in rounds:
             v = v_map.get(r["examination_id"], {})
-            
             dt_str = r.get("examination_date")
             if dt_str:
-                dt = datetime.fromisoformat(str(dt_str).replace("Z", "+00:00"))
-                ph_tz = timezone(timedelta(hours=8))
-                dt_ph = dt.astimezone(ph_tz)
-                date_time_str = dt_ph.strftime("%b %d, %I:%M %p")
-                round_date = dt_ph.date()
+                dt = datetime.fromisoformat(str(dt_str).replace("Z", "+00:00")).astimezone(MANILA_TZ)
+                date_str = dt.strftime("%b %d, %I:%M %p")
+                rd = dt.date()
             else:
-                date_time_str = "—"
-                round_date = date.today()
-
-            try:
-                round_day_num = (round_date - admit_day).days + 1
-                if round_day_num < 1:
-                    round_day_num = 1
-                day_str = f"Day {round_day_num}"
-            except Exception:
-                day_str = "—"
-
+                date_str = "—"
+                rd = date.today()
+            
+            r_day = max(1, (rd - admit_day).days + 1)
+            status_label = r.get("clinical_status") or "—"
+            recorded_by = load_user_name(r.get("created_by"))
+            
             with st.container(key=f"ip_round_row_{r['examination_id']}"):
-                c1, c2, c3, c4, c5, c6 = st.columns(widths, vertical_alignment="center")
-                
-                c1.markdown(f"<span class='ip-cell-strong'>{date_time_str}</span>", unsafe_allow_html=True)
-                c2.markdown(f"<span class='ip-cell'>{day_str}</span>", unsafe_allow_html=True)
-                c3.markdown(f"<span class='ip-cell'>{v.get('spo2')}%</span>", unsafe_allow_html=True)
-                c4.markdown(f"<span class='ip-cell'>{v.get('temperature')}°C</span>", unsafe_allow_html=True)
-                c5.markdown(f"<span class='ip-cell'>{v.get('respiratory_rate')}/min</span>", unsafe_allow_html=True)
-                
-                notes = r.get("diagnosis") or "—"
-                c6.markdown(f"<span class='ip-cell-notes'>{notes}</span>", unsafe_allow_html=True)
+                c1, c2, c3, c4, c5, c6, c7, c8 = st.columns(widths, vertical_alignment="center")
+                c1.markdown(f"<span class='ip-cell-strong'>{date_str}</span>", unsafe_allow_html=True)
+                c2.markdown(f"<span class='ip-cell'>Day {r_day}</span>", unsafe_allow_html=True)
+                c3.markdown(f"<span class='ip-cell'>{status_label}</span>", unsafe_allow_html=True)
+                c4.markdown(f"<span class='ip-cell'>{v.get('spo2')}%</span>", unsafe_allow_html=True)
+                c5.markdown(f"<span class='ip-cell'>{v.get('temperature')}°C</span>", unsafe_allow_html=True)
+                c6.markdown(f"<span class='ip-cell'>{v.get('respiratory_rate')}/min</span>", unsafe_allow_html=True)
+                c7.markdown(f"<span class='ip-cell-notes'>{r.get('diagnosis') or '—'}</span>", unsafe_allow_html=True)
+                c8.markdown(f"<span class='ip-cell'>{recorded_by}</span>", unsafe_allow_html=True)
 
-    # -------- Clinical Trend --------
+    # Charts
     if chart_data:
+        import altair as alt
+        import pandas as pd
+
+        st.write("")
         section_title("Clinical Trend")
 
-        c1, c2, c3 = st.columns(3)
-        with c1:
+        df = pd.DataFrame(chart_data)
+
+        # Shared style for all three charts
+        base = (
+            alt.Chart(df)
+            .mark_line(point=True, strokeWidth=2.5)
+            .properties(height=220, padding={"left": 10, "right": 10, "top": 15, "bottom": 10})
+            .configure_axis(
+                labelFontSize=11,
+                labelColor="#4A677B",
+                titleFontSize=0,
+                gridColor="#EEF3F5",
+                domainColor="#DCE7EB",
+            )
+            .configure_view(strokeWidth=0)
+        )
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
             st.caption("SpO₂ (%)")
-            st.line_chart([{"Date": d["Date"], "SpO2": d["SpO2"]} for d in chart_data], x="Date", y="SpO2", color="#0F7C88")
-        with c2:
+            st.altair_chart(
+                base.encode(
+                    x=alt.X("Date:N", axis=alt.Axis(labelAngle=-45)),
+                    y=alt.Y("SpO2:Q", scale=alt.Scale(domain=[60, 100])),
+                    color=alt.value("#0F7C88"),
+                ),
+                use_container_width=True,
+            )
+
+        with col2:
             st.caption("Temperature (°C)")
-            st.line_chart([{"Date": d["Date"], "Temp": d["Temp"]} for d in chart_data], x="Date", y="Temp", color="#B45309")
-        with c3:
-            st.caption("Respiratory Rate (/min)")
-            st.line_chart([{"Date": d["Date"], "RR": d["RR"]} for d in chart_data], x="Date", y="RR", color="#B91C1C")
+            st.altair_chart(
+                base.encode(
+                    x=alt.X("Date:N", axis=alt.Axis(labelAngle=-45)),
+                    y=alt.Y("Temp:Q", scale=alt.Scale(domain=[35, 42])),
+                    color=alt.value("#B45309"),
+                ),
+                use_container_width=True,
+            )
 
-    # -------- Actions --------
-    st.write("")
-    c1, c2 = st.columns(2)
+        with col3:
+            st.caption("Resp Rate (/min)")
+            st.altair_chart(
+                base.encode(
+                    x=alt.X("Date:N", axis=alt.Axis(labelAngle=-45)),
+                    y=alt.Y("RR:Q", scale=alt.Scale(domain=[10, 40])),
+                    color=alt.value("#B91C1C"),
+                ),
+                use_container_width=True,
+            )
 
-    if c1.button("+ Log New Daily Round", use_container_width=True):
-        # PASS THE admit_day TO THE DIALOG
-        show_log_round_dialog(p, e, admit_day)
+        st.write("")
 
-    if c2.button("Mark as Discharged", type="primary", use_container_width=True, disabled=(readiness["score"] < 3)):
-        show_discharge_dialog(p, e)
-
+    act1, act2 = st.columns(2)
+    if act1.button("+ Log New Daily Round", use_container_width=True):
+        show_log_round_dialog(p, admission)
+    
+    if act2.button("Review Discharge", type="primary", use_container_width=True, disabled=not readiness["can_discharge"]):
+        show_discharge_dialog(p, admission, readiness)
 
 # ============================================================
 # PAGE

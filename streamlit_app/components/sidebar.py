@@ -108,7 +108,7 @@ PHYSICIAN_NAV = [
             (
                 "Inpatient Dashboard",
                 "Inpatient dashboard",
-                "assignment",
+                "bedroom_parent",
             ),
             (
                 "Follow-Ups",

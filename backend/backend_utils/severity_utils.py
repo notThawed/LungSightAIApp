@@ -1,7 +1,10 @@
+# backend/backend_utils/severity_utils.py
+
 from datetime import date, datetime
 
-# Threshold for outdated assessments (in days)
 OUTDATED_THRESHOLD_DAYS = 90
+ELIGIBLE_STATUSES = ("Completed", "Admitted", "Discharged")  # ADD THIS
+
 
 def _parse_date(value):
     if not value:
@@ -13,25 +16,23 @@ def _parse_date(value):
     except Exception:
         return None
 
+
 def get_latest_severity(examinations):
-    """Returns the most recent completed exam that has a valid score."""
-    completed = sorted(
-        [e for e in examinations if e.get("status") == "Completed"],
+    """Returns the most recent completed/admitted/discharged exam that has a valid score."""
+    eligible = sorted(
+        [e for e in examinations if e.get("status") in ELIGIBLE_STATUSES],
         key=lambda e: e.get("examination_date") or "",
         reverse=True,
     )
-    for exam in completed:
+    for exam in eligible:
         has_curb = exam.get("curb65_score") is not None
         has_manual = (exam.get("severity_status") or "Not Assessed") != "Not Assessed"
         if has_curb or has_manual:
             return exam
     return None
 
+
 def get_severity_alert(examinations, latest):
-    """
-    Returns a tuple (level, message).
-    level: 'warning' | 'info' | None
-    """
     if not latest:
         return ("warning", "No severity assessment on record. Please evaluate this patient.")
 
@@ -41,22 +42,20 @@ def get_severity_alert(examinations, latest):
         if days_old > OUTDATED_THRESHOLD_DAYS:
             return ("warning", f"Latest assessment is {days_old} days old. Consider re-evaluating.")
 
-    # Check for previous high scores
-    completed = sorted(
-        [e for e in examinations if e.get("status") == "Completed"],
+    eligible = sorted(
+        [e for e in examinations if e.get("status") in ELIGIBLE_STATUSES],
         key=lambda e: e.get("examination_date") or "",
         reverse=True,
     )
     
-    if len(completed) >= 2:
-        prev = completed[1]
+    if len(eligible) >= 2:
+        prev = eligible[1]
         prev_curb = prev.get("curb65_score")
         prev_man = prev.get("severity_status")
         
         prev_high = (prev_curb is not None and prev_curb >= 3) or (prev_man == "High Risk")
         
         if prev_high:
-            # Was it resolved? Check if the new exam has notes documenting resolution.
             notes = str(latest.get("disposition_notes") or "").lower()
             plans = str(latest.get("plans_orders") or "").lower()
             keywords = ["resolved", "improved", "stable", "cleared", "follow-up", "monitoring"]
