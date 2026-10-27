@@ -1,3 +1,5 @@
+import hashlib
+
 import streamlit as st
 import time
 
@@ -5,10 +7,6 @@ from datetime import datetime, timezone
 
 from backend.fetches import (
     get_xray_request_by_examination,
-    get_xray_images_by_request,
-    get_xray_image_url,
-    get_xray_ai_result,
-    get_all_patients,
 )
 
 from backend.crud import (
@@ -32,14 +30,12 @@ from backend.ai.covid_type_model import predict_covid_type
 
 from backend.ai.ood_validator import is_chest_xray
 from backend.ai.image_loader import load_image, is_dicom
+from backend import audit
 
 from streamlit_app.components.ui import (
     page_header,
-    section_title,
     show_rows,
     full_name,
-    format_date,
-    pill,
     show_flash_message,
 )
 
@@ -279,6 +275,22 @@ def show_ood_warning_dialog(uploaded_file, active_exam, active_patient, request)
 # MODAL — Analysis in progress
 # ============================================================
 
+def _audit_analysis_event(event_type, outcome, request, image_bytes, metadata):
+    """Keyed on request + image so dialog reruns do not duplicate the event."""
+
+    request_id = (request or {}).get("request_id")
+    image_hash = hashlib.sha256(image_bytes).hexdigest()[:16]
+    stage = metadata.get("stage") or metadata.get("check") or ""
+
+    audit.record_event(
+        event_type,
+        outcome,
+        target_id=request_id,
+        metadata=metadata,
+        idempotency_key=f"{event_type}:{request_id}:{image_hash}:{stage}",
+    )
+
+
 @st.dialog("Analyzing X-Ray", width="small")
 def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
 
@@ -298,6 +310,10 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
     if not is_overridden:
         if not is_chest_xray(image_bytes):
             print("❌ OOD VALIDATOR: Image rejected. Triggering warning dialog.")
+            _audit_analysis_event(
+                "xray.quality_rejected", "failure", request, image_bytes,
+                {"check": "chest_xray_validator"},
+            )
             st.session_state[ANALYSIS_STATE_KEY] = None
             st.session_state["show_ood_warning"] = True
             st.rerun()
@@ -306,6 +322,10 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
         print("✅ OOD VALIDATOR: Image is a chest X-ray. Proceeding...")
     else:
         print("⚠️ OOD VALIDATOR: Manual override activated. Proceeding anyway...")
+        _audit_analysis_event(
+            "xray.quality_overridden", "success", request, image_bytes,
+            {"check": "chest_xray_validator"},
+        )
 
     time.sleep(0.4)
 
@@ -364,6 +384,14 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
 
     except Exception as error:
         print(f"❌ RESNET-50 FAILED: {error}")
+        _audit_analysis_event(
+            "ai.analysis_failed", "failure", request, image_bytes,
+            {
+                "stage": "detection",
+                "model_version": AI_MODEL_VERSION,
+                "error_class": audit.error_class(error),
+            },
+        )
         st.error(f"AI prediction failed: {error}")
         return
 
@@ -413,6 +441,14 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
 
         except Exception as error:
             print(f"❌ DENSENET-121 (Type) FAILED: {error}")
+            _audit_analysis_event(
+                "ai.analysis_failed", "failure", request, image_bytes,
+                {
+                    "stage": "type_classification",
+                    "model_version": CLASSIFICATION_MODEL_VERSION,
+                    "error_class": audit.error_class(error),
+                },
+            )
             st.error(f"AI classification failed: {error}")
             return
 

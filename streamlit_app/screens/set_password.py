@@ -1,6 +1,7 @@
 import streamlit as st
 
 from backend.supabase_client import supabase
+from backend import audit
 
 
 def show():
@@ -155,9 +156,21 @@ def show():
 
         try:
 
-            supabase.auth.update_user({
+            update_response = supabase.auth.update_user({
                 "password": password,
             })
+
+            invited_user = getattr(update_response, "user", None)
+
+            if invited_user:
+                audit.record_event(
+                    "user.invite_accepted",
+                    target_id=invited_user.id,
+                    metadata={
+                        "source": st.session_state.get("invite_type") or "invite",
+                    },
+                    verified_actor_id=invited_user.id,
+                )
 
             st.session_state["password_set_success"] = True
 

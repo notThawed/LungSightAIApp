@@ -17,6 +17,7 @@ from datetime import datetime, date, time
 from zoneinfo import ZoneInfo
 
 from backend.supabase_client import admin_supabase
+from backend import audit
 
 from backend.fetches import (
     get_xray_ready_examinations,
@@ -45,7 +46,6 @@ from streamlit_app.components.ui import (
     page_header,
     empty_state,
     section_title,
-    show_rows,
     full_name,
     format_date,
     pill,
@@ -1384,7 +1384,7 @@ def render_report_actions(
         # Set status to Admitted if disposition is Admission
         exam_status = "Admitted" if form_values["disposition"] == "Admission" else "Completed"
         
-        update_examination(
+        exam_updated = update_examination(
             examination_id=exam_id,
             status=exam_status,
             reviewed_by=user_id,
@@ -1397,6 +1397,26 @@ def render_report_actions(
             curb65_score=form_values["curb65_score"],
             severity_status=form_values["severity_status"],
         )
+
+        if exam_updated:
+            ai_result_id = (ai or {}).get("ai_result_id")
+            overrode_ai = bool(training_values.get("overrode_ai"))
+
+            audit.record_event(
+                "review.diagnosis_confirmed",
+                target_id=exam_id,
+                metadata={
+                    "overrode_ai": overrode_ai,
+                    "ai_result_id": ai_result_id,
+                },
+            )
+
+            if overrode_ai and ai_result_id:
+                audit.record_event(
+                    "ai.result_corrected",
+                    target_id=ai_result_id,
+                    metadata={"examination_id": exam_id},
+                )
 
         if image_id:
             consented = patient.get("ai_consent_granted", False)

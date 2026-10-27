@@ -9,3 +9,16 @@ entrypoint = "./functions/paymongo-webhook/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/paymongo-webhook/*.html" ]
+
+# Phase 3 email functions authenticate requests themselves:
+# email-worker checks the x-worker-secret header, email-events verifies the
+# provider's webhook signature.
+[functions.email-worker]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/email-worker/index.ts"
+
+[functions.email-events]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/email-events/index.ts"

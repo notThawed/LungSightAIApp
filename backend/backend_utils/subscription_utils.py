@@ -1,4 +1,5 @@
 from backend.supabase_client import supabase, admin_supabase
+from backend import audit
 from datetime import date, datetime, timedelta, timezone
 
 GRACE_PERIOD_DAYS = 7
@@ -369,6 +370,13 @@ def create_hospital_subscription(
 
         if not response.data:
 
+            audit.record_event(
+                "subscription.created",
+                "failure",
+                target_hospital_id=hospital_id,
+                metadata={"plan_id": plan_id, "reason": "insert_failed"},
+            )
+
             return {
                 "success": False,
                 "message": (
@@ -380,6 +388,16 @@ def create_hospital_subscription(
         # Success
         # ----------------------------------------------------
 
+        audit.record_event(
+            "subscription.created",
+            target_id=response.data[0].get("hospital_subscription_id"),
+            metadata={
+                "plan_id": plan_id,
+                "billing_cycle": billing_cycle,
+                "status": "Pending Setup",
+            },
+        )
+
         return {
             "success": True,
             "message": (
@@ -390,6 +408,13 @@ def create_hospital_subscription(
         }
 
     except Exception as e:
+
+        audit.record_event(
+            "subscription.created",
+            "failure",
+            target_hospital_id=hospital_id,
+            metadata={"plan_id": plan_id, "error_class": audit.error_class(e)},
+        )
 
         return {
             "success": False,
@@ -1007,10 +1032,26 @@ def schedule_downgrade(
 
         if not response.data:
 
+            audit.record_event(
+                "subscription.downgrade_scheduled",
+                "failure",
+                target_id=hospital_subscription_id,
+                metadata={"pending_plan_id": new_plan_id, "reason": "not_updated"},
+            )
+
             return {
                 "success": False,
                 "message": "Could not schedule downgrade.",
             }
+
+        audit.record_event(
+            "subscription.downgrade_scheduled",
+            target_id=hospital_subscription_id,
+            metadata={
+                "plan_id": response.data[0].get("plan_id"),
+                "pending_plan_id": new_plan_id,
+            },
+        )
 
         return {
             "success": True,
@@ -1018,6 +1059,13 @@ def schedule_downgrade(
         }
 
     except Exception as e:
+
+        audit.record_event(
+            "subscription.downgrade_scheduled",
+            "failure",
+            target_id=hospital_subscription_id,
+            metadata={"pending_plan_id": new_plan_id, "error_class": audit.error_class(e)},
+        )
 
         return {
             "success": False,
@@ -1061,10 +1109,22 @@ def undo_scheduled_downgrade(
 
         if not response.data:
 
+            audit.record_event(
+                "subscription.downgrade_undone",
+                "failure",
+                target_id=hospital_subscription_id,
+                metadata={"reason": "not_updated"},
+            )
+
             return {
                 "success": False,
                 "message": "Could not undo scheduled downgrade.",
             }
+
+        audit.record_event(
+            "subscription.downgrade_undone",
+            target_id=hospital_subscription_id,
+        )
 
         return {
             "success": True,
@@ -1072,6 +1132,13 @@ def undo_scheduled_downgrade(
         }
 
     except Exception as e:
+
+        audit.record_event(
+            "subscription.downgrade_undone",
+            "failure",
+            target_id=hospital_subscription_id,
+            metadata={"error_class": audit.error_class(e)},
+        )
 
         return {
             "success": False,
@@ -1120,10 +1187,22 @@ def cancel_subscription(
 
         if not response.data:
 
+            audit.record_event(
+                "subscription.cancel_requested",
+                "failure",
+                target_id=hospital_subscription_id,
+                metadata={"reason": "not_updated"},
+            )
+
             return {
                 "success": False,
                 "message": "Could not cancel subscription.",
             }
+
+        audit.record_event(
+            "subscription.cancel_requested",
+            target_id=hospital_subscription_id,
+        )
 
         return {
             "success": True,
@@ -1134,6 +1213,13 @@ def cancel_subscription(
         }
 
     except Exception as e:
+
+        audit.record_event(
+            "subscription.cancel_requested",
+            "failure",
+            target_id=hospital_subscription_id,
+            metadata={"error_class": audit.error_class(e)},
+        )
 
         return {
             "success": False,
@@ -1178,10 +1264,22 @@ def reactivate_subscription(
 
         if not response.data:
 
+            audit.record_event(
+                "subscription.reactivated",
+                "failure",
+                target_id=hospital_subscription_id,
+                metadata={"reason": "not_updated"},
+            )
+
             return {
                 "success": False,
                 "message": "Could not reactivate subscription.",
             }
+
+        audit.record_event(
+            "subscription.reactivated",
+            target_id=hospital_subscription_id,
+        )
 
         return {
             "success": True,
@@ -1189,6 +1287,13 @@ def reactivate_subscription(
         }
 
     except Exception as e:
+
+        audit.record_event(
+            "subscription.reactivated",
+            "failure",
+            target_id=hospital_subscription_id,
+            metadata={"error_class": audit.error_class(e)},
+        )
 
         return {
             "success": False,
@@ -1419,6 +1524,13 @@ def apply_scheduled_changes(hospital_id):
                     "message": "Could not cancel subscription.",
                 }
 
+            audit.record_event(
+                "subscription.cancelled",
+                target_id=sub_id,
+                idempotency_key=f"subscription.cancelled:{sub_id}:{end_date_str}",
+                system=True,
+            )
+
             return {
                 "success": True,
                 "action": "cancelled",
@@ -1474,6 +1586,17 @@ def apply_scheduled_changes(hospital_id):
                     "action": "error",
                     "message": "Could not apply downgrade.",
                 }
+
+            audit.record_event(
+                "subscription.downgraded",
+                target_id=sub_id,
+                metadata={
+                    "plan_id": pending_plan_id,
+                    "previous_plan_id": old_plan_id,
+                },
+                idempotency_key=f"subscription.downgraded:{sub_id}:{end_date_str}",
+                system=True,
+            )
 
             return {
                 "success": True,

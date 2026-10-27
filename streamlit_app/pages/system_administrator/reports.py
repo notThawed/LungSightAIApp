@@ -1,8 +1,6 @@
-import streamlit as st
+from pages import hospital_reports
 
 
 def show():
 
-    st.title("Generate Reports")
-
-    st.info("Reports coming soon...")
+    hospital_reports.show()

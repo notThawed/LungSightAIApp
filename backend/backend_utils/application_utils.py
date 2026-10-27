@@ -1,8 +1,9 @@
-from backend.supabase_client import supabase, admin_supabase
+from backend.supabase_client import admin_supabase
 from datetime import datetime, timezone
 
 from backend.backend_utils.subscription_utils import create_hospital_subscription
 from backend.backend_utils.hospital_utils import create_hospital_admin
+from backend import audit
 
 
 # ============================================================
@@ -104,6 +105,15 @@ def create_hospital_application(
             .execute()
         )
 
+        audit.record_event(
+            "hospital_application.submitted",
+            target_id=response.data[0]["application_id"],
+            metadata={
+                "plan_id": selected_plan_id,
+                "billing_cycle": billing_cycle,
+            },
+        )
+
         return {
             "success": True,
             "message": "Application submitted successfully.",
@@ -111,6 +121,12 @@ def create_hospital_application(
         }
 
     except Exception as e:
+
+        audit.record_event(
+            "hospital_application.submitted",
+            "failure",
+            metadata={"error_class": audit.error_class(e)},
+        )
 
         return {
             "success": False,
@@ -294,6 +310,13 @@ def approve_hospital_application(application_id):
 
         if not hospital_response.data:
 
+            audit.record_event(
+                "hospital_application.approved",
+                "failure",
+                target_id=application_id,
+                metadata={"reason": "hospital_insert_failed"},
+            )
+
             return {
                 "success": False,
                 "message": (
@@ -310,6 +333,13 @@ def approve_hospital_application(application_id):
         hospital_id = hospital.get(
             "hospital_id"
         )
+
+        if hospital_id:
+            audit.record_event(
+                "hospital.created",
+                target_id=hospital_id,
+                metadata={"source": "application_approval"},
+            )
 
         if not hospital_id:
 
@@ -346,6 +376,14 @@ def approve_hospital_application(application_id):
 
         if not application_update.data:
 
+            audit.record_event(
+                "hospital_application.approved",
+                "failure",
+                target_id=application_id,
+                target_hospital_id=hospital_id,
+                metadata={"reason": "status_update_failed", "hospital_id": hospital_id},
+            )
+
             return {
                 "success": False,
                 "message": (
@@ -357,6 +395,13 @@ def approve_hospital_application(application_id):
                 "hospital_id":
                     hospital_id
             }
+
+        audit.record_event(
+            "hospital_application.approved",
+            target_id=application_id,
+            target_hospital_id=hospital_id,
+            metadata={"hospital_id": hospital_id},
+        )
 
         # ----------------------------------------------------
         # 7. Create Hospital Subscription
@@ -582,6 +627,13 @@ def approve_hospital_application(application_id):
 
     except Exception as e:
 
+        audit.record_event(
+            "hospital_application.approved",
+            "failure",
+            target_id=application_id,
+            metadata={"error_class": audit.error_class(e)},
+        )
+
         return {
 
             "success":
@@ -613,6 +665,12 @@ def reject_hospital_application(application_id):
             .execute()
         )
 
+        if response.data:
+            audit.record_event(
+                "hospital_application.rejected",
+                target_id=application_id,
+            )
+
         return {
             "success": True,
             "message": "Hospital application rejected successfully.",
@@ -620,6 +678,13 @@ def reject_hospital_application(application_id):
         }
 
     except Exception as e:
+
+        audit.record_event(
+            "hospital_application.rejected",
+            "failure",
+            target_id=application_id,
+            metadata={"error_class": audit.error_class(e)},
+        )
 
         return {
             "success": False,
@@ -650,6 +715,12 @@ def delete_hospital_application(application_id):
             .execute()
         )
 
+        if response.data:
+            audit.record_event(
+                "hospital_application.deleted",
+                target_id=application_id,
+            )
+
         return {
             "success": True,
             "message": "Rejected application deleted successfully.",
@@ -657,6 +728,13 @@ def delete_hospital_application(application_id):
         }
 
     except Exception as e:
+
+        audit.record_event(
+            "hospital_application.deleted",
+            "failure",
+            target_id=application_id,
+            metadata={"error_class": audit.error_class(e)},
+        )
 
         return {
             "success": False,

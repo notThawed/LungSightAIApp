@@ -4,6 +4,7 @@ import streamlit as st
 from datetime import datetime, timezone, date, timedelta
 
 from backend.supabase_client import admin_supabase
+from backend import audit
 from backend.backend_utils.inpatient_utils import calculate_discharge_readiness
 from streamlit_app.components.ui import (
     page_header, empty_state, section_title, pill, remember, show_flash_message
@@ -159,6 +160,12 @@ def show_log_round_dialog(patient, parent_exam, admit_date):
                 "recorded_by_role": "doctor",
             }).execute()
 
+            audit.record_event(
+                "inpatient.round_logged",
+                target_id=new_id,
+                metadata={"parent_examination_id": parent_exam["examination_id"]},
+            )
+
             remember("Round logged.")
             st.rerun()
         except Exception as e:
@@ -176,10 +183,16 @@ def show_discharge_dialog(patient, exam):
     st.divider()
 
     if st.button("Mark as Discharged & Schedule Follow-Up", type="primary", use_container_width=True):
-        admin_supabase.table("examinations").update({
+        discharged = admin_supabase.table("examinations").update({
             "status": "Discharged",
             "time_of_discharge": datetime.now(timezone.utc).isoformat(),
         }).eq("examination_id", exam["examination_id"]).execute()
+
+        if discharged.data:
+            audit.record_event(
+                "inpatient.discharged",
+                target_id=exam["examination_id"],
+            )
 
         st.session_state["ip_mode"] = "list"
         st.session_state["review_examination"] = exam
@@ -199,30 +212,36 @@ def render_ward_list():
         "Oversee admitted patients, record daily rounds, and evaluate clinical readiness for discharge.",
     )
 
+    hospital_id = current_user().get("hospital_id")
+
     admitted = []
     try:
-        res = (
-            admin_supabase.table("examinations")
-            .select("*, patients(*)")
-            .eq("disposition", "Admission")
-            .eq("status", "Admitted")
-            .execute()
-        )
-        admitted = res.data or []
+        if hospital_id:
+            res = (
+                admin_supabase.table("examinations")
+                .select("*, patients!inner(*)")
+                .eq("patients.hospital_id", hospital_id)
+                .eq("disposition", "Admission")
+                .eq("status", "Admitted")
+                .execute()
+            )
+            admitted = res.data or []
     except Exception as e:
         st.error(f"Failed to load admissions: {e}")
 
     rounds_today_count = 0
     try:
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        res_today = (
-            admin_supabase.table("examinations")
-            .select("examination_id")
-            .eq("examination_type", "Inpatient Round")
-            .gte("examination_date", today_start.isoformat())
-            .execute()
-        )
-        rounds_today_count = len(res_today.data) if res_today.data else 0
+        if hospital_id:
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            res_today = (
+                admin_supabase.table("examinations")
+                .select("examination_id, patients!inner(hospital_id)")
+                .eq("patients.hospital_id", hospital_id)
+                .eq("examination_type", "Inpatient Round")
+                .gte("examination_date", today_start.isoformat())
+                .execute()
+            )
+            rounds_today_count = len(res_today.data) if res_today.data else 0
     except Exception:
         rounds_today_count = 0
 
