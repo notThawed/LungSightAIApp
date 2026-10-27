@@ -4,6 +4,7 @@ import base64
 import streamlit as st
 
 from auth.auth_manager import authenticate
+from backend import audit
 from shared.assets import load_css, image_path
 
 
@@ -124,6 +125,7 @@ def check_login(email, password):
         if user:
             st.session_state.logged_in = True
             st.session_state.user = user
+            audit.record_login_once(user)
             st.rerun()
         else:
             st.error("Email or password is incorrect.")

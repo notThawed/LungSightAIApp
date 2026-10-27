@@ -7,3 +7,4 @@ datasets/
 hybrid_negative_positive/
 international_classification/
 Microsoft/Windows/PowerShell/ModuleAnalysisCache
+resend.env

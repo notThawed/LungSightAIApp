@@ -18,3 +18,5 @@ tqdm
 numpy
 transformers
 pydicom
+reportlab==4.4.4
+xlsxwriter==3.2.9

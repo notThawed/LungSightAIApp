@@ -88,6 +88,33 @@ async function verifySignature(
 
 
 // ============================================================
+// AUDIT LOG
+// ============================================================
+//
+// System events (no actor). Metadata holds identifiers only.
+// A failed audit write never changes the webhook response.
+
+async function recordAudit(row: {
+  event_type: string;
+  outcome: "success" | "failure";
+  hospital_id: string | null;
+  target_type: string;
+  target_id: string | null;
+  metadata: Record<string, string>;
+  idempotency_key: string;
+}): Promise<void> {
+
+  const { error } = await supabase
+    .from("audit_logs")
+    .insert({ actor_user_id: null, ...row });
+
+  if (error && error.code !== "23505") {
+    console.error(`audit write failed for ${row.event_type}: ${error.code}`);
+  }
+}
+
+
+// ============================================================
 // EXTEND SUBSCRIPTION
 // ============================================================
 
@@ -222,11 +249,6 @@ serve(async (req) => {
 
   if (!valid) {
     console.error("=== SIGNATURE MISMATCH ===");
-    console.error("Header:", signatureHeader);
-    console.error("Secret length:", PAYMONGO_WEBHOOK_SECRET.length);
-    console.error("Secret prefix:", PAYMONGO_WEBHOOK_SECRET.slice(0, 12));
-    console.error("Body length:", rawBody.length);
-    console.error("Body preview:", rawBody.slice(0, 200));
     return new Response("invalid signature", { status: 401 });
   }
 
@@ -309,11 +331,33 @@ serve(async (req) => {
 
     if (!extendResult.success) {
       console.error("Failed to extend subscription:", extendResult.message);
+      await recordAudit({
+        event_type: "subscription.renewed",
+        outcome: "failure",
+        hospital_id: payment.hospital_id ?? null,
+        target_type: "hospital_subscription",
+        target_id: payment.hospital_subscription_id,
+        metadata: { payment_id: payment.payment_id, reason: "extension_failed" },
+        idempotency_key: `subscription.renewed:payment:${payment.payment_id}:failure`,
+      });
       // Return 500 so PayMongo retries the webhook
       return new Response("extension failed", { status: 500 });
     }
 
     console.log(`✅ Subscription extended to ${extendResult.new_end_date}`);
+
+    await recordAudit({
+      event_type: "subscription.renewed",
+      outcome: "success",
+      hospital_id: payment.hospital_id ?? null,
+      target_type: "hospital_subscription",
+      target_id: payment.hospital_subscription_id,
+      metadata: {
+        payment_id: payment.payment_id,
+        end_date: extendResult.new_end_date ?? "",
+      },
+      idempotency_key: `subscription.renewed:payment:${payment.payment_id}`,
+    });
 
   } else {
 
@@ -334,6 +378,35 @@ serve(async (req) => {
     if (appErr) {
       console.error("Failed to update application:", appErr);
       // Payment is recorded; app update can be retried manually
+    }
+
+    if (applicationId) {
+      await recordAudit({
+        event_type: "hospital_application.payment_received",
+        outcome: appErr ? "failure" : "success",
+        hospital_id: payment.hospital_id ?? null,
+        target_type: "hospital_application",
+        target_id: applicationId,
+        metadata: appErr
+          ? { payment_id: payment.payment_id, reason: "application_update_failed" }
+          : { payment_id: payment.payment_id },
+        idempotency_key: `hospital_application.payment_received:payment:${payment.payment_id}`,
+      });
+    } else {
+      // Not an application payment (e.g. payment_type "upgrade"): this branch
+      // does not apply it. Recorded so the gap is visible; behaviour unchanged.
+      await recordAudit({
+        event_type: "payment.unhandled",
+        outcome: "failure",
+        hospital_id: payment.hospital_id ?? null,
+        target_type: "payment",
+        target_id: payment.payment_id,
+        metadata: {
+          payment_id: payment.payment_id,
+          payment_type: String(payment.payment_type ?? "unknown").slice(0, 32),
+        },
+        idempotency_key: `payment.unhandled:payment:${payment.payment_id}`,
+      });
     }
 
     console.log(`✅ Payment processed for application ${applicationId}`);

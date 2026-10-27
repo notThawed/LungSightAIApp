@@ -3,6 +3,8 @@ import html
 
 import streamlit as st
 
+from backend import audit
+
 
 # ============================================================
 # PATHS
@@ -187,6 +189,16 @@ ADMIN_NAV = [
                 "View reports",
                 "bar_chart",
             ),
+            (
+                "Audit Logs",
+                "Audit Logs",
+                "history",
+            ),
+            (
+                "Email Notifications",
+                "Email Notifications",
+                "mail",
+            ),
         ],
     },
 
@@ -310,6 +322,33 @@ HOSPITAL_ADMIN_NAV = [
                 "Subscription Settings",
                 "Subscription Settings",
                 "payments",
+            ),
+        ],
+    },
+
+    {
+        "section": "Reports",
+        "items": [
+            (
+                "Hospital Reports",
+                "Hospital Reports",
+                "summarize",
+            ),
+        ],
+    },
+
+    {
+        "section": "Security",
+        "items": [
+            (
+                "Audit Logs",
+                "Audit Logs",
+                "history",
+            ),
+            (
+                "Email Notifications",
+                "Email Notifications",
+                "mail",
             ),
         ],
     },
@@ -595,6 +634,8 @@ def show_account(role_key):
             icon=":material/logout:",
             width="stretch",
         ):
+
+            audit.record_logout()
 
             st.session_state.logged_in = False
             st.session_state.user = None

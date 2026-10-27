@@ -5,6 +5,7 @@ from datetime import datetime, timezone, date, timedelta, time
 from zoneinfo import ZoneInfo
 
 from backend.supabase_client import admin_supabase
+from backend import audit
 from backend.backend_utils.inpatient_utils import calculate_discharge_readiness
 from backend.backend_utils.followup_utils import create_follow_up
 from streamlit_app.components.ui import (

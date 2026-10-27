@@ -1,6 +1,7 @@
 import streamlit as st
 
 from backend.auth import login_user, logout_user
+from backend import audit
 
 
 def initialize_auth():
@@ -38,6 +39,8 @@ def authenticate(email, password):
 
 
 def logout():
+    audit.record_logout()
+
     try:
         logout_user()
     except Exception as e:

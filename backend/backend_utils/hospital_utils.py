@@ -16,6 +16,8 @@ from backend.fetches import (
     generate_employee_id,
 )
 
+from backend import audit
+
 import time
 
 
@@ -249,6 +251,13 @@ def update_hospital_information(
 
         if not response.data:
 
+            audit.record_event(
+                "hospital.updated",
+                "failure",
+                target_id=hospital_id,
+                metadata={"reason": "not_updated"},
+            )
+
             return {
                 "success": False,
                 "message": (
@@ -256,6 +265,12 @@ def update_hospital_information(
                     "be updated."
                 ),
             }
+
+        audit.record_event(
+            "hospital.updated",
+            target_id=hospital_id,
+            metadata={"changed_fields": list(hospital_data)},
+        )
 
         return {
             "success": True,
@@ -266,6 +281,13 @@ def update_hospital_information(
         }
 
     except Exception as exc:
+
+        audit.record_event(
+            "hospital.updated",
+            "failure",
+            target_id=hospital_id,
+            metadata={"error_class": audit.error_class(exc)},
+        )
 
         return {
             "success": False,
@@ -646,6 +668,18 @@ def complete_hospital_setup(hospital_id):
         # 8. SUCCESS
         # ====================================================
 
+        audit.record_event(
+            "hospital.setup_completed",
+            target_id=hospital_id,
+        )
+
+        for activated in subscription_response.data:
+            audit.record_event(
+                "subscription.activated",
+                target_id=activated.get("hospital_subscription_id"),
+                metadata={"end_date": end_date.isoformat()},
+            )
+
         return {
             "success": True,
             "message": (
@@ -659,6 +693,13 @@ def complete_hospital_setup(hospital_id):
         }
 
     except Exception as exc:
+
+        audit.record_event(
+            "hospital.setup_completed",
+            "failure",
+            target_id=hospital_id,
+            metadata={"error_class": audit.error_class(exc)},
+        )
 
         return {
             "success": False,
@@ -949,6 +990,15 @@ def create_hospital_admin(
         # 7. SUCCESS
         # ====================================================
 
+        audit.record_event(
+            "user.created",
+            target_id=user_id,
+            metadata={
+                "role_id": role["role_id"],
+                "source": "application_approval",
+            },
+        )
+
         return {
             "success": True,
             "message": (
@@ -977,6 +1027,16 @@ def create_hospital_admin(
             message = (
                 "A user with this email already exists."
             )
+
+        audit.record_event(
+            "user.created",
+            "failure",
+            target_hospital_id=hospital_id,
+            metadata={
+                "source": "application_approval",
+                "error_class": audit.error_class(exc),
+            },
+        )
 
         return {
             "success": False,

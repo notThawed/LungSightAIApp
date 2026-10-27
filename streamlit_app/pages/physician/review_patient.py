@@ -17,6 +17,7 @@ from datetime import datetime, date, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from backend.supabase_client import admin_supabase
+from backend import audit
 
 from backend.fetches import (
     get_xray_ready_examinations,
@@ -45,7 +46,6 @@ from streamlit_app.components.ui import (
     page_header,
     empty_state,
     section_title,
-    show_rows,
     full_name,
     format_date,
     pill,
