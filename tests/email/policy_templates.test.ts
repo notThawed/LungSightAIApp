@@ -141,3 +141,15 @@ test("test redirect prefixes the subject", () => {
   const email = renderEmail(row("subscription.renewed", { end_date: "2028-01-01" }), { ...BASE, subjectPrefix: "[TEST]\r\n" });
   assert.equal(email.subject, "[TEST] LungSight: subscription renewed");
 });
+
+test("rejection notice is generic and never echoes user text", () => {
+  const email = renderEmail(row("application.rejected", { reference: "ABCDEF12", hospital_name: "Injected <b>", notes: "x" }), BASE);
+  assert.equal(email.subject, "LungSight: update on your hospital application");
+  assert.ok(email.text.includes("Reference: ABCDEF12"));
+  assert.ok(email.text.includes("unable to approve this application"));
+  assert.ok(!email.text.includes("Injected") && !email.html.includes("Injected"));
+  assert.ok(!email.html.includes("href"), "no links to an unverified address");
+  assert.ok(!/refund|payment|₱|reason/i.test(email.text));
+  const bad = renderEmail(row("application.rejected", { reference: "<script>" }), BASE);
+  assert.ok(bad.text.includes("Reference: —"));
+});

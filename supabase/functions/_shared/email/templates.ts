@@ -85,6 +85,20 @@ function bodyFor(row: TemplateRow): Body {
         ],
       };
     }
+    case "application.rejected": {
+      const reference = /^[A-Z0-9]{8}$/.test(String(d.reference ?? "")) ? String(d.reference) : "—";
+      return {
+        subject: "LungSight: update on your hospital application",
+        heading: "Application update",
+        paragraphs: [
+          "We have reviewed the hospital application that listed this email address as the contact.",
+          `Reference: ${reference}`,
+          "We are unable to approve this application at this time.",
+          "If you have questions, please contact the LungSight team and mention the reference above.",
+          "If you did not submit an application, you can ignore this email.",
+        ],
+      };
+    }
     case "application.approved":
       return {
         subject: "LungSight: hospital application approved",

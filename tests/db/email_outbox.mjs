@@ -131,7 +131,8 @@ try {
   await db.query(STUB);
   await db.query(read("_create_audit_logs.sql"));
   await db.query(read("_email_notifications.sql"));
-  check("both migrations apply on PostgreSQL 17", true);
+  await db.query(read("_email_rejection.sql"));
+  check("all migrations apply on PostgreSQL 17", true);
 
   // ---------------------------------------------------------- receipts
   const app1 = (await db.query(`insert into public.hospital_applications (applicant_email, application_status, payment_status)
@@ -180,6 +181,35 @@ try {
   await db.query("alter table public.email_outbox drop constraint test_force_fail");
   check("an enqueue failure never blocks the business update",
     upd.rows[0]?.application_status === "Pending" && (await outbox(db, "target_id=$1", [app3])).length === 0);
+
+  // ---------------------------------------------------------- rejection (follow-up migration)
+  const rej = (await db.query(`insert into public.hospital_applications (applicant_email, application_status, payment_status)
+    values (' Rejected.Applicant@Example.com','Draft','unpaid') returning application_id`)).rows[0].application_id;
+  const setApp = (sql) => db.query(`update public.hospital_applications set ${sql} where application_id=$1`, [rej]);
+
+  await setApp("application_status='Rejected'");
+  check("rejecting an unpaid application sends nothing", (await outbox(db, "event_type='application.rejected'")).length === 0);
+
+  await setApp("application_status='Pending', payment_status='paid'");
+  await setApp("application_status='Rejected'");
+  rows = await outbox(db, "event_type='application.rejected'");
+  check("rejecting a paid application queues one notice to the applicant",
+    rows.length === 1 && rows[0].recipient_email === "rejected.applicant@example.com" && rows[0].recipient_kind === "applicant_receipt");
+  check("rejection notice carries only a reference",
+    JSON.stringify(rows[0]?.template_data) === JSON.stringify({ reference: rej.slice(0, 8).toUpperCase() }));
+
+  await setApp("application_status='Rejected', admin_notes='second save'");
+  check("re-saving a rejected application does not queue again", (await outbox(db, "event_type='application.rejected'")).length === 1);
+
+  const rejClaim = await claim(db, "wr");
+  check("worker can claim the rejection notice", rejClaim.some((r) => r.event_type === "application.rejected"));
+  check("send check passes while still rejected", (await sendCheck(db, rows[0].email_id)).ok === true);
+  await setApp("application_status='Pending'");
+  check("send check skips it if the rejection was reversed", (await sendCheck(db, rows[0].email_id)).reason === "state_changed");
+
+  check("rejections do not count against receipt limits",
+    (await outbox(db, "event_type='application.received' and recipient_email='rejected.applicant@example.com'"))
+      .every((r) => r.skip_reason !== "rate_limited"));
 
   await drain(db);
 

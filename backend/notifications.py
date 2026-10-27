@@ -27,6 +27,7 @@ STATUSES = (
 EVENT_LABELS = {
     "application.received": "Application received (receipt)",
     "application.approved": "Application approved",
+    "application.rejected": "Application rejected (notice)",
     "subscription.activated": "Subscription activated",
     "subscription.renewed": "Subscription renewed",
     "subscription.expiry_reminder": "Subscription expiry reminder",
