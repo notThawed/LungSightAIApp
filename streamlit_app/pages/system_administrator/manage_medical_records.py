@@ -29,7 +29,7 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
 from backend.fetches import (
-    get_completed_patients_with_latest_ai,
+    get_all_patients,
     get_examinations_by_patient,
     get_medical_records_by_patient,
     get_xray_request_by_examination,
@@ -372,9 +372,26 @@ def load_patient_rows(hospital_id=None):
         filter_hospital = user_hospital_id
 
     try:
-        return get_completed_patients_with_latest_ai(
-            hospital_id=filter_hospital
-        ) or []
+        # 1. Get ALL patients (even those with no exams)
+        patients = get_all_patients() or []
+        
+        # 2. Filter by hospital if needed
+        if filter_hospital:
+            patients = [p for p in patients if p.get("hospital_id") == filter_hospital]
+
+        # 3. Format them so the table can read the data
+        rows = []
+        for p in patients:
+            rows.append({
+                "patient": p,
+                "examination_date": p.get("created_at"), # Use creation date since they have no exams
+                "ai_findings": None,
+                "ai_confidence": None,
+                "pneumonia_type": None,
+            })
+            
+        return rows
+        
     except Exception as error:
         st.error(f"Failed to load patient records: {error}")
         return []
