@@ -329,7 +329,7 @@ def render_patient_row(row):
 
 def render_patient_list(rows):
     with st.container(key="physician_patient_records_page"):
-        page_header("Patient Records", "View completed patient X-ray analyses and clinical history.")
+        page_header("Patient Records", "View patients from your hospital and their X-ray analyses and clinical history.")
         search = st.text_input(
             "Search patient",
             placeholder="Search by patient ID, name, or contact number",
@@ -348,7 +348,7 @@ def render_patient_list(rows):
 
         st.divider()
         if not filtered:
-            empty_state("No completed patient records found.")
+            empty_state("No patients found.")
             return
 
         with st.container(key="pr_table_header"):
