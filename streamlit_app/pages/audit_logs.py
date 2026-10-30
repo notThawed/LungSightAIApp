@@ -18,7 +18,11 @@ from streamlit_app.components.ui import (
     format_date,
     full_name,
     page_header,
+    metric_card,
+    section_title,
+    pill,
     show_rows,
+    safe,
 )
 from shared.assets import load_css
 
@@ -67,54 +71,69 @@ def _actor_options(hospital_id):
 
 
 def _render_filters(scope):
-    today = date.today()
+    with st.container(key="sa_audit_filters"):
+        f_head_l, f_head_r = st.columns([3, 1], vertical_alignment="center")
+        with f_head_l:
+            section_title("Audit Event Filters", "Filter security events, authentication attempts, and operational records.")
+        with f_head_r:
+            if st.button("Reset Filters", icon=":material/restart_alt:", key="audit_reset_btn", width="stretch"):
+                st.session_state.pop("audit_from", None)
+                st.session_state.pop("audit_to", None)
+                st.session_state.pop("audit_category", None)
+                st.session_state.pop("audit_outcome", None)
+                st.session_state.pop("audit_hospital", None)
+                st.session_state.pop("audit_actor", None)
+                st.session_state.pop("audit_search", None)
+                st.rerun()
 
-    c1, c2, c3, c4 = st.columns(4)
+        today = date.today()
 
-    date_from = c1.date_input("From", value=today - timedelta(days=30), key="audit_from")
-    date_to = c2.date_input("To", value=today, key="audit_to")
-    category = c3.selectbox("Category", [ANY] + audit.CATEGORIES, key="audit_category")
-    outcome = c4.selectbox("Outcome", [ANY] + list(audit.OUTCOMES), key="audit_outcome")
+        c1, c2, c3, c4 = st.columns(4)
 
-    filters = {
-        "date_from": date_from,
-        "date_to": date_to,
-        "category": None if category == ANY else category,
-        "outcome": None if outcome == ANY else outcome,
-    }
+        date_from = c1.date_input("From Date", value=today - timedelta(days=30), key="audit_from")
+        date_to = c2.date_input("To Date", value=today, key="audit_to")
+        category = c3.selectbox("Event Category", [ANY] + audit.CATEGORIES, key="audit_category")
+        outcome = c4.selectbox("Outcome", [ANY] + list(audit.OUTCOMES), key="audit_outcome")
 
-    hospital_names = {}
+        filters = {
+            "date_from": date_from,
+            "date_to": date_to,
+            "category": None if category == ANY else category,
+            "outcome": None if outcome == ANY else outcome,
+        }
 
-    if scope["platform"]:
-        d1, d2, d3 = st.columns([1.3, 1.3, 1.4])
-        hospital_names = _hospital_options()
-        hospital_choice = d1.selectbox(
-            "Hospital",
-            [ANY, PLATFORM] + sorted(hospital_names),
-            key="audit_hospital",
+        hospital_names = {}
+
+        if scope["platform"]:
+            d1, d2, d3 = st.columns([1.3, 1.3, 1.4])
+            hospital_names = _hospital_options()
+            hospital_choice = d1.selectbox(
+                "Hospital Facility",
+                [ANY, PLATFORM] + sorted(hospital_names),
+                key="audit_hospital",
+            )
+            if hospital_choice == PLATFORM:
+                filters["hospital_id"] = "platform"
+            elif hospital_choice != ANY:
+                filters["hospital_id"] = hospital_names[hospital_choice]
+            actor_hospital = filters.get("hospital_id") if filters.get("hospital_id") != "platform" else None
+            actor_col, search_col = d2, d3
+        else:
+            d2, d3 = st.columns(2)
+            actor_hospital = scope["hospital_id"]
+            actor_col, search_col = d2, d3
+
+        actors = _actor_options(actor_hospital)
+        actor_choice = actor_col.selectbox("Actor", [ANY] + sorted(actors), key="audit_actor")
+        filters["actor_user_id"] = None if actor_choice == ANY else actors[actor_choice]
+
+        filters["search"] = search_col.text_input(
+            "Search event type or ID",
+            key="audit_search",
+            placeholder="e.g. auth.login or record ID",
         )
-        if hospital_choice == PLATFORM:
-            filters["hospital_id"] = "platform"
-        elif hospital_choice != ANY:
-            filters["hospital_id"] = hospital_names[hospital_choice]
-        actor_hospital = filters.get("hospital_id") if filters.get("hospital_id") != "platform" else None
-        actor_col, search_col = d2, d3
-    else:
-        d2, d3 = st.columns(2)
-        actor_hospital = scope["hospital_id"]
-        actor_col, search_col = d2, d3
 
-    actors = _actor_options(actor_hospital)
-    actor_choice = actor_col.selectbox("Actor", [ANY] + sorted(actors), key="audit_actor")
-    filters["actor_user_id"] = None if actor_choice == ANY else actors[actor_choice]
-
-    filters["search"] = search_col.text_input(
-        "Search event or target ID",
-        key="audit_search",
-        placeholder="e.g. patient.created or a record ID",
-    )
-
-    return filters, {v: k for k, v in hospital_names.items()}
+        return filters, {v: k for k, v in hospital_names.items()}
 
 
 def _filter_signature(filters):
@@ -122,20 +141,39 @@ def _filter_signature(filters):
 
 
 def _render_detail(row, actor_name, hospital_label):
-    st.markdown("**Event details**")
+    outcome_raw = str(row.get("outcome") or "").lower()
+    if outcome_raw in ("success", "approved", "completed"):
+        outcome_pill = pill("SUCCESS", "green")
+    elif outcome_raw in ("failure", "failed", "denied", "error"):
+        outcome_pill = pill(outcome_raw.upper(), "red")
+    else:
+        outcome_pill = pill(outcome_raw.upper() if outcome_raw else "UNKNOWN", "amber")
+
+    st.markdown(
+        f"<div class='sa-audit-inspector'>"
+        f"<div class='sa-audit-inspector-header'>"
+        f"<div class='sa-audit-inspector-title'>"
+        f"<span class='material-symbols-rounded' style='color:#2563EB;'>manage_search</span>"
+        f"<span>Event Inspector: {safe(row.get('event_type'))}</span>"
+        f"</div>"
+        f"{outcome_pill}"
+        f"</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
     show_rows([
         ("Timestamp (UTC)", row.get("created_at")),
-        ("Event", row.get("event_type")),
+        ("Event Type", row.get("event_type")),
         ("Outcome", row.get("outcome")),
         ("Actor", actor_name),
         ("Actor ID", row.get("actor_user_id") or "System"),
-        ("Hospital", hospital_label),
+        ("Facility", hospital_label),
         ("Target", f"{row.get('target_type') or '—'} · {row.get('target_id') or '—'}"),
     ])
 
     if row.get("metadata"):
-        st.caption("Metadata")
+        st.caption("Event Payload & Metadata")
         st.json(row["metadata"], expanded=True)
 
 
@@ -146,44 +184,56 @@ def _render_export(filters, signature):
         st.session_state.pop(EXPORT_KEY, None)
         cached = None
 
-    if not cached:
-        if st.button("Prepare CSV export", icon=":material/download:", key="audit_export_prepare"):
-            try:
-                with st.spinner("Preparing export..."):
-                    data, count, truncated = audit.export_audit_logs_csv(filters)
-                st.session_state[EXPORT_KEY] = {
-                    "sig": signature,
-                    "data": data,
-                    "count": count,
-                    "truncated": truncated,
-                }
-                st.rerun()
-            except audit.AuditAccessDenied as exc:
-                st.error(str(exc))
-            except ValueError as exc:
-                st.warning(str(exc))
-            except Exception as exc:
-                logger.error("audit export failed: %s", type(exc).__name__)
-                st.error("The export could not be prepared. Please try again.")
-        return
+    with st.container(key="sa_audit_export_container"):
+        st.markdown(
+            f"<div class='sa-audit-export-card'>"
+            f"<div>"
+            f"<div style='font-weight:700; color:#0F172A; font-size:0.95rem;'>Compliance &amp; Security CSV Export</div>"
+            f"<div style='font-size:0.8rem; color:#64748B;'>Generate an immutable, timestamped CSV export matching current search filters.</div>"
+            f"</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
-    caption = f"{cached['count']:,} rows ready."
-    if cached["truncated"]:
-        caption += f" Export is limited to the newest {audit.EXPORT_ROW_LIMIT:,} rows; narrow the filters for more."
-    st.caption(caption)
+        if not cached:
+            if st.button("Generate CSV Export", icon=":material/download:", key="audit_export_prepare", type="primary"):
+                try:
+                    with st.spinner("Preparing export dataset..."):
+                        data, count, truncated = audit.export_audit_logs_csv(filters)
+                    st.session_state[EXPORT_KEY] = {
+                        "sig": signature,
+                        "data": data,
+                        "count": count,
+                        "truncated": truncated,
+                    }
+                    st.rerun()
+                except audit.AuditAccessDenied as exc:
+                    st.error(str(exc))
+                except ValueError as exc:
+                    st.warning(str(exc))
+                except Exception as exc:
+                    logger.error("audit export failed: %s", type(exc).__name__)
+                    st.error("The export could not be prepared. Please try again.")
+            return
 
-    st.download_button(
-        "Download CSV",
-        data=cached["data"],
-        file_name=f"audit_logs_{date.today().isoformat()}.csv",
-        mime="text/csv",
-        icon=":material/download:",
-        key="audit_export_download",
-    )
+        caption = f"{cached['count']:,} events ready for export."
+        if cached["truncated"]:
+            caption += f" Export is limited to the newest {audit.EXPORT_ROW_LIMIT:,} rows; narrow filters for smaller sets."
+        st.caption(caption)
+
+        st.download_button(
+            "Download Audit Log CSV",
+            data=cached["data"],
+            file_name=f"audit_logs_{date.today().isoformat()}.csv",
+            mime="text/csv",
+            icon=":material/download:",
+            key="audit_export_download",
+            type="primary",
+        )
 
 
 def show():
-    load_css("system_admin_css/base.css")
+    load_css("audit_logs.css")
 
     try:
         scope = audit.get_viewer_scope()
@@ -198,9 +248,9 @@ def show():
     page_header(
         "Audit Logs",
         (
-            "Security and activity events across the LungSight platform."
+            "Platform-wide security events, administrative activities, and audit trails."
             if scope["platform"]
-            else "Security and activity events for your hospital."
+            else "Hospital security events, patient access records, and staff activity trails."
         ),
     )
 
@@ -231,8 +281,23 @@ def show():
     rows = result["rows"]
     total = result["total"]
 
+    # ---------------- Top KPI Metrics ----------------
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        metric_card("Total Events Logged", total, "history", "teal")
+    with k2:
+        scope_str = "Platform-wide" if scope["platform"] else "Hospital Facility"
+        metric_card("Audited Scope", scope_str, "domain", "blue")
+    with k3:
+        period_str = f"{filters['date_from'].strftime('%b %d')} - {filters['date_to'].strftime('%b %d')}"
+        metric_card("Timeframe", period_str, "calendar_month", "green")
+    with k4:
+        metric_card("Events on Page", len(rows), "list_alt", "amber")
+
+    st.markdown("<div style='margin-bottom: 0.5rem;'></div>", unsafe_allow_html=True)
+
     if not rows:
-        empty_state("No audit events match these filters.")
+        empty_state("No audit events match these filters. Try expanding the date range or clearing specific filter criteria.")
         return
 
     try:
@@ -265,6 +330,15 @@ def show():
             entry["Hospital"] = hospital_label(row)
         table.append(entry)
 
+    # Toolbar with count badge
+    st.markdown(
+        f"<div class='sa-audit-toolbar'>"
+        f"<span class='sa-audit-count-badge'>Showing <b>{len(rows)}</b> of <b>{total:,}</b> events</span>"
+        f"<span style='font-size:0.8rem; color:#64748B;'>Click any row below to inspect full event payload</span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
     selection = st.dataframe(
         table,
         hide_index=True,
@@ -283,7 +357,9 @@ def show():
         st.rerun()
 
     p2.markdown(
-        f"<div style='text-align:center'>Page {page} of {pages} · {total:,} events</div>",
+        f"<div style='text-align:center; font-size:0.88rem; font-weight:600; color:#475569;'>"
+        f"Page {page} of {pages} · {total:,} total records"
+        f"</div>",
         unsafe_allow_html=True,
     )
 
@@ -297,7 +373,7 @@ def show():
         row = rows[selected_rows[0]]
         _render_detail(row, actor_label(row), hospital_label(row))
     else:
-        st.caption("Select a row to see its details.")
+        st.caption("ℹ️ Click any row in the audit table to inspect full event metadata, actor identity, and system payloads.")
 
     st.divider()
 

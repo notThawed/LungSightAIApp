@@ -2037,13 +2037,54 @@ def get_hospital_patient_locations(hospital_id):
 
 def get_completed_patients_with_latest_ai(hospital_id=None):
     """
-    Return one row per patient who has at least one
-    completed, admitted, or discharged examination.
+    Return one row per patient, including patients without an eligible
+    examination, with the latest completed, admitted, or discharged
+    examination and its latest X-ray AI result when available.
     """
 
     try:
+        # Load the scoped patient list first so patients without examinations
+        # are not dropped by an examinations-rooted query.
+        patient_query = (
+            admin_supabase
+            .table("patients")
+            .select("""
+                patient_id,
+                patient_code,
+                first_name,
+                middle_name,
+                last_name,
+                suffix,
+                date_of_birth,
+                sex,
+                contact_number,
+                address,
+                hospital_id,
 
-        # 1. Eligible examinations (order by date descending)
+                hospitals (
+                    hospital_id,
+                    hospital_name,
+                    hospital_code
+                )
+            """)
+            .order("last_name", desc=False)
+            .order("first_name", desc=False)
+        )
+
+        if hospital_id is not None:
+            patient_query = patient_query.eq("hospital_id", hospital_id)
+
+        patients = patient_query.execute().data or []
+        patient_by_id = {
+            patient["patient_id"]: patient
+            for patient in patients
+            if patient.get("patient_id")
+        }
+
+        if not patient_by_id:
+            return []
+
+        # 1. Load eligible examinations for the already-scoped patients.
         exam_query = (
             admin_supabase
             .table("examinations")
@@ -2056,28 +2097,9 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
                 curb65_score,
                 severity_status,
                 disposition_notes,
-                plans_orders,
-
-                patients!inner (
-                    patient_id,
-                    patient_code,
-                    first_name,
-                    middle_name,
-                    last_name,
-                    suffix,
-                    date_of_birth,
-                    sex,
-                    contact_number,
-                    address,
-                    hospital_id,
-
-                    hospitals (
-                        hospital_id,
-                        hospital_name,
-                        hospital_code
-                    )
-                )
+                plans_orders
             """)
+            .in_("patient_id", list(patient_by_id))
             .in_(
                 "status",
                 ["Completed", "Admitted", "Discharged"],
@@ -2085,34 +2107,19 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
             .order("examination_date", desc=True)
         )
 
-        if hospital_id:
-            exam_query = exam_query.eq(
-                "patients.hospital_id",
-                hospital_id,
-            )
-
         exam_rows = exam_query.execute().data or []
-
-        if not exam_rows:
-            return []
 
         # 2. Keep the LATEST eligible exam per patient.
         # Prefer exams that have a severity score.
         latest_by_patient = {}
 
         for row in exam_rows:
-
-            patient = row.get("patients") or {}
-
-            if isinstance(patient, list):
-                patient = patient[0] if patient else None
-
-            if not patient:
+            patient_id = row.get("patient_id")
+            if not patient_id:
                 continue
 
-            patient_id = patient.get("patient_id")
-
-            if not patient_id:
+            patient = patient_by_id.get(patient_id)
+            if not patient:
                 continue
 
             has_score = (
@@ -2140,17 +2147,19 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
             for item in latest_by_patient.values()
         ]
 
-        req_response = (
-            admin_supabase.table("xray_requests")
-            .select("request_id, examination_id")
-            .in_("examination_id", exam_ids)
-            .execute()
-        )
+        request_by_exam = {}
+        if exam_ids:
+            req_response = (
+                admin_supabase.table("xray_requests")
+                .select("request_id, examination_id")
+                .in_("examination_id", exam_ids)
+                .execute()
+            )
 
-        request_by_exam = {
-            r["examination_id"]: r["request_id"]
-            for r in (req_response.data or [])
-        }
+            request_by_exam = {
+                r["examination_id"]: r["request_id"]
+                for r in (req_response.data or [])
+            }
 
         # 4. Fetch X-ray images
         request_ids = list(request_by_exam.values())
@@ -2200,13 +2209,13 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
         # 6. Merge everything
         results = []
 
-        for patient_id, item in latest_by_patient.items():
-
-            patient = item["patient"]
-            exam = item["exam"]
-
-            request_id = request_by_exam.get(
-                exam["examination_id"]
+        for patient_id, patient in patient_by_id.items():
+            item = latest_by_patient.get(patient_id)
+            exam = item["exam"] if item else None
+            request_id = (
+                request_by_exam.get(exam["examination_id"])
+                if exam
+                else None
             )
 
             image = (
@@ -2223,10 +2232,10 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
 
             results.append({
                 "patient": patient,
-                "examination_id": exam.get("examination_id"),
+                "examination_id": exam.get("examination_id") if exam else None,
                 "examination_date": (
-                    exam.get("examination_date")
-                    or exam.get("created_at")
+                    (exam.get("examination_date") or exam.get("created_at"))
+                    if exam else None
                 ),
                 "image_id": image.get("image_id") if image else None,
                 "ai_findings": ai.get("ai_findings") if ai else None,
@@ -2240,10 +2249,10 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
                     ai.get("classification_confidence")
                     if ai else None
                 ),
-                "curb65_score": exam.get("curb65_score"),
-                "severity_status": exam.get("severity_status"),
-                "disposition_notes": exam.get("disposition_notes"),
-                "plans_orders": exam.get("plans_orders"),
+                "curb65_score": exam.get("curb65_score") if exam else None,
+                "severity_status": exam.get("severity_status") if exam else None,
+                "disposition_notes": exam.get("disposition_notes") if exam else None,
+                "plans_orders": exam.get("plans_orders") if exam else None,
             })
 
         results.sort(
@@ -2254,13 +2263,9 @@ def get_completed_patients_with_latest_ai(hospital_id=None):
         return results
 
     except Exception as exc:
-
-        print(
-            "Failed to fetch completed patients with AI: "
-            f"{exc}"
-        )
-
-        return []
+        raise RuntimeError(
+            "Failed to fetch patients and their latest completed examination data."
+        ) from exc
 
 
 # ==========================================

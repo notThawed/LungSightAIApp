@@ -1,20 +1,581 @@
 /* ==========================================================
    SYSTEM ADMIN - MANAGE PATIENTS
    shared/theme/css_content/system_admin_css/manage_patients.css
-   Only what is unique to this page. The table, avatars, buttons
-   and dialogs come from base.css.
+   Table, toolbar, rows, avatars, code badges, action buttons,
+   filters, dialog cards, and pagination styles.
    ========================================================== */
 
-/* the two icon buttons at the end of a row sit close together */
+/* ----------------------------------------------------------
+   Wide Layout & Full Width Shell
+   ---------------------------------------------------------- */
+
+.st-key-sa_page {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+div[data-testid="stMainBlockContainer"],
+.main .block-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
+}
+
+/* ----------------------------------------------------------
+   Metric Cards Spacing & Typography
+   ---------------------------------------------------------- */
+
+/* Metric card styling inherited directly from base.css */
+
+
+
+/* ----------------------------------------------------------
+   Filter Bar Container
+   ---------------------------------------------------------- */
+
+.st-key-sa_patient_filters {
+  background: var(--sa-white);
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 1px 3px rgba(18, 40, 58, 0.03);
+}
+
+.st-key-sa_patient_filters [data-testid="stHorizontalBlock"] {
+  align-items: center !important;
+  gap: 0.75rem !important;
+}
+
+/* ----------------------------------------------------------
+   Table Shell & Container
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_table_patients"] {
+  background: var(--sa-white);
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px -2px rgba(18, 40, 58, 0.05), 0 2px 6px -1px rgba(18, 40, 58, 0.02);
+  overflow: hidden;
+  margin-top: 0.25rem;
+  margin-bottom: 1.25rem;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-bottom: 0.65rem;
+}
+
+/* ----------------------------------------------------------
+   Table Header
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_head_patients"] {
+  padding: 0.75rem 1.15rem;
+  background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-bottom: 1px solid #E2E8F0;
+}
+
+[class*="st-key-sa_head_patients"] .sa-th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Actions Header Centering */
+[class*="st-key-sa_head_patients"] [data-testid="column"]:last-child {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+[class*="st-key-sa_head_patients"] [data-testid="column"]:last-child .sa-th {
+  justify-content: center !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+/* ----------------------------------------------------------
+   Table Rows & Hover Elevation
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_row_patients_"] {
+  padding: 0.85rem 1.15rem;
+  border-bottom: 1px solid #F1F5F9;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+[class*="st-key-sa_row_patients_"]:last-child {
+  border-bottom: none;
+  padding-bottom: 1.15rem;
+}
+
+[class*="st-key-sa_row_patients_"]:hover {
+  background-color: #F8FAFC;
+  box-shadow: inset 3px 0 0 0 var(--sa-teal);
+}
+
 [class*="st-key-sa_row_patients_"] [data-testid="stHorizontalBlock"] {
-  gap: 0.35rem;
+  align-items: center !important;
+  gap: 0.45rem;
+}
+
+/* ----------------------------------------------------------
+   Patient ID / Code Badge
+   ---------------------------------------------------------- */
+
+.sa-code-cell {
+  display: flex;
+  align-items: center;
+}
+
+.sa-code-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--sa-teal-dark);
+  background: var(--sa-teal-soft);
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid rgba(15, 124, 136, 0.2);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------
+   Patient Name & Avatar Cell
+   ---------------------------------------------------------- */
+
+.sa-patient-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.sa-patient-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #E8F4F6 0%, #D8EDF2 100%);
+  color: #0B626C;
+  border: 1px solid rgba(15, 124, 136, 0.2);
+  box-shadow: 0 1px 3px rgba(15, 124, 136, 0.08);
+  user-select: none;
+}
+
+.sa-patient-avatar-male {
+  background: linear-gradient(135deg, #E8F1FB 0%, #D2E4F8 100%);
+  color: #2A5FA8;
+  border-color: rgba(42, 95, 168, 0.25);
+}
+
+.sa-patient-avatar-female {
+  background: linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%);
+  color: #9D174D;
+  border-color: rgba(157, 23, 77, 0.25);
+}
+
+.sa-patient-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.15rem 0;
+}
+
+.sa-patient-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sa-patient-sub {
+  font-size: 0.75rem;
+  color: var(--sa-slate);
+  margin-top: 0.2rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ----------------------------------------------------------
+   Date of Birth & Demographics Cells
+   ---------------------------------------------------------- */
+
+.sa-dob-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-dob-date {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+  white-space: nowrap;
+}
+
+.sa-dob-sub {
+  font-size: 0.74rem;
+  color: var(--sa-slate);
+  margin-top: 0.1rem;
+}
+
+.sa-sex-cell,
+.sa-status-cell {
+  display: flex;
+  align-items: center;
+}
+
+/* ----------------------------------------------------------
+   Contact & Hospital Cells
+   ---------------------------------------------------------- */
+
+.sa-contact-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-contact-main {
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--sa-ink);
+  white-space: nowrap;
+}
+
+.sa-contact-emg {
+  font-size: 0.73rem;
+  color: var(--sa-slate);
+  margin-top: 0.1rem;
+  white-space: nowrap;
+}
+
+.sa-hospital-cell {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #334155;
+  line-height: 1.3;
+}
+
+/* ----------------------------------------------------------
+   Row Action Buttons (View, Edit, Delete)
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_row_patients_"] [data-testid="column"]:last-child {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+[class*="st-key-sa_row_patients_"] [data-testid="column"]:last-child [data-testid="stHorizontalBlock"] {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+  width: 100% !important;
+}
+
+[class*="st-key-sa_row_patients_"] [data-testid="column"]:last-child [data-testid="column"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  min-width: 34px !important;
 }
 
 [class*="st-key-sa_row_patients_"] [data-testid^="stBaseButton"] {
-  width: 100%;
+  width: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto !important;
+  background: var(--sa-white) !important;
+  border: 1px solid #DDE7EC !important;
+  box-shadow: 0 1px 2px rgba(14, 34, 50, 0.04) !important;
+  transition: all 0.15s ease-in-out !important;
 }
 
-/* the patient form is wide: give the suffix box a little less room */
+[class*="st-key-sa_row_patients_"] [data-testid^="stBaseButton"] [data-testid="stIconMaterial"] {
+  font-size: 1.15rem !important;
+  line-height: 1 !important;
+  color: var(--sa-slate) !important;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+[class*="st-key-sa_row_patients_"] [data-testid^="stBaseButton"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(14, 34, 50, 0.08) !important;
+}
+
+[class*="st-key-sa_row_patients_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] {
+  transform: scale(1.1);
+}
+
+/* View button hover (teal) */
+[class*="st-key-view_"] [data-testid^="stBaseButton"]:hover {
+  background: var(--sa-teal-soft) !important;
+  border-color: var(--sa-teal) !important;
+}
+
+[class*="st-key-view_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] {
+  color: var(--sa-teal) !important;
+}
+
+/* Edit button hover (blue) */
+[class*="st-key-edit_"] [data-testid^="stBaseButton"]:hover {
+  background: var(--sa-blue-soft) !important;
+  border-color: var(--sa-blue) !important;
+}
+
+[class*="st-key-edit_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] {
+  color: var(--sa-blue) !important;
+}
+
+/* Delete button hover (red) */
+[class*="st-key-delete_"] [data-testid^="stBaseButton"]:hover {
+  background: var(--sa-red-soft) !important;
+  border-color: var(--sa-red) !important;
+}
+
+[class*="st-key-delete_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] {
+  color: var(--sa-red) !important;
+}
+
+/* ----------------------------------------------------------
+   Table Toolbar & Badges
+   ---------------------------------------------------------- */
+
+.sa-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.25rem 0.6rem;
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+}
+
+.sa-table-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--sa-white);
+  border: 1px solid #E2E8F0;
+  border-radius: 9999px;
+  font-weight: 600;
+  color: var(--sa-ink);
+  font-size: 0.78rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+/* ----------------------------------------------------------
+   Pagination Bar
+   ---------------------------------------------------------- */
+
+.sa-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.sa-pagination-info {
+  font-size: 0.84rem;
+  color: var(--sa-slate);
+  font-weight: 500;
+  text-align: center;
+}
+
+.sa-pagination-info b {
+  color: var(--sa-ink);
+}
+
+/* ----------------------------------------------------------
+   View Patient Dialog: Hero Header & Info Cards
+   ---------------------------------------------------------- */
+
+.sa-dialog-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  padding: 1.1rem 1.25rem;
+  background: linear-gradient(135deg, #F8FAFC 0%, #EBF4F6 100%);
+  border: 1px solid #DDE8EB;
+  border-radius: 14px;
+  margin-bottom: 1.1rem;
+}
+
+.sa-dialog-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #0F7C88 0%, #0B626C 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(15, 124, 136, 0.25);
+  user-select: none;
+}
+
+.sa-dialog-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-grow: 1;
+}
+
+.sa-dialog-name {
+  font-family: var(--sa-font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  line-height: 1.2;
+}
+
+.sa-dialog-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+}
+
+.sa-view-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  margin-bottom: 0.85rem;
+}
+
+.sa-view-card-header {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sa-teal);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #F1F5F9;
+  margin-bottom: 0.5rem;
+}
+
+.sa-view-card-header .material-symbols-rounded {
+  font-size: 1.05rem;
+}
+
+.sa-view-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid #F8FAFC;
+  gap: 0.75rem;
+}
+
+.sa-view-row:last-child {
+  border-bottom: none;
+}
+
+.sa-view-label {
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+  flex-shrink: 0;
+}
+
+.sa-view-value {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+  text-align: right;
+  word-break: break-word;
+}
+
+/* ----------------------------------------------------------
+   Patient Form: Structured Sections & DOB Box
+   ---------------------------------------------------------- */
+
 .st-key-sa_dialog [data-testid="stForm"] [data-testid="stHorizontalBlock"] {
   align-items: flex-start;
+}
+
+.sa-form-section-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--sa-teal-dark);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #E2E8F0;
+  margin-top: 0.85rem;
+  margin-bottom: 0.65rem;
+}
+
+.sa-form-section-title .material-symbols-rounded {
+  font-size: 1.05rem;
+}
+
+.sa-form-dob-box {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 0.75rem 0.95rem 0.4rem;
+  margin: 0.25rem 0 0.75rem;
+}
+
+.sa-form-dob-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.sa-form-dob-hint {
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--sa-slate);
+  margin-left: auto;
 }
