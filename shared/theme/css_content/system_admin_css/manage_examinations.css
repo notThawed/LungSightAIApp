@@ -1,21 +1,681 @@
 /* ==========================================================
    SYSTEM ADMIN - MANAGE EXAMINATIONS
    shared/theme/css_content/system_admin_css/manage_examinations.css
-   Only what is unique to this page. The tables, pills, buttons
-   and dialogs come from base.css.
+   Tables, consultation history, examination forms, signature
+   canvas, vitals cards, action buttons, hero badges, and dialog styling.
    ========================================================== */
 
-/* the examination history list inside the dialog is a small table */
-.st-key-sa_table_history {
-  margin-bottom: 0.4rem;
+/* ----------------------------------------------------------
+   Wide Layout & Shell
+   ---------------------------------------------------------- */
+
+.st-key-sa_page {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
 }
 
-/* the "Examine" button in each row is a quiet outlined button */
-[class*="st-key-sa_row_exam_patients_"] [data-testid^="stBaseButton"] {
-  padding: 0.25rem 0.7rem;
+div[data-testid="stMainBlockContainer"],
+.main .block-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
 }
 
-/* pill under the details rows: give it some room */
+/* ----------------------------------------------------------
+   Main Examinations Patient Table
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_table_exam_patients"] {
+  background: var(--sa-white);
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px -2px rgba(18, 40, 58, 0.05), 0 2px 6px -1px rgba(18, 40, 58, 0.02);
+  overflow: hidden;
+  margin-top: 0.35rem;
+  margin-bottom: 1.25rem;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-bottom: 0.65rem;
+}
+
+/* Table Header */
+[class*="st-key-sa_head_exam_patients"] {
+  padding: 0.75rem 1.15rem;
+  background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-bottom: 1px solid #E2E8F0;
+}
+
+[class*="st-key-sa_head_exam_patients"] .sa-th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Table Rows */
+[class*="st-key-sa_row_exam_patients_"] {
+  padding: 0.85rem 1.15rem;
+  border-bottom: 1px solid #F1F5F9;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+[class*="st-key-sa_row_exam_patients_"]:last-child {
+  border-bottom: none;
+  padding-bottom: 1.15rem;
+}
+
+[class*="st-key-sa_row_exam_patients_"]:hover {
+  background-color: #F8FAFC;
+  box-shadow: inset 3px 0 0 0 var(--sa-teal);
+}
+
+[class*="st-key-sa_row_exam_patients_"] [data-testid="stHorizontalBlock"] {
+  align-items: center !important;
+  gap: 0.5rem;
+}
+
+/* ----------------------------------------------------------
+   Patient ID / Code Badge
+   ---------------------------------------------------------- */
+
+.sa-code-cell {
+  display: flex;
+  align-items: center;
+}
+
+.sa-code-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--sa-teal-dark);
+  background: var(--sa-teal-soft);
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid rgba(15, 124, 136, 0.2);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------
+   Patient Name & Avatar Cell
+   ---------------------------------------------------------- */
+
+.sa-patient-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.sa-patient-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #E8F4F6 0%, #D8EDF2 100%);
+  color: #0B626C;
+  border: 1px solid rgba(15, 124, 136, 0.2);
+  box-shadow: 0 1px 3px rgba(15, 124, 136, 0.08);
+  user-select: none;
+}
+
+.sa-patient-avatar-male {
+  background: linear-gradient(135deg, #E8F1FB 0%, #D2E4F8 100%);
+  color: #2A5FA8;
+  border-color: rgba(42, 95, 168, 0.25);
+}
+
+.sa-patient-avatar-female {
+  background: linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%);
+  color: #9D174D;
+  border-color: rgba(157, 23, 77, 0.25);
+}
+
+.sa-patient-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.15rem 0;
+}
+
+.sa-patient-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sa-patient-sub {
+  font-size: 0.75rem;
+  color: var(--sa-slate);
+  margin-top: 0.2rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ----------------------------------------------------------
+   Date of Birth & Demographics Cells
+   ---------------------------------------------------------- */
+
+.sa-dob-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-dob-date {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+  white-space: nowrap;
+}
+
+.sa-dob-sub {
+  font-size: 0.74rem;
+  color: var(--sa-slate);
+  margin-top: 0.1rem;
+}
+
+.sa-contact-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-contact-main {
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--sa-ink);
+  white-space: nowrap;
+}
+
+.sa-contact-emg {
+  font-size: 0.73rem;
+  color: var(--sa-slate);
+  margin-top: 0.1rem;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------
+   "Examine" Action Button
+   ---------------------------------------------------------- */
+
+[class*="st-key-examine_"] [data-testid^="stBaseButton"] {
+  background: var(--sa-teal-soft) !important;
+  border: 1px solid rgba(15, 124, 136, 0.3) !important;
+  color: var(--sa-teal-dark) !important;
+  font-weight: 600 !important;
+  font-size: 0.84rem !important;
+  border-radius: 8px !important;
+  padding: 0.35rem 0.95rem !important;
+  min-height: 2.15rem !important;
+  height: 2.15rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+  transition: all 0.18s ease-in-out !important;
+  box-shadow: 0 1px 2px rgba(15, 124, 136, 0.06) !important;
+}
+
+[class*="st-key-examine_"] [data-testid^="stBaseButton"] [data-testid="stIconMaterial"] {
+  color: var(--sa-teal) !important;
+  font-size: 1.15rem !important;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+[class*="st-key-examine_"] [data-testid^="stBaseButton"]:hover {
+  background: var(--sa-teal) !important;
+  border-color: var(--sa-teal) !important;
+  color: #FFFFFF !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 124, 136, 0.22) !important;
+}
+
+[class*="st-key-examine_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"],
+[class*="st-key-examine_"] [data-testid^="stBaseButton"]:hover p {
+  color: #FFFFFF !important;
+}
+
+[class*="st-key-examine_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] {
+  transform: scale(1.08);
+}
+
+/* ----------------------------------------------------------
+   Table Toolbar & Pagination
+   ---------------------------------------------------------- */
+
+.sa-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.25rem 0.6rem;
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+}
+
+.sa-table-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--sa-white);
+  border: 1px solid #E2E8F0;
+  border-radius: 9999px;
+  font-weight: 600;
+  color: var(--sa-ink);
+  font-size: 0.78rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.sa-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.sa-pagination-info {
+  font-size: 0.84rem;
+  color: var(--sa-slate);
+  font-weight: 500;
+  text-align: center;
+}
+
+.sa-pagination-info b {
+  color: var(--sa-ink);
+}
+
+/* ----------------------------------------------------------
+   Hero Header in Dialogs
+   ---------------------------------------------------------- */
+
+.sa-dialog-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  padding: 1.1rem 1.25rem;
+  background: linear-gradient(135deg, #F8FAFC 0%, #EBF4F6 100%);
+  border: 1px solid #DDE8EB;
+  border-radius: 14px;
+  margin-bottom: 1.1rem;
+}
+
+.sa-dialog-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #0F7C88 0%, #0B626C 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(15, 124, 136, 0.25);
+  user-select: none;
+}
+
+.sa-dialog-avatar-female {
+  background: linear-gradient(135deg, #9D174D 0%, #831843 100%);
+  box-shadow: 0 4px 12px rgba(157, 23, 77, 0.25);
+}
+
+.sa-dialog-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-grow: 1;
+}
+
+.sa-dialog-name {
+  font-family: var(--sa-font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  line-height: 1.2;
+}
+
+.sa-dialog-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+}
+
+.sa-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #475569;
+  background: #FFFFFF;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+}
+
+/* ----------------------------------------------------------
+   Clinical Vitals Grid & Cards
+   ---------------------------------------------------------- */
+
+.sa-vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.sa-vital-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.sa-vital-card:hover {
+  border-color: var(--sa-teal);
+  transform: translateY(-1px);
+}
+
+.sa-vital-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748B;
+}
+
+.sa-vital-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  line-height: 1.2;
+}
+
+.sa-vital-unit {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--sa-slate);
+  margin-left: 0.2rem;
+}
+
+/* ----------------------------------------------------------
+   Structured View Cards in Dialogs
+   ---------------------------------------------------------- */
+
+.sa-view-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 0.95rem 1.15rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  margin-bottom: 0.85rem;
+}
+
+.sa-view-card-header {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sa-teal);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid #F1F5F9;
+  margin-bottom: 0.45rem;
+}
+
+.sa-view-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #F8FAFC;
+  gap: 0.75rem;
+}
+
+.sa-view-row:last-child {
+  border-bottom: none;
+}
+
+.sa-view-label {
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+  flex-shrink: 0;
+}
+
+.sa-view-value {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+  text-align: right;
+  word-break: break-word;
+}
+
+/* ----------------------------------------------------------
+   Dialog Sub-Tables (Examination & Medical History)
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_table_exam_history"],
+[class*="st-key-sa_table_medical_history"] {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 0.35rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+[class*="st-key-sa_head_exam_history"],
+[class*="st-key-sa_head_medical_history"] {
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 0.55rem 0.85rem;
+}
+
+[class*="st-key-sa_head_exam_history"] .sa-th,
+[class*="st-key-sa_head_medical_history"] .sa-th {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748B;
+}
+
+[class*="st-key-sa_row_exam_history_"],
+[class*="st-key-sa_row_medical_history_"] {
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid #F1F5F9;
+  transition: background-color 0.15s ease;
+}
+
+[class*="st-key-sa_row_exam_history_"]:last-child,
+[class*="st-key-sa_row_medical_history_"]:last-child {
+  border-bottom: none;
+}
+
+[class*="st-key-sa_row_exam_history_"]:hover,
+[class*="st-key-sa_row_medical_history_"]:hover {
+  background-color: #F8FAFC;
+}
+
+/* Sub-table view action buttons */
+[class*="st-key-history_view_"] [data-testid^="stBaseButton"],
+[class*="st-key-history_medical_"] [data-testid^="stBaseButton"],
+[class*="st-key-form_view_exam_"] [data-testid^="stBaseButton"],
+[class*="st-key-form_view_medical_"] [data-testid^="stBaseButton"] {
+  min-height: 1.95rem !important;
+  height: 1.95rem !important;
+  font-size: 0.8rem !important;
+  padding: 0 0.75rem !important;
+  border-radius: 6px !important;
+  background: #FFFFFF !important;
+  border: 1px solid #DDE7EC !important;
+  color: var(--sa-ink) !important;
+  transition: all 0.15s ease-in-out !important;
+}
+
+[class*="st-key-history_view_"] [data-testid^="stBaseButton"]:hover,
+[class*="st-key-history_medical_"] [data-testid^="stBaseButton"]:hover,
+[class*="st-key-form_view_exam_"] [data-testid^="stBaseButton"]:hover,
+[class*="st-key-form_view_medical_"] [data-testid^="stBaseButton"]:hover {
+  background: var(--sa-teal-soft) !important;
+  border-color: var(--sa-teal) !important;
+  color: var(--sa-teal-dark) !important;
+  box-shadow: 0 2px 5px rgba(15, 124, 136, 0.1) !important;
+}
+
+/* ----------------------------------------------------------
+   Examination Form: Signature Canvas
+   ---------------------------------------------------------- */
+
+[class*="st-key-signature_canvas_"] {
+  border: 1.5px dashed #94A3B8 !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  background: #FFFFFF !important;
+  margin: 0.5rem 0 0.85rem !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+[class*="st-key-signature_canvas_"]:hover {
+  border-color: var(--sa-teal) !important;
+  box-shadow: inset 0 1px 3px rgba(15, 124, 136, 0.06), 0 0 0 3px rgba(15, 124, 136, 0.08) !important;
+}
+
+/* ----------------------------------------------------------
+   Dialog Tabs Styling
+   ---------------------------------------------------------- */
+
+.st-key-sa_dialog [data-baseweb="tab-list"] {
+  gap: 0.5rem !important;
+  border-bottom: 2px solid #E2E8F0 !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 1rem !important;
+}
+
+.st-key-sa_dialog [data-baseweb="tab"] {
+  font-size: 0.86rem !important;
+  font-weight: 600 !important;
+  color: var(--sa-slate) !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+
+.st-key-sa_dialog [aria-selected="true"] {
+  color: var(--sa-teal) !important;
+  border-bottom: 2px solid var(--sa-teal) !important;
+}
+
+/* ----------------------------------------------------------
+   Dialog Structured Cards & Section Titles
+   ---------------------------------------------------------- */
+
+.st-key-sa_dialog .sa-section-title {
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  color: var(--sa-teal-dark) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding-bottom: 0.4rem !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.st-key-sa_dialog .sa-rows {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 0.75rem 1.1rem;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.st-key-sa_dialog .sa-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid #F8FAFC;
+  gap: 0.75rem;
+}
+
+.st-key-sa_dialog .sa-row:last-child {
+  border-bottom: none;
+}
+
+.st-key-sa_dialog .sa-row span {
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+}
+
+.st-key-sa_dialog .sa-row b {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+  text-align: right;
+}
+
+/* Pill under details */
 .st-key-sa_dialog .sa-pill {
   margin-bottom: 0.2rem;
+}
+
+/* ----------------------------------------------------------
+   Vitals & Input Controls inside Dialogs
+   ---------------------------------------------------------- */
+
+.st-key-sa_dialog [data-testid="stNumberInput"] input,
+.st-key-sa_dialog [data-testid="stTextInput"] input,
+.st-key-sa_dialog [data-testid="stSelectbox"] [data-baseweb="select"] {
+  border-radius: 8px !important;
+  border-color: #DDE7EC !important;
+}
+
+.st-key-sa_dialog [data-testid="stNumberInput"] input:focus,
+.st-key-sa_dialog [data-testid="stTextInput"] input:focus {
+  border-color: var(--sa-teal) !important;
+  box-shadow: 0 0 0 2px rgba(15, 124, 136, 0.15) !important;
+}
+
+/* AI Consent notice alert box */
+.st-key-sa_dialog .stAlert {
+  border-radius: 10px !important;
+  border: 1px solid #BAE6FD !important;
+  background: #F0F9FF !important;
+  color: #0369A1 !important;
+  font-size: 0.84rem !important;
 }
