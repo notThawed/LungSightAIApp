@@ -1,65 +1,433 @@
 /* ==========================================================
    SYSTEM ADMIN - MANAGE SUBSCRIPTIONS
    shared/theme/css_content/system_admin_css/manage_subscriptions.css
-   Plan cards. Cards, pills, limits grid, buttons and dialogs
-   come from base.css.
+   Modern, medical-grade subscription plan cards, quotas grid,
+   live preview panel, search/filter toolbar, and dialog styles.
    ========================================================== */
 
+/* ----------------------------------------------------------
+   Top Overview & Metrics Bar
+   ---------------------------------------------------------- */
+.st-key-sa_page .sa-subs-metrics {
+  margin-bottom: 1.5rem;
+}
+
+/* ----------------------------------------------------------
+   Toolbar & Search Bar
+   ---------------------------------------------------------- */
+.st-key-sa_subs_toolbar_container {
+  background: var(--sa-white, #FFFFFF);
+  border: 1px solid #CBD5E1;
+  border-radius: 14px;
+  padding: 0.75rem 1rem 0.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 4px rgba(18, 40, 58, 0.04);
+}
+
+.st-key-sa_page .sa-subs-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--sa-slate, #475569);
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 9999px;
+  padding: 0.3rem 0.85rem;
+  font-weight: 500;
+}
+
+.st-key-sa_page .sa-subs-count-badge b {
+  color: var(--sa-ink, #0F172A);
+  font-weight: 700;
+}
+
+/* ----------------------------------------------------------
+   Plan Cards (Container key: sa_card_plan_*)
+   ---------------------------------------------------------- */
 [class*="st-key-sa_card_plan_"] {
-  gap: 0.5rem;
-  padding: 1.1rem 1.25rem 1.15rem;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  background: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 18px !important;
+  padding: 1.4rem 1.45rem 1.25rem !important;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 16px -4px rgba(18, 40, 58, 0.07) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+  position: relative;
+  overflow: hidden;
 }
 
 [class*="st-key-sa_card_plan_"]:hover {
-  border-color: #BCD3D8;
-  box-shadow: 0 10px 24px -16px rgba(18, 40, 58, 0.35);
+  transform: translateY(-3px);
+  border-color: #94A3B8 !important;
+  box-shadow: 0 14px 30px -6px rgba(18, 40, 58, 0.14) !important;
 }
 
-[class*="st-key-sa_card_plan_"] .sa-plan-head {
+/* Top Accent Stripe */
+.sa-plan-accent-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  width: 100%;
+}
+
+.sa-plan-accent-bar.sa-tier-basic {
+  background: linear-gradient(90deg, #0F7C88, #2DD4BF);
+}
+
+.sa-plan-accent-bar.sa-tier-pro {
+  background: linear-gradient(90deg, #2563EB, #60A5FA);
+}
+
+.sa-plan-accent-bar.sa-tier-enterprise {
+  background: linear-gradient(90deg, #D97706, #FBBF24);
+}
+
+.sa-plan-accent-bar.sa-tier-custom {
+  background: linear-gradient(90deg, #8B5CF6, #C084FC);
+}
+
+.sa-plan-accent-bar.sa-tier-inactive {
+  background: #94A3B8;
+}
+
+/* Plan Card Header */
+.sa-plan-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+  margin-bottom: 0.85rem;
 }
 
-[class*="st-key-sa_card_plan_"] .sa-plan-name {
-  margin: 0;
-  font-family: var(--sa-font-display);
-  font-size: 1.35rem;
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--sa-ink);
+.sa-plan-head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-[class*="st-key-sa_card_plan_"] .sa-plan-desc {
-  min-height: 2.6rem;             /* keeps cards in a row the same height */
-  margin: 0.15rem 0 0;
-  font-size: 0.85rem;
-  color: var(--sa-slate);
-}
-
-[class*="st-key-sa_card_plan_"] .sa-plan-price {
-  margin: 0.6rem 0 0;
-  font-size: 1.9rem;
+/* Tier Badge Pill */
+.sa-tier-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
   font-weight: 700;
-  line-height: 1.1;
-  color: var(--sa-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  line-height: 1.2;
 }
 
-[class*="st-key-sa_card_plan_"] .sa-plan-price small {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--sa-slate);
+.sa-tier-pill.sa-tier-basic {
+  background: #E6F7F8;
+  color: #0F7C88;
+  border: 1px solid #BCE5E8;
 }
 
-[class*="st-key-sa_card_plan_"] .sa-plan-yearly {
-  margin: 0.1rem 0 0.7rem;
+.sa-tier-pill.sa-tier-pro {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+
+.sa-tier-pill.sa-tier-enterprise {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.sa-tier-pill.sa-tier-custom {
+  background: #F3E8FF;
+  color: #7E22CE;
+  border: 1px solid #E9D5FF;
+}
+
+.sa-tier-pill.sa-tier-inactive {
+  background: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #CBD5E1;
+}
+
+/* Subscribed Hospitals Counter Tag */
+.sa-plan-sub-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  line-height: 1.2;
+}
+
+.sa-plan-sub-tag.active {
+  background: #F0FDF4;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+}
+
+.sa-plan-sub-tag.empty {
+  background: #F8FAFC;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+/* Plan Title & Description */
+.sa-plan-name {
+  margin: 0 0 0.25rem 0;
+  font-family: var(--sa-font-display, "Space Grotesk", sans-serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--sa-ink, #0F172A);
+  letter-spacing: -0.01em;
+}
+
+.sa-plan-desc {
+  min-height: 2.7rem;
+  margin: 0 0 1rem 0;
   font-size: 0.85rem;
-  color: var(--sa-slate);
+  color: var(--sa-slate, #475569);
+  line-height: 1.45;
 }
 
-/* the "add plan" form card */
+/* Pricing Box */
+.sa-plan-pricing-box {
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.sa-plan-price-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.sa-plan-currency {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0F7C88;
+}
+
+.sa-plan-amount {
+  font-family: var(--sa-font-display, "Space Grotesk", sans-serif);
+  font-size: 1.95rem;
+  font-weight: 800;
+  color: var(--sa-ink, #0F172A);
+  line-height: 1;
+}
+
+.sa-plan-period {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748B;
+  margin-left: 0.15rem;
+}
+
+.sa-plan-yearly-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed #CBD5E1;
+  font-size: 0.8rem;
+  color: var(--sa-slate, #475569);
+}
+
+.sa-plan-badge-savings {
+  display: inline-flex;
+  align-items: center;
+  background: #DCFCE7;
+  color: #15803D;
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid #86EFAC;
+}
+
+.sa-plan-badge-annual {
+  display: inline-flex;
+  align-items: center;
+  background: #EFF6FF;
+  color: #2563EB;
+  font-weight: 600;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid #BFDBFE;
+}
+
+/* Quotas Section */
+.sa-plan-section-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748B;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.55rem;
+}
+
+.sa-limits-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.sa-limit-item {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 0.65rem 0.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.sa-limit-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.sa-limit-icon {
+  color: #0F7C88;
+  display: inline-flex;
+  align-items: center;
+}
+
+.sa-limit-val {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--sa-ink, #0F172A);
+  line-height: 1.1;
+}
+
+.sa-limit-val.unlimited {
+  color: #0F7C88;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.sa-limit-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+}
+
+/* Action Buttons inside Plan Card */
+[class*="st-key-sa_card_plan_"] [data-testid="stBaseButton-secondary"] {
+  border-radius: 9px;
+  font-weight: 600;
+}
+
+[class*="st-key-sa_card_plan_"] [data-testid="stBaseButton-primary"] {
+  border-radius: 9px;
+  font-weight: 600;
+}
+
+/* Action Button Hovers */
+[class*="st-key-deactivate_plan_"] [data-testid^="stBaseButton"]:hover {
+  border-color: #FDE68A !important;
+  background: #FFFBEB !important;
+  color: #B45309 !important;
+}
+
+[class*="st-key-delete_inactive_"] [data-testid^="stBaseButton"]:hover {
+  border-color: #FCA5A5 !important;
+  background: #FEF2F2 !important;
+  color: #DC2626 !important;
+}
+
+/* ----------------------------------------------------------
+   Add Plan: Form & Live Preview Shell
+   ---------------------------------------------------------- */
 .st-key-sa_card_add_plan {
-  max-width: 760px;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 16px;
+  padding: 1.5rem 1.6rem;
+  box-shadow: 0 2px 8px rgba(18, 40, 58, 0.04);
+}
+
+.sa-preview-shell {
+  background: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
+  border: 2px dashed #CBD5E1;
+  border-radius: 18px;
+  padding: 1.4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.sa-preview-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0F7C88;
+  background: #E6F7F8;
+  border: 1px solid #BCE5E8;
+  border-radius: 9999px;
+  padding: 0.25rem 0.65rem;
+  margin-top: 0.2rem;
+  margin-bottom: 0.85rem;
+}
+
+/* ----------------------------------------------------------
+   Dialog Enhancements
+   ---------------------------------------------------------- */
+.sa-dialog-plan-summary {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  margin: 0.85rem 0;
+}
+
+.sa-dialog-quota-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid #E2E8F0;
+  font-size: 0.85rem;
+}
+
+.sa-dialog-quota-row:last-child {
+  border-bottom: none;
+}
+
+.sa-dialog-quota-row span {
+  color: #64748B;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sa-dialog-quota-row b {
+  color: #0F172A;
+  font-weight: 700;
 }
