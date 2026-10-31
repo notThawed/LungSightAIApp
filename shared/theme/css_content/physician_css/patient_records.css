@@ -1,457 +1,391 @@
 /* =========================================================
    LUNGSIGHT — PHYSICIAN
-   Patient Records + Analysis Report
+   Patient Records & Clinical Diagnostic Reports
+   shared/theme/css_content/physician_css/patient_records.css
+   Modern, medical-grade patient records and diagnostic report:
+   widescreen canvas, patient list table, dossier hero cards,
+   dark radiographic frames, and clinical AI summary panels.
    ========================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
-
 /* ----------------------------------------------------------
-   Tokens
+   MATERIAL SYMBOLS
    ---------------------------------------------------------- */
 
-:root {
-    --pr-film:         #F2F6F7;
-    --pr-white:        #FFFFFF;
-    --pr-ink:          #12283A;
-    --pr-slate:        #5A6F7F;
-    --pr-mist:         #DDE8EB;
-
-    --pr-teal:         #0F7C88;
-    --pr-teal-soft:    #E8F4F6;
-
-    --pr-green:        #2E8B6A;
-    --pr-green-soft:   #EAF6F1;
-
-    --pr-amber:        #B45309;
-    --pr-amber-soft:   #FEF3C7;
-
-    --pr-red:          #B91C1C;
-    --pr-red-soft:     #FEE2E2;
-
-    --pr-font-display: 'Fraunces', Georgia, serif;
-    --pr-font-body:    'Manrope', system-ui, -apple-system, sans-serif;
-}
-
-.material-symbols-rounded {
-    font-family: 'Material Symbols Rounded';
+.material-symbols-rounded,
+.material-symbols-outlined {
+    font-family: 'Material Symbols Rounded' !important;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 19px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    direction: ltr;
     font-feature-settings: 'liga';
     -webkit-font-smoothing: antialiased;
     vertical-align: middle;
 }
 
+/* ----------------------------------------------------------
+   DESIGN TOKENS
+   ---------------------------------------------------------- */
+
+:root {
+    --pr-teal:          #0F7C88;
+    --pr-teal-dark:     #0B626C;
+    --pr-teal-soft:     #E6F7F8;
+    --pr-teal-glow:     rgba(15, 124, 136, 0.22);
+
+    --pr-blue:          #2563EB;
+    --pr-blue-soft:     #EFF6FF;
+
+    --pr-cyan:          #38BDF8;
+
+    --pr-green:         #16A34A;
+    --pr-green-soft:    #F0FDF4;
+
+    --pr-amber:         #D97706;
+    --pr-amber-soft:    #FFFDF5;
+
+    --pr-red:           #DC2626;
+    --pr-red-soft:      #FEF2F2;
+
+    --pr-ink:           #0F172A;
+    --pr-slate:         #475569;
+    --pr-muted:         #64748B;
+
+    --pr-border:        #CBD5E1;
+    --pr-border-light:  #E2E8F0;
+
+    --pr-white:         #FFFFFF;
+    --pr-film:          #F8FAFC;
+    --pr-surface:       #F1F5F9;
+
+    --pr-dark-viewport: #0A141D;
+    --pr-dark-frame:    #11202D;
+
+    --pr-radius-sm:     8px;
+    --pr-radius-md:     14px;
+    --pr-radius-lg:     18px;
+
+    --pr-font-display:  'Space Grotesk', 'Fraunces', Georgia, serif;
+    --pr-font-body:     'Manrope', system-ui, -apple-system, sans-serif;
+
+    --pr-shadow-xs:     0 1px 3px rgba(18, 40, 58, 0.04);
+    --pr-shadow-sm:     0 4px 16px -2px rgba(18, 40, 58, 0.06);
+    --pr-shadow-md:     0 10px 28px -4px rgba(18, 40, 58, 0.10);
+    --pr-shadow-lg:     0 18px 38px -8px rgba(18, 40, 58, 0.16);
+}
 
 /* ----------------------------------------------------------
-   Page — narrowed
+   WIDESCREEN CANVAS
    ---------------------------------------------------------- */
+
+div[data-testid="stMainBlockContainer"],
+.main .block-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    padding-top: 1.25rem !important;
+    padding-bottom: 3.5rem !important;
+}
 
 .st-key-physician_patient_records_page {
     font-family: var(--pr-font-body);
     color: var(--pr-ink);
-    max-width: 980px;
-    margin: 0 auto;
-    padding: 0 1rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 0 2.5rem 0;
+    animation: prFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@keyframes prFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
 /* ----------------------------------------------------------
-   List — header row
+   PATIENT LIST — TABLE HEADER & ROWS
    ---------------------------------------------------------- */
 
 .st-key-pr_table_header {
-    padding: 0.7rem 1rem;
-    background: var(--pr-film);
-    border: 1px solid var(--pr-mist);
-    border-radius: 10px;
-    margin-bottom: 0.5rem;
+    padding: 0.8rem 1.4rem;
+    background: var(--pr-surface);
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-sm);
+    margin-bottom: 0.65rem;
 }
 
 .st-key-pr_table_header .pr-header-cell {
-    font-size: 0.7rem;
-    font-weight: 700;
+    font-size: 0.74rem;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--pr-slate);
+    letter-spacing: 0.06em;
+    color: var(--pr-muted);
 }
 
-
-/* ----------------------------------------------------------
-   List — patient row
-   ---------------------------------------------------------- */
-
 [class*="st-key-pr_row_"] {
-    padding: 0.9rem 1rem;
-    border: 1px solid var(--pr-mist);
-    border-radius: 10px;
-    background: var(--pr-white);
-    margin-bottom: 0.4rem;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+    padding: 1.1rem 1.4rem;
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-md);
+    background: #FFFFFF;
+    margin-bottom: 0.65rem;
+    box-shadow: var(--pr-shadow-xs);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.22s ease,
+                box-shadow 0.22s ease;
+    overflow: hidden;
+}
+
+[class*="st-key-pr_row_"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--pr-teal) 0%, #38BDF8 100%);
+    border-radius: 4px 0 0 4px;
 }
 
 [class*="st-key-pr_row_"]:hover {
-    border-color: var(--pr-teal);
-    box-shadow: 0 4px 12px rgba(15, 124, 136, 0.08);
+    transform: translateY(-2px);
+    border-color: #94A3B8;
+    box-shadow: var(--pr-shadow-md);
 }
 
 [class*="st-key-pr_row_"] .pr-cell {
-    font-size: 0.84rem;
+    font-size: 0.88rem;
     color: var(--pr-slate);
-    padding-top: 0.3rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
 }
 
 [class*="st-key-pr_row_"] .pr-cell-id {
-    font-family: ui-monospace, monospace;
-    font-size: 0.76rem;
-    color: var(--pr-ink);
-    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.82rem;
+    color: var(--pr-teal-dark);
+    font-weight: 750;
+    background: var(--pr-teal-soft);
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(15, 124, 136, 0.2);
+    width: fit-content;
 }
 
 [class*="st-key-pr_row_"] .pr-cell-name {
-    font-weight: 700;
+    font-family: var(--pr-font-display);
+    font-weight: 800;
     color: var(--pr-ink);
-    font-size: 0.88rem;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
 }
 
-
 /* ----------------------------------------------------------
-   Report header
+   PATIENT REPORT & OVERVIEW HEADERS
    ---------------------------------------------------------- */
 
 .pr-report-header {
-    margin-bottom: 1.25rem;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-md);
+    padding: 1.4rem 1.6rem;
+    margin: 0.5rem 0 1.5rem;
+    box-shadow: var(--pr-shadow-xs);
+    position: relative;
+    overflow: hidden;
+}
+
+.pr-report-header::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--pr-teal) 0%, #20A3B2 45%, #2563EB 100%);
 }
 
 .pr-report-title {
     margin: 0;
     font-family: var(--pr-font-display);
-    font-size: 1.65rem;
-    font-weight: 600;
+    font-size: 1.75rem;
+    font-weight: 800;
     color: var(--pr-ink);
-    letter-spacing: -0.01em;
-}
-
-.pr-report-sub {
-    margin: 0.2rem 0 0;
-    font-size: 0.8rem;
-    color: var(--pr-slate);
-    font-family: ui-monospace, monospace;
-}
-
-
-/* ----------------------------------------------------------
-   Section label
-   ---------------------------------------------------------- */
-
-.pr-section-label {
-    margin: 1.5rem 0 0.75rem;
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--pr-slate);
-}
-
-
-/* ----------------------------------------------------------
-   Category cards (Level 1)
-   ---------------------------------------------------------- */
-
-[class*="st-key-pr_cat_"]:not([class*="pr_cat_view"]) {
-    padding: 1.35rem 1.15rem 0.85rem;
-    background: var(--pr-white);
-    border: 1px solid var(--pr-mist);
-    border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(18, 40, 58, 0.04);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    margin-bottom: 0.4rem;
-}
-
-[class*="st-key-pr_cat_"]:not([class*="pr_cat_view"]):hover {
-    border-color: var(--pr-teal);
-    box-shadow: 0 6px 18px rgba(15, 124, 136, 0.10);
-}
-
-.pr-cat-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 0.35rem;
-}
-
-.pr-cat-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 46px;
-    height: 46px;
-    border-radius: 12px;
-    background: var(--pr-teal-soft);
-    color: var(--pr-teal);
-    font-size: 22px;
-    line-height: 1;
-    margin-bottom: 0.4rem;
-}
-
-.pr-cat-title {
-    margin: 0;
-    font-family: var(--pr-font-display);
-    font-size: 0.98rem;
-    font-weight: 600;
-    color: var(--pr-ink);
+    letter-spacing: -0.02em;
     line-height: 1.2;
 }
 
-.pr-cat-count {
-    margin: 0 0 0.5rem;
-    font-size: 0.76rem;
+.pr-report-sub {
+    margin: 0.35rem 0 0;
+    font-size: 0.84rem;
     color: var(--pr-slate);
-}
-
-
-/* ----------------------------------------------------------
-   Exam list card (Level 2)
-   ---------------------------------------------------------- */
-
-[class*="st-key-pr_exam_card_"],
-[class*="st-key-pr_rec_card_"] {
-    padding: 1rem 1.15rem 0.75rem;
-    background: var(--pr-white);
-    border: 1px solid var(--pr-mist);
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(18, 40, 58, 0.03);
-    margin-bottom: 0.75rem;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-[class*="st-key-pr_exam_card_"]:hover,
-[class*="st-key-pr_rec_card_"]:hover {
-    border-color: var(--pr-teal);
-    box-shadow: 0 6px 16px rgba(15, 124, 136, 0.10);
-}
-
-.pr-exam-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 1rem;
-    margin-bottom: 0.55rem;
-    padding-bottom: 0.45rem;
-    border-bottom: 1px solid var(--pr-film);
-}
-
-.pr-exam-title {
-    margin: 0;
-    font-family: var(--pr-font-display);
-    font-size: 0.98rem;
     font-weight: 600;
-    color: var(--pr-ink);
-}
-
-.pr-exam-date {
-    font-size: 0.72rem;
-    color: var(--pr-slate);
-    font-family: ui-monospace, monospace;
-    white-space: nowrap;
-}
-
-.pr-exam-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 0.32rem 0;
-    font-size: 0.8rem;
-}
-
-.pr-exam-row span {
-    color: var(--pr-slate);
-    font-weight: 500;
-    flex-shrink: 0;
-}
-
-.pr-exam-row b {
-    color: var(--pr-ink);
-    font-weight: 600;
-    text-align: right;
-    word-break: break-word;
-}
-
-.pr-xray-available {
-    color: var(--pr-green) !important;
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 8px;
 }
-
-.pr-xray-missing {
-    color: var(--pr-amber) !important;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-}
-
-.pr-xray-icon {
-    font-size: 16px !important;
-    line-height: 1;
-}
-
 
 /* ----------------------------------------------------------
-   Left column — stacked cards
+   HERO & METRIC CARDS (pr-hero-card)
    ---------------------------------------------------------- */
-
-.st-key-pr_hero_left {
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-}
 
 .pr-hero-card {
-    padding: 1.1rem 1.25rem;
-    background: var(--pr-white);
-    border: 1px solid var(--pr-mist);
-    border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(18, 40, 58, 0.04);
-    margin-bottom: 0.85rem;
+    background: #FFFFFF;
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-md);
+    padding: 1.4rem 1.6rem 1.2rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--pr-shadow-sm);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.pr-hero-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--pr-teal) 0%, #38BDF8 100%);
+}
+
+.pr-hero-card:hover {
+    box-shadow: var(--pr-shadow-md);
+    border-color: #94A3B8;
 }
 
 .pr-hero-eyebrow {
-    margin: 0 0 0.35rem;
-    font-size: 0.68rem;
-    font-weight: 700;
+    font-size: 0.74rem;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--pr-teal);
+    margin: 0 0 0.35rem;
 }
 
 .pr-hero-name {
-    margin: 0 0 0.85rem;
     font-family: var(--pr-font-display);
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 1.35rem;
+    font-weight: 800;
     color: var(--pr-ink);
-    line-height: 1.15;
+    margin: 0 0 0.85rem;
+    letter-spacing: -0.01em;
 }
 
 .pr-hero-row {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    gap: 0.85rem;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid var(--pr-film);
-    font-size: 0.82rem;
+    align-items: center;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--pr-border-light);
+    font-size: 0.88rem;
 }
 
 .pr-hero-row:last-child {
     border-bottom: none;
+    padding-bottom: 0;
 }
 
 .pr-hero-row span {
-    color: var(--pr-slate);
-    font-weight: 500;
-    flex-shrink: 0;
-    max-width: 45%;
+    color: var(--pr-muted);
+    font-weight: 600;
 }
 
 .pr-hero-row b {
     color: var(--pr-ink);
-    font-weight: 600;
-    text-align: right;
-    word-break: break-word;
+    font-weight: 750;
 }
 
-.pr-hero-row-block {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.45rem;
+/* Category cards */
+.pr-cat-card {
+    background: #FFFFFF;
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-md);
+    padding: 1.4rem 1.25rem;
+    text-align: center;
+    box-shadow: var(--pr-shadow-xs);
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 
-.pr-conf-label {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.82rem;
+.pr-cat-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--pr-teal);
+    box-shadow: var(--pr-shadow-md);
 }
 
-.pr-conf-label span {
-    color: var(--pr-slate);
-}
-
-.pr-conf-label b {
+.pr-cat-icon {
+    font-size: 32px !important;
     color: var(--pr-teal);
-    font-size: 1rem;
-    font-weight: 800;
+    margin-bottom: 0.5rem;
 }
 
-.pr-conf-bar {
-    width: 100%;
-    height: 7px;
-    background: var(--pr-film);
-    border-radius: 999px;
+.pr-cat-title {
+    font-family: var(--pr-font-display);
+    font-size: 1.1rem;
+    font-weight: 750;
+    color: var(--pr-ink);
+    margin: 0 0 0.25rem;
+}
+
+.pr-cat-count {
+    font-size: 0.82rem;
+    color: var(--pr-muted);
+    font-weight: 600;
+    margin: 0;
+}
+
+/* ----------------------------------------------------------
+   DARK RADIOGRAPHIC VIEWPORT (pr-xray-frame)
+   ---------------------------------------------------------- */
+
+.st-key-pr_xray_frame,
+.pr-xray-frame {
+    background: var(--pr-dark-viewport);
+    border: 2px solid var(--pr-dark-frame);
+    border-radius: var(--pr-radius-md);
+    padding: 16px;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 10px 30px rgba(10, 20, 29, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
 }
 
-.pr-conf-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--pr-teal), #2BB6C4);
-    border-radius: 999px;
-    transition: width 0.4s ease;
+.st-key-pr_xray_frame img,
+.pr-xray-frame img {
+    border-radius: 8px;
+    max-width: 100%;
+    object-fit: contain;
 }
-
-
-/* ----------------------------------------------------------
-   Image labels
-   ---------------------------------------------------------- */
 
 .pr-img-label {
-    margin: 0 0 0.4rem;
-    font-size: 0.68rem;
-    font-weight: 700;
+    margin: 0 0 0.5rem;
+    font-size: 0.74rem;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     color: var(--pr-slate);
-}
-
-
-/* ----------------------------------------------------------
-   X-ray frame + heatmap
-   ---------------------------------------------------------- */
-
-.st-key-pr_xray_frame {
-    padding: 12px;
-    background: var(--pr-film);
-    border: 1px solid var(--pr-mist);
-    border-radius: 12px;
-    margin: 0 0 0.85rem;
-
-    height: 300px;
-    box-sizing: border-box;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.st-key-pr_xray_frame [data-testid="stImage"] {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.st-key-pr_xray_frame img {
-    border-radius: 8px;
-    display: block;
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    object-fit: contain;
 }
 
 .pr-heatmap-placeholder {
@@ -459,215 +393,124 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-
-    padding: 1.25rem 1rem;
-
-    height: 300px;
-    box-sizing: border-box;
-
-    background:
-        repeating-linear-gradient(
-            45deg,
-            #F7FAFB,
-            #F7FAFB 12px,
-            #F2F6F7 12px,
-            #F2F6F7 24px
-        );
-
-    border: 2px dashed var(--pr-mist);
-    border-radius: 12px;
-
+    padding: 3rem 1.5rem;
+    background: var(--pr-dark-frame);
+    border-radius: var(--pr-radius-md);
+    border: 1px dashed #243B4E;
     text-align: center;
-    margin: 0 0 0.85rem;
 }
 
 .pr-heatmap-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: var(--pr-teal-soft);
-    color: var(--pr-teal);
-    font-size: 24px;
-    line-height: 1;
+    font-size: 38px !important;
+    color: #4A677B;
+    margin-bottom: 0.5rem;
 }
 
 .pr-heatmap-title {
-    margin: 0.25rem 0 0;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--pr-ink);
+    color: #E2E8F0;
+    font-size: 1rem;
+    font-weight: 750;
+    margin: 0 0 0.25rem;
 }
 
 .pr-heatmap-text {
+    color: #94A3B8;
+    font-size: 0.82rem;
     margin: 0;
-    max-width: 240px;
-    font-size: 0.75rem;
-    line-height: 1.5;
-    color: var(--pr-slate);
 }
-
 
 /* ----------------------------------------------------------
-   No X-Ray notice
-   ---------------------------------------------------------- */
-
-.pr-no-xray {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-
-    padding: 1.75rem 1.25rem;
-
-    background: var(--pr-film);
-    border: 1px dashed var(--pr-mist);
-    border-radius: 12px;
-
-    text-align: center;
-    margin: 0.4rem 0 0.85rem;
-}
-
-.pr-no-xray-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--pr-white);
-    color: var(--pr-slate);
-    font-size: 22px;
-    line-height: 1;
-}
-
-.pr-no-xray-title {
-    margin: 0.35rem 0 0;
-    font-size: 0.88rem;
-    font-weight: 700;
-    color: var(--pr-ink);
-}
-
-.pr-no-xray-text {
-    margin: 0;
-    max-width: 300px;
-    font-size: 0.76rem;
-    line-height: 1.5;
-    color: var(--pr-slate);
-}
-
-
-/* ----------------------------------------------------------
-   AI findings summary
+   AI CLINICAL SUMMARY
    ---------------------------------------------------------- */
 
 .pr-ai-summary {
-    padding: 1rem 1.15rem;
-    border-radius: 12px;
-    margin: 0.65rem 0 1.1rem;
-    border-left: 4px solid var(--pr-slate);
-    background: var(--pr-film);
+    position: relative;
+    background: #FFFFFF;
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-md);
+    padding: 1.4rem 1.6rem;
+    margin: 1.25rem 0;
+    box-shadow: var(--pr-shadow-sm);
+    overflow: hidden;
 }
 
 .pr-ai-summary-positive {
-    background: var(--pr-red-soft);
-    border-left-color: var(--pr-red);
+    border-left: 5px solid var(--pr-red);
+    background: linear-gradient(180deg, #FFFFFF 0%, #FFF5F5 100%);
 }
 
 .pr-ai-summary-negative {
-    background: var(--pr-green-soft);
-    border-left-color: var(--pr-green);
+    border-left: 5px solid var(--pr-green);
+    background: linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);
 }
 
 .pr-ai-summary-text {
-    margin: 0;
-    font-size: 0.85rem;
-    line-height: 1.6;
+    font-size: 0.94rem;
+    font-weight: 600;
     color: var(--pr-ink);
+    line-height: 1.6;
+    margin: 0;
 }
 
 .pr-ai-summary-meta {
-    display: inline-block;
-    margin-top: 0.4rem;
-    font-size: 0.76rem;
+    font-size: 0.82rem;
     color: var(--pr-slate);
+    font-weight: 600;
 }
-
-.pr-ai-summary-meta b {
-    color: var(--pr-ink);
-}
-
-
-/* ----------------------------------------------------------
-   Recommendations
-   ---------------------------------------------------------- */
 
 .pr-rec-list {
     list-style: none;
     padding: 0;
-    margin: 0.5rem 0 1.1rem;
+    margin: 0.75rem 0;
 }
 
 .pr-rec-list li {
     display: flex;
     align-items: flex-start;
-    gap: 0.6rem;
-    padding: 0.45rem 0;
-    border-bottom: 1px solid var(--pr-film);
-    font-size: 0.82rem;
-    color: var(--pr-ink);
-}
-
-.pr-rec-list li:last-child {
-    border-bottom: none;
+    gap: 10px;
+    padding: 0.55rem 0;
+    font-size: 0.88rem;
+    color: var(--pr-slate);
+    border-bottom: 1px solid var(--pr-border-light);
 }
 
 .pr-rec-num {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
     width: 22px;
     height: 22px;
     border-radius: 50%;
     background: var(--pr-teal-soft);
     color: var(--pr-teal);
-    font-size: 0.7rem;
+    font-size: 0.76rem;
     font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
-
-
-/* ----------------------------------------------------------
-   Disclaimer
-   ---------------------------------------------------------- */
 
 .pr-disclaimer {
-    padding: 0.85rem 1rem;
-    background: var(--pr-film);
-    border: 1px solid var(--pr-mist);
-    border-radius: 10px;
-    font-size: 0.76rem;
-    line-height: 1.55;
-    color: var(--pr-slate);
-    margin-top: 0.5rem;
+    background: var(--pr-surface);
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-sm);
+    padding: 0.85rem 1.15rem;
+    font-size: 0.8rem;
+    color: var(--pr-muted);
+    line-height: 1.5;
+    margin-top: 1rem;
 }
-
-.pr-disclaimer b {
-    color: var(--pr-ink);
-}
-
 
 /* ----------------------------------------------------------
-   Responsive
+   RESPONSIVE
    ---------------------------------------------------------- */
 
 @media (max-width: 900px) {
-    .st-key-pr_xray_frame,
-    .pr-heatmap-placeholder {
-        height: 240px;
+    div[data-testid="stMainBlockContainer"],
+    .main .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    .pr-report-title {
+        font-size: 1.4rem;
     }
 }

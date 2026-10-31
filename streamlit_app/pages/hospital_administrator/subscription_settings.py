@@ -36,6 +36,7 @@ from streamlit_app.components.ui import (
     section_title,
     empty_state,
     safe,
+    format_date,
     show_flash_message,
 )
 
@@ -106,10 +107,7 @@ def limit_text(value):
         return "—"
 
 
-def format_date(value):
-    if not value:
-        return "—"
-    return str(value)
+# format_date is imported from streamlit_app.components.ui
 
 
 def plan_price_for(plan, billing_cycle):
@@ -225,10 +223,7 @@ def show():
                 show_checkout_link_screen()
         return
 
-    _, center, _ = st.columns([1, 6, 1])
-
-    with center:
-        with st.container(key="ss_page"):
+    with st.container(key="ss_page"):
 
             page_header(
                 "Subscription Settings",
@@ -349,14 +344,17 @@ def render_current_plan_card(subscription, plan):
     # Limits
     st.markdown(
         "<div class='ss-limits'>"
-        "<div class='ss-limit'>"
-        f"<b>{limit_text(plan.get('max_users'))}</b><span>Users</span>"
+        "<div class='ss-limit ss-limit-users'>"
+        "<span class='material-symbols-rounded ss-limit-icon'>group</span>"
+        f"<div class='ss-limit-info'><b>{limit_text(plan.get('max_users'))}</b><span>Users limit</span></div>"
         "</div>"
-        "<div class='ss-limit'>"
-        f"<b>{limit_text(plan.get('max_patients'))}</b><span>Patients</span>"
+        "<div class='ss-limit ss-limit-patients'>"
+        "<span class='material-symbols-rounded ss-limit-icon'>personal_injury</span>"
+        f"<div class='ss-limit-info'><b>{limit_text(plan.get('max_patients'))}</b><span>Patients limit</span></div>"
         "</div>"
-        "<div class='ss-limit'>"
-        f"<b>{limit_text(plan.get('max_xrays_per_month'))}</b><span>X-rays / month</span>"
+        "<div class='ss-limit ss-limit-xrays'>"
+        "<span class='material-symbols-rounded ss-limit-icon'>radiology</span>"
+        f"<div class='ss-limit-info'><b>{limit_text(plan.get('max_xrays_per_month'))}</b><span>X-rays / month</span></div>"
         "</div>"
         "</div>",
         unsafe_allow_html=True,
@@ -365,13 +363,19 @@ def render_current_plan_card(subscription, plan):
     # Dates
     st.markdown(
         "<div class='ss-dates'>"
+        "<div class='ss-date-tile'>"
+        "<span class='material-symbols-rounded ss-date-icon'>event_available</span>"
         "<div>"
-        "<span class='ss-dates-label'>Started</span>"
+        "<span class='ss-dates-label'>Subscription Started</span>"
         f"<span class='ss-dates-value'>{safe(start_date)}</span>"
         "</div>"
+        "</div>"
+        "<div class='ss-date-tile'>"
+        "<span class='material-symbols-rounded ss-date-icon'>event_repeat</span>"
         "<div>"
-        "<span class='ss-dates-label'>Renews</span>"
+        "<span class='ss-dates-label'>Next Renewal Date</span>"
         f"<span class='ss-dates-value'>{safe(end_date)}</span>"
+        "</div>"
         "</div>"
         "</div>",
         unsafe_allow_html=True,
@@ -676,9 +680,9 @@ def render_plan_card(
         badge_html = ""
 
     features = "".join([
-        f"<div class='ss-plan-feature'><span>Users</span><b>{max_users}</b></div>",
-        f"<div class='ss-plan-feature'><span>Patients</span><b>{max_patients}</b></div>",
-        f"<div class='ss-plan-feature'><span>X-rays / month</span><b>{max_xrays}</b></div>",
+        f"<div class='ss-plan-feature'><span class='ss-feat-name'><span class='material-symbols-rounded ss-feat-check'>check</span>Users</span><b>{max_users}</b></div>",
+        f"<div class='ss-plan-feature'><span class='ss-feat-name'><span class='material-symbols-rounded ss-feat-check'>check</span>Patients</span><b>{max_patients}</b></div>",
+        f"<div class='ss-plan-feature'><span class='ss-feat-name'><span class='material-symbols-rounded ss-feat-check'>check</span>Monthly X-rays</span><b>{max_xrays}</b></div>",
     ])
 
     card_html = "".join([
@@ -1047,49 +1051,128 @@ def render_payment_history(payments):
     section_title("Recent payments", "Your last five transactions.")
 
     if not payments:
-        empty_state("No payments yet.")
+        with st.container(key="ss_payments_empty"):
+            st.markdown(
+                "<div class='ss-empty-box'>"
+                "<span class='material-symbols-rounded ss-empty-icon'>receipt_long</span>"
+                "<p class='ss-empty-title'>No payment history found</p>"
+                "<p class='ss-empty-desc'>Your hospital's transaction records and PayMongo invoices will appear here once processed.</p>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
         return
+
+    count_label = f"{len(payments)} transaction" if len(payments) == 1 else f"{len(payments)} transactions"
 
     with st.container(key="ss_payments"):
 
         st.markdown(
+            "<div class='ss-payments-card-header'>"
+            "<div class='ss-payments-card-title'>"
+            "<span class='material-symbols-rounded ss-payments-title-icon'>receipt_long</span>"
+            "<span>Transaction History</span>"
+            f"<span class='ss-payments-count-badge'>{safe(count_label)}</span>"
+            "</div>"
+            "<div class='ss-payments-verified-badge'>"
+            "<span class='material-symbols-rounded'>verified_user</span>"
+            "<span>PayMongo Gateway</span>"
+            "</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
             "<div class='ss-payment-row ss-payment-header'>"
-            "<span>Date</span><span>Type</span>"
-            "<span>Amount</span><span>Status</span>"
+            "<span class='ss-col-date'>Transaction Date</span>"
+            "<span class='ss-col-type'>Payment Details</span>"
+            "<span class='ss-col-ref'>Reference</span>"
+            "<span class='ss-col-amount'>Amount</span>"
+            "<span class='ss-col-status'>Status</span>"
             "</div>",
             unsafe_allow_html=True,
         )
 
         for payment in payments:
 
-            when = str(
+            paid_time = (
                 payment.get("paid_at")
                 or payment.get("created_at")
-                or "—"
-            )[:10]
+                or ""
+            )
 
-            ptype = payment.get("payment_type") or "—"
-            amount = peso(payment.get("amount"))
-            status = payment.get("status") or "—"
+            when = format_date(paid_time)
 
-            if status == "paid":
+            ptype_raw = str(payment.get("payment_type") or "subscription").lower()
+
+            if ptype_raw == "application":
+                type_label = "Hospital Application"
+                type_icon = "domain"
+            elif ptype_raw == "upgrade":
+                type_label = "Plan Upgrade"
+                type_icon = "upgrade"
+            elif ptype_raw == "renewal":
+                type_label = "Subscription Renewal"
+                type_icon = "autorenew"
+            else:
+                type_label = ptype_raw.capitalize()
+                type_icon = "receipt"
+
+            cycle = str(payment.get("billing_cycle") or "Monthly").capitalize()
+            amount_str = peso(payment.get("amount"))
+
+            payment_id = str(payment.get("payment_id") or "")
+            ref_code = f"#{payment_id[:8]}" if payment_id else "—"
+
+            status_raw = str(payment.get("status") or "pending").lower()
+
+            if status_raw == "paid":
+                status_label = "Paid"
+                status_icon = "check_circle"
                 tone = "green"
-            elif status == "pending":
+            elif status_raw == "pending":
+                status_label = "Pending"
+                status_icon = "schedule"
                 tone = "amber"
-            elif status == "failed":
+            elif status_raw in ["failed", "cancelled"]:
+                status_label = "Failed"
+                status_icon = "cancel"
                 tone = "red"
             else:
+                status_label = status_raw.capitalize()
+                status_icon = "info"
                 tone = "slate"
 
             st.markdown(
                 "<div class='ss-payment-row'>"
-                f"<span>{safe(when)}</span>"
-                f"<span class='ss-payment-type'>{safe(ptype)}</span>"
-                f"<span class='ss-payment-amount'>{amount}</span>"
-                "<span class='ss-payment-status-cell'>"
-                f"<span class='ss-pill ss-pill-{tone}'>"
-                f"{safe(status)}</span>"
+                "<div class='ss-col-date'>"
+                "<span class='material-symbols-rounded ss-row-calendar-icon'>calendar_today</span>"
+                "<div class='ss-date-meta'>"
+                f"<span class='ss-date-text'>{safe(when)}</span>"
+                "<span class='ss-date-sub'>Verified Payment</span>"
+                "</div>"
+                "</div>"
+                "<div class='ss-col-type'>"
+                "<div class='ss-type-meta'>"
+                "<span class='ss-type-title'>"
+                f"<span class='material-symbols-rounded ss-type-icon'>{type_icon}</span>"
+                f"{safe(type_label)}"
                 "</span>"
+                f"<span class='ss-cycle-badge'>{safe(cycle)} Billing</span>"
+                "</div>"
+                "</div>"
+                "<div class='ss-col-ref'>"
+                f"<span class='ss-ref-code'>{safe(ref_code)}</span>"
+                "</div>"
+                "<div class='ss-col-amount'>"
+                f"<span class='ss-amount-val'>{amount_str}</span>"
+                "<span class='ss-currency-label'>PHP</span>"
+                "</div>"
+                "<div class='ss-col-status'>"
+                f"<span class='ss-pill ss-pill-{tone}'>"
+                f"<span class='material-symbols-rounded ss-pill-icon'>{status_icon}</span>"
+                f"{safe(status_label)}"
+                "</span>"
+                "</div>"
                 "</div>",
                 unsafe_allow_html=True,
             )

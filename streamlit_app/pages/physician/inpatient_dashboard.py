@@ -353,14 +353,26 @@ def render_ward_list():
         admit_day = as_date(a.get("time_in") or a.get("examination_date"))
         h_day = max(1, (date.today() - admit_day).days + 1)
         
-        with st.container(key=f"ip_card_{admit_id}"):  # <-- Unique key
-            st.markdown(
-                f"<p class='ip-patient-name'>{patient_name(p)}</p>"
-                f"<p class='ip-patient-meta'>Hospital Day {h_day} · Admitted {format_date(admit_day)}</p>",
-                unsafe_allow_html=True,
-            )
-        if st.button("Open Monitoring", key=f"ip_btn_{admit_id}", use_container_width=True): # <-- Unique key
-            go_to_admission(p, a)
+        with st.container(key=f"ip_card_{admit_id}"):
+            c_info, c_btn = st.columns([4, 1.2], vertical_alignment="center")
+            with c_info:
+                st.markdown(
+                    f"<div class='ip-card-patient-row'>"
+                    f"<div class='ip-patient-avatar'><span class='material-symbols-rounded'>hotel</span></div>"
+                    f"<div class='ip-patient-details'>"
+                    f"<p class='ip-patient-name'>{patient_name(p)}</p>"
+                    f"<div class='ip-patient-meta'>"
+                    f"<span class='ip-meta-badge'>Hospital Day {h_day}</span>"
+                    f"<span class='ip-meta-date'><span class='material-symbols-rounded'>calendar_today</span>Admitted {format_date(admit_day)}</span>"
+                    f"<span class='ip-meta-diag'>{a.get('diagnosis') or 'Inpatient Stay'}</span>"
+                    f"</div>"
+                    f"</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+            with c_btn:
+                if st.button("Open Monitoring", key=f"ip_btn_{admit_id}", icon=":material/monitor_heart:", use_container_width=True):
+                    go_to_admission(p, a)
 
 
 # ============================================================
@@ -376,7 +388,8 @@ def render_patient_detail():
         st.error("Admission not found."); return
     
     p = admission.get("patients") or {}
-    if st.button("← Back to Ward", key="ip_back"): back_to_admissions()
+    if st.button("Back to Ward", key="ip_back", icon=":material/arrow_back:"):
+        back_to_admissions()
 
     admit_day = as_date(admission.get("time_in") or admission.get("examination_date"))
     page_header("Inpatient Monitoring", f"{patient_name(p)} · Admitted {format_date(admit_day)}")
@@ -530,10 +543,10 @@ def render_patient_detail():
         st.write("")
 
     act1, act2 = st.columns(2)
-    if act1.button("+ Log New Daily Round", use_container_width=True):
+    if act1.button("Log New Daily Round", key="ip_btn_new_round", icon=":material/add_circle:", use_container_width=True):
         show_log_round_dialog(p, admission)
     
-    if act2.button("Review Discharge", type="primary", use_container_width=True, disabled=not readiness["can_discharge"]):
+    if act2.button("Review Discharge", key="ip_btn_discharge", type="primary", icon=":material/assignment_turned_in:", use_container_width=True, disabled=not readiness["can_discharge"]):
         show_discharge_dialog(p, admission, readiness)
 
 # ============================================================

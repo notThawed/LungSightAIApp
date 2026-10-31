@@ -33,6 +33,7 @@ from streamlit_app.components.ui import (
     pill,
     metric_card,
     remember,
+    safe,
     show_flash_message,
 )
 
@@ -300,8 +301,21 @@ def render_search_bar():
         return
 
     st.markdown(
-        f"<p class='sf-search-results-label'>"
-        f"{len(results)} matches found</p>",
+        f"<div class='sf-search-results-banner'>"
+        f"<span class='material-symbols-rounded'>search_check</span>"
+        f"<span>Found <b>{len(results)}</b> follow-up appointment(s) matching &ldquo;{safe(query.strip())}&rdquo;</span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<div class='sf-table-header'>"
+        "<span>Follow-Up ID</span>"
+        "<span>Patient Details</span>"
+        "<span>Scheduled Time</span>"
+        "<span>Parent Consult</span>"
+        "<span>Status</span>"
+        "</div>",
         unsafe_allow_html=True,
     )
 
@@ -329,37 +343,46 @@ def render_today_fu_card(fu, show_arrived=True):
 
     with st.container(key=f"sf_fu_card_{fu_id}"):
 
-        cols = st.columns([2, 3, 2, 2, 1.4])
+        cols = st.columns([1.6, 2.5, 2.2, 2.2, 1.2], vertical_alignment="center")
 
         with cols[0]:
             st.markdown(
-                f"<div class='sf-fu-code'>{code}</div>",
+                f"<div class='sf-fu-code-badge'>"
+                f"<span class='material-symbols-rounded sf-code-icon'>tag</span>"
+                f"<span>{safe(code)}</span>"
+                f"</div>",
                 unsafe_allow_html=True,
             )
 
         with cols[1]:
             st.markdown(
-                f"<div class='sf-fu-patient'>{patient_name(patient)}</div>"
-                f"<div class='sf-fu-sub'>{patient_code(patient)}</div>",
+                f"<div class='sf-fu-patient'>{safe(patient_name(patient))}</div>"
+                f"<div class='sf-fu-sub'><span class='material-symbols-rounded sf-sub-icon'>badge</span>{safe(patient_code(patient))}</div>",
                 unsafe_allow_html=True,
             )
 
         with cols[2]:
             st.markdown(
-                f"<div class='sf-fu-sub'>{format_appointment(fu)}</div>",
+                f"<div class='sf-fu-schedule'>"
+                f"<span class='material-symbols-rounded sf-sched-icon'>calendar_today</span>"
+                f"<span class='sf-sched-text'>{safe(format_appointment(fu))}</span>"
+                f"</div>",
                 unsafe_allow_html=True,
             )
 
         with cols[3]:
             st.markdown(
-                f"<div class='sf-fu-sub'>{parent_summary}</div>",
+                f"<div class='sf-fu-parent'>"
+                f"<span class='material-symbols-rounded sf-parent-icon'>medical_information</span>"
+                f"<span class='sf-parent-text'>{safe(parent_summary)}</span>"
+                f"</div>",
                 unsafe_allow_html=True,
             )
 
         with cols[4]:
             pill(status, status_tone(status))
 
-        btn_cols = st.columns([1, 1, 3, 1])
+        btn_cols = st.columns([1, 1, 3, 1], vertical_alignment="center")
 
         with btn_cols[0]:
             if st.button(
@@ -404,6 +427,16 @@ def render_landing():
     if not todays:
         empty_state("No follow-up appointments are scheduled for today.")
     else:
+        st.markdown(
+            "<div class='sf-table-header'>"
+            "<span>Follow-Up ID</span>"
+            "<span>Patient Details</span>"
+            "<span>Scheduled Time</span>"
+            "<span>Parent Consult</span>"
+            "<span>Status</span>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
         for fu in todays:
             render_today_fu_card(fu)
 
@@ -484,7 +517,7 @@ def render_fu_detail():
             prev_fu = None
 
     if st.button(
-        "Back",
+        "Back to Follow-Ups",
         key="staff_fu_detail_back",
         icon=":material/arrow_back:",
     ):
@@ -492,8 +525,14 @@ def render_fu_detail():
 
     st.markdown(
         "<div class='sf-detail-header'>"
-        f"<p class='sf-detail-title'>Follow-Up {code}</p>"
-        f"<p class='sf-detail-sub'>{format_appointment(fu)}</p>"
+        "<div class='sf-detail-eyebrow'>"
+        "<span class='material-symbols-rounded sf-eyebrow-icon'>medical_services</span>"
+        "<span>Patient Follow-Up Dossier</span>"
+        "</div>"
+        "<div class='sf-detail-title-row'>"
+        f"<p class='sf-detail-title'>Follow-Up {safe(code)}</p>"
+        f"<span class='sf-detail-pill'><span class='material-symbols-rounded'>event_available</span>{safe(format_appointment(fu))}</span>"
+        "</div>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -503,19 +542,22 @@ def render_fu_detail():
     with left:
         st.markdown(
             "<div class='sf-card'>"
-            "<p class='sf-card-eyebrow'>Patient</p>"
-            f"<p class='sf-card-title'>{patient_name(patient)}</p>"
+            "<div class='sf-card-header-bar'>"
+            "<span class='material-symbols-rounded sf-card-icon'>person</span>"
+            "<span class='sf-card-eyebrow'>Patient Demographics</span>"
+            "</div>"
+            f"<p class='sf-card-title'>{safe(patient_name(patient))}</p>"
             "<div class='sf-card-row'>"
-            f"<span>Patient ID</span><b>{patient_code(patient)}</b>"
+            f"<span>Patient ID</span><b class='sf-mono-code'>{safe(patient_code(patient))}</b>"
             "</div>"
             "<div class='sf-card-row'>"
             f"<span>Age / Gender</span>"
-            f"<b>{patient_age(patient.get('date_of_birth'))} / "
-            f"{patient.get('sex') or '—'}</b>"
+            f"<b>{safe(str(patient_age(patient.get('date_of_birth'))))} yrs / "
+            f"{safe(patient.get('sex') or '—')}</b>"
             "</div>"
             "<div class='sf-card-row'>"
             f"<span>Contact</span>"
-            f"<b>{patient.get('contact_number') or '—'}</b>"
+            f"<b>{safe(patient.get('contact_number') or '—')}</b>"
             "</div>"
             "</div>",
             unsafe_allow_html=True,
@@ -524,21 +566,24 @@ def render_fu_detail():
     with right:
         st.markdown(
             "<div class='sf-card'>"
-            "<p class='sf-card-eyebrow'>Appointment</p>"
+            "<div class='sf-card-header-bar'>"
+            "<span class='material-symbols-rounded sf-card-icon'>calendar_month</span>"
+            "<span class='sf-card-eyebrow'>Appointment Schedule</span>"
+            "</div>"
             "<div class='sf-card-row'>"
             f"<span>Status</span><b>{pill(status, status_tone(status))}</b>"
             "</div>"
             "<div class='sf-card-row'>"
-            f"<span>Date</span>"
-            f"<b>{format_date_only(fu.get('follow_up_date'))}</b>"
+            f"<span>Scheduled Date</span>"
+            f"<b>{safe(format_date_only(fu.get('follow_up_date')))}</b>"
             "</div>"
             "<div class='sf-card-row'>"
-            f"<span>Time</span>"
-            f"<b>{format_time(fu.get('follow_up_time'))}</b>"
+            f"<span>Scheduled Time</span>"
+            f"<b>{safe(format_time(fu.get('follow_up_time')))}</b>"
             "</div>"
             "<div class='sf-card-row'>"
-            f"<span>Notes</span>"
-            f"<b>{fu.get('notes') or '—'}</b>"
+            f"<span>Clinical Notes</span>"
+            f"<b>{safe(fu.get('notes') or 'None recorded')}</b>"
             "</div>"
             "</div>",
             unsafe_allow_html=True,
@@ -549,19 +594,23 @@ def render_fu_detail():
     if source:
         st.markdown(
             "<div class='sf-card sf-card--info'>"
+            "<div class='sf-card-header-bar'>"
+            "<span class='material-symbols-rounded sf-card-icon sf-card-icon-blue'>clinical_notes</span>"
+            "<span class='sf-card-eyebrow'>Initial Clinical Encounter</span>"
+            "</div>"
             f"<p class='sf-card-title'>"
-            f"{source.get('examination_type') or 'General Consult'}</p>"
+            f"{safe(source.get('examination_type') or 'General Consult')}</p>"
             "<div class='sf-card-row'>"
-            f"<span>Date</span>"
-            f"<b>{format_date_only(source.get('examination_date'))}</b>"
+            f"<span>Consult Date</span>"
+            f"<b>{safe(format_date_only(source.get('examination_date')))}</b>"
             "</div>"
             "<div class='sf-card-row'>"
             f"<span>Chief Complaint</span>"
-            f"<b>{source.get('chief_complaint') or '—'}</b>"
+            f"<b>{safe(source.get('chief_complaint') or '—')}</b>"
             "</div>"
             "<div class='sf-card-row'>"
-            f"<span>Diagnosis</span>"
-            f"<b>{source.get('diagnosis') or '—'}</b>"
+            f"<span>Working Diagnosis</span>"
+            f"<b>{safe(source.get('diagnosis') or '—')}</b>"
             "</div>"
             "</div>",
             unsafe_allow_html=True,
@@ -574,11 +623,15 @@ def render_fu_detail():
     if prev_fu:
         st.markdown(
             "<div class='sf-card sf-card--info'>"
+            "<div class='sf-card-header-bar'>"
+            "<span class='material-symbols-rounded sf-card-icon sf-card-icon-teal'>history</span>"
+            "<span class='sf-card-eyebrow'>Prior Follow-Up History</span>"
+            "</div>"
             f"<p class='sf-card-title'>"
-            f"{prev_fu.get('follow_up_code') or 'Previous Follow-Up'}</p>"
+            f"{safe(prev_fu.get('follow_up_code') or 'Previous Follow-Up')}</p>"
             "<div class='sf-card-row'>"
             f"<span>Scheduled</span>"
-            f"<b>{format_appointment(prev_fu)}</b>"
+            f"<b>{safe(format_appointment(prev_fu))}</b>"
             "</div>"
             "<div class='sf-card-row'>"
             f"<span>Status</span>"
@@ -755,7 +808,7 @@ def show_cancel_dialog(fu):
 
 def show():
 
-    load_css("followups.css")
+    load_css("staff_css/followup.css")
     show_flash_message()
 
     role_id = current_role_id()

@@ -892,7 +892,16 @@ def show_examination_form(patient, examination=None):
                     key="exam_guardian_relation",
                 )
 
-            st.markdown("<span style='font-size:0.84rem; font-weight:600; color:var(--sa-ink);'>Digital Signature (Draw below):</span>", unsafe_allow_html=True)
+            if existing_consent and existing_consent.get("signature_path"):
+                existing_sig_url = get_consent_signature_url(existing_consent["signature_path"])
+                if existing_sig_url:
+                    st.caption("Existing signature on file:")
+                    st.image(existing_sig_url, width=180)
+                    st.markdown("<span style='font-size:0.84rem; font-weight:600; color:var(--sa-ink);'>Update Signature (Draw below to replace):</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<span style='font-size:0.84rem; font-weight:600; color:var(--sa-ink);'>Digital Signature (Draw below):</span>", unsafe_allow_html=True)
+            else:
+                st.markdown("<span style='font-size:0.84rem; font-weight:600; color:var(--sa-ink);'>Digital Signature (Draw below):</span>", unsafe_allow_html=True)
 
             canvas_result = st_canvas(
                 stroke_width=2,
@@ -901,7 +910,6 @@ def show_examination_form(patient, examination=None):
                 height=140,
                 width=540,
                 drawing_mode="freedraw",
-                return_image_data=True,
                 key=f"signature_canvas_{examination_id or 'new'}",
             )
 
@@ -986,10 +994,15 @@ def show_examination_form(patient, examination=None):
         errors.error("Please confirm the informed consent.")
         return
 
-    has_signature = (
-        canvas_result.image_data is not None
-        and canvas_result.image_data[:, :, 3].sum() > 0
-    )
+    has_signature = False
+    if canvas_result is not None and getattr(canvas_result, "image_data", None) is not None:
+        json_objs = (canvas_result.json_data or {}).get("objects", []) if getattr(canvas_result, "json_data", None) else []
+        if len(json_objs) > 0:
+            has_signature = True
+        elif canvas_result.image_data.ndim == 3 and canvas_result.image_data.shape[2] == 4:
+            rgb = canvas_result.image_data[:, :, :3]
+            alpha = canvas_result.image_data[:, :, 3]
+            has_signature = bool((alpha > 0).any() and (rgb < 250).any())
 
     if not has_signature and not (existing_consent and existing_consent.get("signature_path")):
         errors.error("Please draw the patient/guardian signature on the canvas.")
@@ -1039,13 +1052,29 @@ def show_examination_form(patient, examination=None):
 
         else:
             if existing_consent:
+                new_signature_path = None
+                if has_signature:
+                    image = Image.fromarray(
+                        canvas_result.image_data.astype("uint8"),
+                        "RGBA",
+                    )
+                    buffer = io.BytesIO()
+                    image.save(buffer, format="PNG")
+                    new_signature_path = upload_consent_signature(examination_id, buffer.getvalue())
+
+                consent_kwargs = {
+                    "given": True,
+                    "signed_by_name": signed_by_name.strip(),
+                    "signed_by_type": signed_by_type,
+                    "guardian_name": (guardian_name or "").strip() or None,
+                    "guardian_relation": guardian_relation,
+                }
+                if new_signature_path:
+                    consent_kwargs["signature_path"] = new_signature_path
+
                 update_examination_consent(
                     existing_consent["consent_id"],
-                    given=True,
-                    signed_by_name=signed_by_name.strip(),
-                    signed_by_type=signed_by_type,
-                    guardian_name=(guardian_name or "").strip() or None,
-                    guardian_relation=guardian_relation,
+                    **consent_kwargs,
                 )
 
             if existing_vitals:

@@ -2,9 +2,11 @@
    LUNGSIGHT — HOSPITAL ADMIN
    My Hospital
    shared/theme/css_content/hospital_admin_css/hospital_info.css
+   Modern, medical-grade hospital profile, facility stats grid,
+   interactive map panel, subscription badge, and contact styles.
    ========================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0');
 
 /* ---------------------------------------------------------
@@ -14,40 +16,43 @@
 :root {
     --geo-primary: #0F7C88;
     --geo-primary-dark: #0B626C;
-    --geo-primary-soft: #E8F4F6;
+    --geo-primary-soft: #E6F7F8;
     --geo-primary-glow: rgba(15, 124, 136, 0.16);
 
     --geo-accent: #2B8CA8;
-    --geo-success: #23745A;
-    --geo-success-soft: #EAF6F1;
+    --geo-success: #16A34A;
+    --geo-success-soft: #F0FDF4;
 
-    --geo-warning: #8A5A00;
-    --geo-warning-soft: #FFF4DC;
+    --geo-warning: #D97706;
+    --geo-warning-soft: #FFFDF5;
 
-    --geo-danger: #B3402F;
-    --geo-danger-soft: #FDECEA;
+    --geo-danger: #DC2626;
+    --geo-danger-soft: #FEF2F2;
 
-    --geo-text: #12283A;
-    --geo-text-soft: #5A6F7F;
-    --geo-muted: #7E92A0;
+    --geo-blue: #2563EB;
+    --geo-blue-soft: #EFF6FF;
 
-    --geo-border: #DDE8EB;
-    --geo-border-light: #EBF2F4;
+    --geo-text: #0F172A;
+    --geo-text-soft: #475569;
+    --geo-muted: #64748B;
+
+    --geo-border: #CBD5E1;
+    --geo-border-light: #E2E8F0;
 
     --geo-card: #FFFFFF;
-    --geo-surface-subtle: #F8FAFB;
+    --geo-surface-subtle: #F8FAFC;
 
     --geo-radius-sm: 8px;
     --geo-radius-md: 14px;
     --geo-radius-lg: 20px;
 
-    --geo-font-display: 'Fraunces', Georgia, serif;
+    --geo-font-display: 'Space Grotesk', 'Fraunces', Georgia, serif;
     --geo-font-body: 'Manrope', system-ui, -apple-system, sans-serif;
 
     --geo-shadow-xs: 0 1px 3px rgba(18, 40, 58, 0.04);
-    --geo-shadow-sm: 0 2px 8px rgba(18, 40, 58, 0.05);
-    --geo-shadow-md: 0 8px 24px -4px rgba(18, 40, 58, 0.08);
-    --geo-shadow-lg: 0 16px 36px -8px rgba(18, 40, 58, 0.12);
+    --geo-shadow-sm: 0 4px 16px -2px rgba(18, 40, 58, 0.06);
+    --geo-shadow-md: 0 8px 24px -4px rgba(18, 40, 58, 0.09);
+    --geo-shadow-lg: 0 16px 36px -8px rgba(18, 40, 58, 0.13);
 }
 
 /* ---------------------------------------------------------
@@ -70,11 +75,13 @@
 }
 
 /* ---------------------------------------------------------
-   PAGE WRAPPER
+   PAGE WRAPPER & CONTAINER
    --------------------------------------------------------- */
 
 div[class*="st-key-sa_page"] {
     font-family: var(--geo-font-body);
+    color: var(--geo-text);
+    width: 100%;
     animation: geoFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -90,21 +97,21 @@ div[class*="st-key-sa_page"] {
 }
 
 /* ---------------------------------------------------------
-   LEFT CARD — HOSPITAL INFO
+   LEFT CARD — HOSPITAL INFO CARD
    --------------------------------------------------------- */
 
 div[class*="st-key-geo_info_card"] {
     position: relative;
-    padding: 24px 24px 20px;
-    background: var(--geo-card);
+    padding: 26px 26px 22px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
     border: 1px solid var(--geo-border);
     border-radius: var(--geo-radius-lg);
     box-shadow: var(--geo-shadow-sm);
-    min-height: 580px;
+    min-height: 600px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
 }
 
 div[class*="st-key-geo_info_card"]::before {
@@ -113,92 +120,146 @@ div[class*="st-key-geo_info_card"]::before {
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--geo-primary) 0%, #20A3B2 50%, var(--geo-accent) 100%);
+    height: 5px;
+    background: linear-gradient(90deg, var(--geo-primary) 0%, #20A3B2 45%, #3B82F6 100%);
     border-top-left-radius: var(--geo-radius-lg);
     border-top-right-radius: var(--geo-radius-lg);
 }
 
 div[class*="st-key-geo_info_card"]:hover {
-    border-color: rgba(15, 124, 136, 0.28);
+    border-color: #94A3B8;
     box-shadow: var(--geo-shadow-md);
 }
 
+/* Clean spacing between vertical blocks inside info card */
+div[class*="st-key-geo_info_card"] > [data-testid="stVerticalBlock"] {
+    gap: 0.85rem !important;
+}
+
 /* ---------------------------------------------------------
-   LOGO
+   BRAND HEADER & LOGO
    --------------------------------------------------------- */
+
+.geo-brand-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 6px;
+}
 
 .geo-logo-wrap {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 76px;
-    height: 76px;
-    margin-bottom: 14px;
-    border-radius: 16px;
+    width: 82px;
+    height: 82px;
+    flex-shrink: 0;
+    border-radius: 18px;
     background: #FFFFFF;
-    border: 1px solid var(--geo-border);
+    border: 1px solid #CBD5E1;
     overflow: hidden;
-    box-shadow: var(--geo-shadow-xs);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 14px rgba(18, 40, 58, 0.06), 0 0 0 1px rgba(15, 124, 136, 0.08);
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
 .geo-logo-wrap:hover {
-    transform: scale(1.02);
-    box-shadow: var(--geo-shadow-sm);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 22px rgba(15, 124, 136, 0.16);
 }
 
 .geo-logo {
-    max-width: 90%;
-    max-height: 90%;
+    max-width: 88%;
+    max-height: 88%;
     object-fit: contain;
 }
 
 .geo-logo-fallback {
-    background: radial-gradient(circle at 30% 30%, #F0F9FB 0%, var(--geo-primary-soft) 100%);
-    border-color: rgba(15, 124, 136, 0.2);
+    background: linear-gradient(135deg, #E6F7F8 0%, #D1F0F2 100%);
+    border-color: #BCE5E8;
     color: var(--geo-primary);
-    font-size: 36px;
+    font-size: 40px;
     line-height: 1;
 }
 
+.geo-logo-fallback .material-symbols-rounded {
+    font-size: 40px;
+    color: var(--geo-primary);
+}
+
+.geo-brand-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
 /* ---------------------------------------------------------
-   NAME / TYPE / BADGE
+   NAME / TYPE / VERIFIED BADGE
    --------------------------------------------------------- */
 
 .geo-type {
-    margin: 0 0 4px;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    align-self: flex-start;
     color: var(--geo-primary);
+    background: var(--geo-primary-soft);
+    border: 1px solid #BCE5E8;
+    border-radius: 9999px;
+    padding: 3px 10px;
     font-size: 0.72rem;
     font-weight: 800;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
+    line-height: 1.2;
 }
 
 .geo-name {
-    margin: 0 0 10px;
+    margin: 2px 0 6px;
     font-family: var(--geo-font-display);
     color: var(--geo-text);
-    font-size: 1.45rem;
-    font-weight: 600;
+    font-size: 1.55rem;
+    font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1.25;
 }
 
 .geo-badge-row {
-    margin-bottom: 16px;
+    margin-bottom: 4px;
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
-/* Verified Pill refinement */
-.geo-badge-row .sa-pill {
-    padding: 3px 10px;
-    font-size: 0.72rem;
+/* Verified Pill Refinement */
+.geo-badge-row .sa-pill,
+.geo-badge-row .mh-verified-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px;
+    font-size: 0.74rem;
     font-weight: 700;
     letter-spacing: 0.02em;
-    border-radius: 999px;
+    border-radius: 9999px;
+    background: #ECFDF5 !important;
+    color: #065F46 !important;
+    border: 1px solid #A7F3D0 !important;
+    box-shadow: 0 1px 2px rgba(16, 185, 129, 0.08);
+}
+
+.geo-badge-row .sa-pill::before,
+.geo-badge-row .mh-verified-pill::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
 }
 
 /* ---------------------------------------------------------
@@ -208,8 +269,9 @@ div[class*="st-key-geo_info_card"]:hover {
 .geo-contact {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     padding: 14px 0;
+    margin: 6px 0;
     border-top: 1px solid var(--geo-border-light);
     border-bottom: 1px solid var(--geo-border-light);
 }
@@ -218,37 +280,43 @@ div[class*="st-key-geo_info_card"]:hover {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 4px 6px;
-    border-radius: var(--geo-radius-sm);
+    padding: 6px 8px;
+    border-radius: 10px;
     color: var(--geo-text-soft);
     font-size: 0.84rem;
+    font-weight: 600;
     line-height: 1.45;
-    transition: background 0.15s ease, color 0.15s ease;
+    text-decoration: none;
+    transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
 }
 
 .geo-contact-row:hover {
-    background: var(--geo-surface-subtle);
+    background: #F1F5F9;
     color: var(--geo-text);
+    transform: translateX(2px);
 }
 
 .geo-contact-row .material-symbols-rounded {
-    width: 28px;
-    height: 28px;
-    flex: 0 0 28px;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--geo-surface-subtle);
-    border: 1px solid var(--geo-border-light);
-    border-radius: 8px;
+    background: var(--geo-primary-soft);
+    border: 1px solid #CCFBF1;
+    border-radius: 10px;
     color: var(--geo-primary);
-    font-size: 17px;
-    transition: background 0.15s ease, color 0.15s ease;
+    font-size: 18px;
+    transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
 }
 
 .geo-contact-row:hover .material-symbols-rounded {
-    background: var(--geo-primary-soft);
-    color: var(--geo-primary-dark);
+    background: var(--geo-primary);
+    color: #FFFFFF;
+    border-color: var(--geo-primary);
+    box-shadow: 0 2px 8px rgba(15, 124, 136, 0.28);
+    transform: scale(1.05);
 }
 
 .geo-contact-row span:last-child {
@@ -257,21 +325,49 @@ div[class*="st-key-geo_info_card"]:hover {
     white-space: nowrap;
 }
 
+.geo-contact-link {
+    cursor: pointer;
+}
+
+.geo-contact-link .geo-external-icon {
+    font-size: 14px;
+    margin-left: auto;
+    color: #94A3B8;
+    background: transparent !important;
+    border: none !important;
+    width: auto !important;
+    height: auto !important;
+}
+
+.geo-contact-link:hover .geo-external-icon {
+    color: var(--geo-primary);
+}
+
 /* ---------------------------------------------------------
    SECTION LABELS
    --------------------------------------------------------- */
 
 .geo-section-label {
-    margin: 18px 0 10px;
+    margin: 14px 0 8px;
     color: var(--geo-muted);
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     font-weight: 800;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.geo-section-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--geo-border-light);
 }
 
 /* ---------------------------------------------------------
-   ACTIVITY STATS TILES
+   ACTIVITY STATS TILES (CLINICAL COLORED VARIANTS)
    --------------------------------------------------------- */
 
 .geo-stats {
@@ -282,22 +378,35 @@ div[class*="st-key-geo_info_card"]:hover {
 
 .geo-stat {
     position: relative;
-    padding: 12px 14px;
-    background: linear-gradient(180deg, #FFFFFF 0%, var(--geo-surface-subtle) 100%);
-    border: 1px solid var(--geo-border);
-    border-radius: 12px;
+    padding: 13px 15px;
+    background: #FFFFFF;
+    border: 1px solid var(--geo-border-light);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(18, 40, 58, 0.03);
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    overflow: hidden;
 }
 
 .geo-stat:hover {
     transform: translateY(-2px);
-    border-color: rgba(15, 124, 136, 0.3);
-    box-shadow: var(--geo-shadow-xs);
+    box-shadow: 0 6px 18px rgba(18, 40, 58, 0.08);
+}
+
+.geo-stat-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.geo-stat-icon {
+    font-size: 18px;
+    line-height: 1;
 }
 
 .geo-stat-value {
-    color: var(--geo-text);
-    font-size: 1.35rem;
+    font-family: var(--geo-font-display);
+    font-size: 1.5rem;
     font-weight: 800;
     letter-spacing: -0.02em;
     line-height: 1.1;
@@ -305,12 +414,91 @@ div[class*="st-key-geo_info_card"]:hover {
 }
 
 .geo-stat-label {
-    margin-top: 4px;
-    color: var(--geo-text-soft);
-    font-size: 0.7rem;
+    margin-top: 5px;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
+}
+
+/* Color Coding: Tile 1 (Staff / Users) -> Blue */
+.geo-stat:nth-child(1),
+.geo-stat-users {
+    background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%) !important;
+    border: 1px solid #BFDBFE !important;
+    border-left: 4px solid #2563EB !important;
+}
+.geo-stat:nth-child(1) .geo-stat-value,
+.geo-stat-users .geo-stat-value {
+    color: #1E3A8A !important;
+}
+.geo-stat:nth-child(1) .geo-stat-label,
+.geo-stat-users .geo-stat-label {
+    color: #1D4ED8 !important;
+}
+.geo-stat:nth-child(1) .geo-stat-icon,
+.geo-stat-users .geo-stat-icon {
+    color: #2563EB !important;
+}
+
+/* Color Coding: Tile 2 (Patients) -> Green */
+.geo-stat:nth-child(2),
+.geo-stat-patients {
+    background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%) !important;
+    border: 1px solid #BBF7D0 !important;
+    border-left: 4px solid #16A34A !important;
+}
+.geo-stat:nth-child(2) .geo-stat-value,
+.geo-stat-patients .geo-stat-value {
+    color: #14532D !important;
+}
+.geo-stat:nth-child(2) .geo-stat-label,
+.geo-stat-patients .geo-stat-label {
+    color: #15803D !important;
+}
+.geo-stat:nth-child(2) .geo-stat-icon,
+.geo-stat-patients .geo-stat-icon {
+    color: #16A34A !important;
+}
+
+/* Color Coding: Tile 3 (Examinations) -> Teal */
+.geo-stat:nth-child(3),
+.geo-stat-exams {
+    background: linear-gradient(135deg, #F0FDFA 0%, #E6F7F8 100%) !important;
+    border: 1px solid #BCE5E8 !important;
+    border-left: 4px solid #0F7C88 !important;
+}
+.geo-stat:nth-child(3) .geo-stat-value,
+.geo-stat-exams .geo-stat-value {
+    color: #0B4F57 !important;
+}
+.geo-stat:nth-child(3) .geo-stat-label,
+.geo-stat-exams .geo-stat-label {
+    color: #0F5E68 !important;
+}
+.geo-stat:nth-child(3) .geo-stat-icon,
+.geo-stat-exams .geo-stat-icon {
+    color: #0F7C88 !important;
+}
+
+/* Color Coding: Tile 4 (X-Rays this mo.) -> Amber */
+.geo-stat:nth-child(4),
+.geo-stat-xrays {
+    background: linear-gradient(135deg, #FFFDF5 0%, #FEF3C7 100%) !important;
+    border: 1px solid #FDE68A !important;
+    border-left: 4px solid #D97706 !important;
+}
+.geo-stat:nth-child(4) .geo-stat-value,
+.geo-stat-xrays .geo-stat-value {
+    color: #78350F !important;
+}
+.geo-stat:nth-child(4) .geo-stat-label,
+.geo-stat-xrays .geo-stat-label {
+    color: #92400E !important;
+}
+.geo-stat:nth-child(4) .geo-stat-icon,
+.geo-stat-xrays .geo-stat-icon {
+    color: #D97706 !important;
 }
 
 /* ---------------------------------------------------------
@@ -319,21 +507,35 @@ div[class*="st-key-geo_info_card"]:hover {
 
 .geo-sub-card {
     position: relative;
-    padding: 14px 16px;
-    background: linear-gradient(135deg, #F0F9FB 0%, #E6F4F7 100%);
-    border: 1px solid rgba(15, 124, 136, 0.2);
-    border-radius: 12px;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #F0FDFA 0%, #E6F7F8 60%, #EFF6FF 100%);
+    border: 1px solid #BCE5E8;
+    border-left: 4px solid var(--geo-primary);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(15, 124, 136, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
 .geo-sub-card:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--geo-shadow-xs);
+    transform: translateY(-2px);
+    border-color: #99F6E4;
+    box-shadow: 0 6px 18px rgba(15, 124, 136, 0.12);
+}
+
+.geo-sub-left {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .geo-sub-plan {
-    color: var(--geo-primary-dark);
-    font-size: 1rem;
+    color: var(--geo-text);
+    font-family: var(--geo-font-display);
+    font-size: 1.05rem;
     font-weight: 800;
     letter-spacing: -0.01em;
     display: flex;
@@ -341,11 +543,34 @@ div[class*="st-key-geo_info_card"]:hover {
     gap: 6px;
 }
 
+.geo-sub-plan .material-symbols-rounded {
+    font-size: 1.15rem;
+    color: var(--geo-primary);
+}
+
 .geo-sub-meta {
-    margin-top: 3px;
     color: var(--geo-text-soft);
     font-size: 0.8rem;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.geo-sub-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #FFFFFF;
+    color: var(--geo-primary);
+    border: 1px solid #BCE5E8;
+    border-radius: 9999px;
+    padding: 3px 9px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 /* ---------------------------------------------------------
@@ -354,34 +579,101 @@ div[class*="st-key-geo_info_card"]:hover {
 
 div[class*="st-key-geo_map_panel"] {
     position: relative;
-    padding: 14px;
-    background: var(--geo-card);
+    padding: 16px;
+    background: #FFFFFF;
     border: 1px solid var(--geo-border);
     border-radius: var(--geo-radius-lg);
     box-shadow: var(--geo-shadow-sm);
-    min-height: 580px;
+    min-height: 600px;
     overflow: hidden;
     transition: box-shadow 0.25s ease, border-color 0.25s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+div[class*="st-key-geo_map_panel"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, #3B82F6 0%, #20A3B2 55%, var(--geo-primary) 100%);
+    border-top-left-radius: var(--geo-radius-lg);
+    border-top-right-radius: var(--geo-radius-lg);
+    z-index: 5;
 }
 
 div[class*="st-key-geo_map_panel"]:hover {
-    border-color: rgba(15, 124, 136, 0.28);
+    border-color: #94A3B8;
     box-shadow: var(--geo-shadow-md);
 }
 
-/* Style the folium container inside the panel */
+/* Map Header Bar */
+.geo-map-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--geo-border-light);
+}
+
+.geo-map-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--geo-font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--geo-text);
+}
+
+.geo-map-title .material-symbols-rounded {
+    color: var(--geo-primary);
+    font-size: 1.15rem;
+}
+
+.geo-map-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #1E40AF;
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 9999px;
+    padding: 3px 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.geo-map-badge::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2563EB;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+/* Style the folium container & iframe inside the panel */
 div[class*="st-key-geo_map_panel"] iframe {
-    border-radius: 14px;
-    border: 1px solid var(--geo-border-light);
-    display: block;
+    border-radius: 14px !important;
+    border: 1px solid var(--geo-border-light) !important;
+    display: block !important;
     width: 100% !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 /* ---------------------------------------------------------
    RESPONSIVE DESIGN
    --------------------------------------------------------- */
 
-@media (max-width: 900px) {
+@media (max-width: 992px) {
     div[class*="st-key-geo_info_card"],
     div[class*="st-key-geo_map_panel"] {
         min-height: auto;
@@ -393,9 +685,23 @@ div[class*="st-key-geo_map_panel"] iframe {
     }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 580px) {
     div[class*="st-key-geo_info_card"] {
-        padding: 18px 16px;
+        padding: 20px 18px;
+    }
+
+    .geo-brand-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .geo-type {
+        align-self: center;
+    }
+
+    .geo-badge-row {
+        justify-content: center;
     }
 
     .geo-stats {
@@ -403,7 +709,12 @@ div[class*="st-key-geo_map_panel"] iframe {
     }
 
     .geo-name {
-        font-size: 1.25rem;
+        font-size: 1.35rem;
+    }
+
+    .geo-sub-card {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 

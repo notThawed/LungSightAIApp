@@ -561,6 +561,9 @@ div[data-testid="stMainBlockContainer"],
    ---------------------------------------------------------- */
 
 [class*="st-key-signature_canvas_"] {
+  width: 542px !important;
+  max-width: 100% !important;
+  height: 178px !important;
   border: 1.5px dashed #94A3B8 !important;
   border-radius: 10px !important;
   overflow: hidden !important;
@@ -568,6 +571,12 @@ div[data-testid="stMainBlockContainer"],
   margin: 0.5rem 0 0.85rem !important;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03) !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+[class*="st-key-signature_canvas_"] iframe {
+  width: 540px !important;
+  height: 174px !important;
+  display: block !important;
 }
 
 [class*="st-key-signature_canvas_"]:hover {
