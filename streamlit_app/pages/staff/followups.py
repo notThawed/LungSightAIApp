@@ -247,7 +247,7 @@ def render_kpi_strip(follow_ups):
 
 def render_filter_bar():
 
-    search_col, status_col, refresh_col = st.columns([3, 1.5, 1])
+    search_col, status_col = st.columns([3, 1.5])
 
     search = search_col.text_input(
         "Search",
@@ -262,9 +262,6 @@ def render_filter_bar():
         key="staff_fu_status_filter",
         label_visibility="collapsed",
     )
-
-    if refresh_col.button("Refresh", icon=":material/refresh:", use_container_width=True, key="staff_fu_refresh"):
-        st.rerun()
 
     return search, status_filter
 
@@ -335,6 +332,8 @@ def render_fu_card(fu, show_arrived=True):
 
         with cols[4]:
             pill(status, status_tone(status))
+            if fu.get("follow_up_examination_id"):
+                st.caption("Checked in · awaiting physician")
 
         btn_cols = st.columns([1, 1, 1, 4, 1])
 
@@ -343,7 +342,11 @@ def render_fu_card(fu, show_arrived=True):
                 go_to_fu_detail(fu)
 
         with btn_cols[1]:
-            if show_arrived and status in ACTIVE_STATUSES:
+            if (
+                show_arrived
+                and status in ACTIVE_STATUSES
+                and not fu.get("follow_up_examination_id")
+            ):
                 if st.button("Arrived", key=f"sf_fu_arrived_{fu_id}", icon=":material/check_circle:", type="primary", use_container_width=True):
                     st.session_state["staff_fu_arrival_target"] = fu
                     st.rerun()
@@ -517,21 +520,36 @@ def render_fu_detail():
     if source:
         st.markdown(
             "<div class='sf-card sf-card--info'>"
-            f"<p class='sf-card-title'>{source.get('examination_type') or 'General Consult'}</p>"
+            f"<p class='sf-card-title'>"
+            f"{source.get('examination_type') or 'General Consult'}</p>"
             "<div class='sf-card-row'>"
-            f"<span>Date</span><b>{format_date_only(source.get('examination_date'))}</b>"
+            f"<span>Date</span>"
+            f"<b>{format_date_only(source.get('examination_date'))}</b>"
             "</div>"
             "<div class='sf-card-row'>"
-            f"<span>Chief Complaint</span><b>{source.get('chief_complaint') or '—'}</b>"
+            f"<span>Chief Complaint</span>"
+            f"<b>{source.get('chief_complaint') or '—'}</b>"
             "</div>"
             "<div class='sf-card-row'>"
-            f"<span>Diagnosis</span><b>{source.get('diagnosis') or '—'}</b>"
+            f"<span>Diagnosis</span>"
+            f"<b>{source.get('diagnosis') or '—'}</b>"
             "</div>"
             "</div>",
             unsafe_allow_html=True,
         )
+
+        # NEW: explicit button to open the full parent dialog
+        if st.button(
+            "See Full Parent Consult",
+            key=f"staff_fu_detail_view_parent_{fu.get('follow_up_id')}",
+            icon=":material/open_in_new:",
+            width="stretch",
+        ):
+            st.session_state["staff_fu_parent_view"] = source
+            st.rerun()
     else:
         st.caption("No parent consultation linked.")
+
 
     section_title("Previous Follow-Up")
 
@@ -553,7 +571,7 @@ def render_fu_detail():
 
     st.divider()
 
-    col_arrive, col_view, col_resched, col_cancel = st.columns(4)
+    col_arrive, col_resched, col_cancel = st.columns(3)
 
     if col_arrive.button(
         "Mark as Arrived",
@@ -564,15 +582,6 @@ def render_fu_detail():
         disabled=status not in ACTIVE_STATUSES,
     ):
         st.session_state["staff_fu_arrival_target"] = fu
-        st.rerun()
-
-    if col_view.button(
-        "View Full Parent",
-        key=f"staff_fu_view_parent_{fu.get('follow_up_id')}",
-        icon=":material/open_in_new:",
-        use_container_width=True,
-    ):
-        st.session_state["staff_fu_parent_view"] = source
         st.rerun()
 
     if col_resched.button(
@@ -594,6 +603,7 @@ def render_fu_detail():
     ):
         st.session_state["staff_fu_cancel_target"] = fu
         st.rerun()
+
 
 # ============================================================
 # DIALOG — RESCHEDULE
