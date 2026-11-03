@@ -1,0 +1,604 @@
+
+/* ============================================================
+   LUNGSIGHT AI — HOSPITAL OPERATIONS CENTER
+   Hospital Administrator Dashboard
+   ============================================================ */
+
+
+/* ============================================================
+   DASHBOARD VARIABLES
+   ============================================================ */
+
+.st-key-had_dashboard {
+    --had-ink: #111b3e;
+    --had-muted: #5d6c8b;
+    --had-teal: #00a7ad;
+
+    color: var(--had-ink);
+}
+
+
+/* ============================================================
+   SVG ICONS
+   ============================================================ */
+
+.st-key-had_dashboard .had-icon {
+    width: 27px;
+    height: 27px;
+    flex-shrink: 0;
+}
+
+
+/* ============================================================
+   HERO BANNER
+   ============================================================ */
+
+.st-key-had_dashboard .had-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+
+    min-height: 148px;
+    padding: 25px 36px;
+    margin-bottom: 16px;
+
+    border-radius: 16px;
+    color: white;
+
+    background: linear-gradient(
+        108deg,
+        #005965 0%,
+        #008b93 49%,
+        #5fc9cd 100%
+    );
+
+    box-shadow: 0 6px 22px rgba(4, 108, 117, 0.12);
+}
+
+.st-key-had_dashboard .had-hero::before {
+    content: "";
+
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+
+    background:
+        radial-gradient(
+            circle at 84% 10%,
+            rgba(255, 255, 255, 0.27),
+            transparent 35%
+        ),
+        repeating-linear-gradient(
+            125deg,
+            transparent 0 39px,
+            rgba(255, 255, 255, 0.025) 40px 41px
+        );
+}
+
+.st-key-had_dashboard .had-hero-kicker {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    opacity: 0.95;
+}
+
+.st-key-had_dashboard .had-hero h1 {
+    color: white !important;
+
+    font-size: clamp(25px, 3vw, 39px) !important;
+    font-weight: 850 !important;
+
+    letter-spacing: -1.3px;
+    line-height: 1.12;
+
+    margin: 6px 0 !important;
+}
+
+.st-key-had_dashboard .had-hero p {
+    margin: 8px 0 0;
+
+    color: #f1ffff;
+    font-size: 14px;
+}
+
+
+/* ============================================================
+   KPI METRIC CARDS
+   ============================================================ */
+
+.st-key-had_dashboard .had-metric {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+
+    min-width: 0;
+    min-height: 109px;
+
+    padding: 16px 14px;
+
+    border: 1px solid var(--edge);
+    border-radius: 17px;
+
+    background: linear-gradient(
+        115deg,
+        #ffffff,
+        var(--tint)
+    );
+
+    box-shadow: 0 4px 12px rgba(30, 78, 105, 0.055);
+}
+
+
+/* Teal */
+
+.st-key-had_dashboard .had-teal {
+    --edge: #b9e7ec;
+    --tint: #eafafa;
+    --accent: #04a9ae;
+}
+
+
+/* Blue */
+
+.st-key-had_dashboard .had-blue {
+    --edge: #c6e0ff;
+    --tint: #edf5ff;
+    --accent: #2c96fa;
+}
+
+
+/* Orange */
+
+.st-key-had_dashboard .had-orange {
+    --edge: #ffe2c1;
+    --tint: #fff4e7;
+    --accent: #ff9900;
+}
+
+
+/* Purple */
+
+.st-key-had_dashboard .had-purple {
+    --edge: #e1d5ff;
+    --tint: #f6f1ff;
+    --accent: #925af0;
+}
+
+
+/* ============================================================
+   KPI ICONS
+   ============================================================ */
+
+.st-key-had_dashboard .had-metric-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+
+    width: 51px;
+    height: 51px;
+
+    color: white;
+    background: var(--accent);
+
+    border-radius: 13px;
+
+    box-shadow: 0 5px 12px rgba(30, 78, 105, 0.12);
+}
+
+.st-key-had_dashboard .had-metric-icon .had-icon {
+    width: 30px;
+    height: 30px;
+}
+
+
+/* ============================================================
+   KPI TEXT
+   ============================================================ */
+
+.st-key-had_dashboard .had-metric-body {
+    min-width: 0;
+}
+
+.st-key-had_dashboard .had-metric-label {
+    color: #131b3a;
+
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.st-key-had_dashboard .had-metric-value {
+    color: #11183b;
+
+    font-size: clamp(24px, 2.5vw, 34px);
+    font-weight: 850;
+
+    line-height: 1.1;
+    letter-spacing: -0.8px;
+
+    margin-top: 5px;
+}
+
+.st-key-had_dashboard .had-metric-note {
+    color: #677894;
+
+    font-size: 10px;
+    margin-top: 4px;
+}
+
+
+/* ============================================================
+   DASHBOARD PANELS
+   ============================================================ */
+
+.st-key-had_dashboard
+[class*="st-key-had_"][data-testid="stVerticalBlockBorderWrapper"] {
+    border: 1px solid #d8e5f2;
+    border-radius: 16px;
+
+    background: white;
+
+    box-shadow: 0 4px 14px rgba(32, 79, 111, 0.055);
+}
+
+
+/* ============================================================
+   PANEL HEADINGS
+   ============================================================ */
+
+.st-key-had_dashboard .had-panel-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    min-width: 0;
+    margin: 1px 0 15px;
+}
+
+.st-key-had_dashboard .had-heading-icon {
+    width: 30px;
+    height: 30px;
+
+    flex-shrink: 0;
+    color: #00a8ae;
+}
+
+.st-key-had_dashboard .had-panel-heading-text {
+    min-width: 0;
+}
+
+.st-key-had_dashboard .had-panel-heading strong {
+    display: block;
+
+    color: #121a3a;
+
+    font-size: 17px;
+    font-weight: 850;
+    line-height: 1.15;
+}
+
+.st-key-had_dashboard .had-panel-heading span {
+    display: block;
+
+    color: #58688b;
+
+    font-size: 11px;
+    margin-top: 5px;
+}
+
+
+/* ============================================================
+   EXAMINATION STATUS CARDS
+   ============================================================ */
+
+.st-key-had_dashboard .had-status {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    min-height: 84px;
+
+    padding: 13px 12px;
+    margin: 7px 0;
+
+    border-radius: 15px;
+}
+
+
+/* Pending */
+
+.st-key-had_dashboard .had-status-pending {
+    color: #e58a00;
+    background: #fff5e5;
+
+    border: 1px solid #ffebc6;
+}
+
+
+/* Completed */
+
+.st-key-had_dashboard .had-status-done {
+    color: #009e55;
+    background: #e8fbed;
+
+    border: 1px solid #d5f6df;
+}
+
+.st-key-had_dashboard .had-status span {
+    display: block;
+
+    color: #14203e;
+
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.st-key-had_dashboard .had-status strong {
+    display: block;
+
+    color: #101a3c;
+
+    font-size: 26px;
+    line-height: 1.2;
+}
+
+
+/* ============================================================
+   STAFF DISTRIBUTION LEGEND
+   ============================================================ */
+
+.st-key-had_dashboard .had-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    padding: 8px 0;
+
+    font-size: 11px;
+
+    border-bottom: 1px solid #f1f3f7;
+}
+
+.st-key-had_dashboard .had-legend-row span:nth-child(2) {
+    flex: 1;
+    min-width: 0;
+
+    overflow-wrap: anywhere;
+}
+
+.st-key-had_dashboard .had-legend-row b {
+    white-space: nowrap;
+    font-size: 10px;
+}
+
+.st-key-had_dashboard .had-legend-dot {
+    width: 11px;
+    height: 11px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+}
+
+
+/* ============================================================
+   SUBSCRIPTION PLAN
+   ============================================================ */
+
+.st-key-had_dashboard .had-plan {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 15px;
+    margin: 4px 0 17px;
+
+    border-radius: 13px;
+
+    background: #ebfaef;
+}
+
+.st-key-had_dashboard .had-plan svg {
+    width: 32px;
+    height: 32px;
+
+    color: #00a447;
+}
+
+.st-key-had_dashboard .had-plan strong {
+    display: block;
+
+    color: #142140;
+
+    font-size: 15px;
+}
+
+.st-key-had_dashboard .had-plan span {
+    display: block;
+
+    color: #526b72;
+
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+
+/* ============================================================
+   SUBSCRIPTION USAGE
+   ============================================================ */
+
+.st-key-had_dashboard .had-usage-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+
+    font-size: 11px;
+
+    margin: 13px 0 6px;
+}
+
+.st-key-had_dashboard .had-usage-label b {
+    white-space: nowrap;
+}
+
+.st-key-had_dashboard
+[data-testid="stProgressBar"] > div > div {
+    background: #00a7ad;
+}
+
+
+/* ============================================================
+   RECENT HOSPITAL ACTIVITY
+   ============================================================ */
+
+.st-key-had_dashboard .had-activity-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    padding: 12px 8px;
+    margin-bottom: 4px;
+
+    border-radius: 9px;
+
+    background: #f8fafc;
+
+    font-size: 11px;
+}
+
+.st-key-had_dashboard .had-activity-mark {
+    width: 9px;
+    height: 9px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+    background: #00a8ae;
+}
+
+.st-key-had_dashboard .had-activity-row strong {
+    flex: 1;
+    min-width: 0;
+
+    overflow-wrap: anywhere;
+}
+
+.st-key-had_dashboard .had-activity-row span:last-child {
+    color: #63708c;
+    text-align: right;
+}
+
+
+/* ============================================================
+   QUICK ACTION BUTTONS
+   ============================================================ */
+
+.st-key-had_quick_actions .stButton > button {
+    min-height: 65px;
+
+    border: 1px solid #d6ecea;
+    border-radius: 13px;
+
+    background: #eaf9f6;
+    color: #007c6b;
+
+    font-weight: 800;
+
+    box-shadow: none;
+}
+
+
+/* Patient Records */
+
+.st-key-had_quick_actions
+[data-testid="stHorizontalBlock"]:first-child
+[data-testid="column"]:nth-child(2)
+.stButton > button {
+    background: #eaf3ff;
+    color: #1269de;
+
+    border-color: #d7e7ff;
+}
+
+
+/* Subscriptions */
+
+.st-key-had_quick_actions
+[data-testid="stHorizontalBlock"]:nth-child(2)
+[data-testid="column"]:first-child
+.stButton > button {
+    background: #fff5e5;
+    color: #dc8500;
+
+    border-color: #ffebc8;
+}
+
+
+/* Reports */
+
+.st-key-had_quick_actions
+[data-testid="stHorizontalBlock"]:nth-child(2)
+[data-testid="column"]:nth-child(2)
+.stButton > button {
+    background: #f2ebff;
+    color: #7d45dc;
+
+    border-color: #e7d9ff;
+}
+
+
+/* Hover Effect */
+
+.st-key-had_quick_actions .stButton > button:hover {
+    filter: brightness(0.97);
+    border-color: currentColor;
+}
+
+
+/* ============================================================
+   OVERFLOW PROTECTION
+   ============================================================ */
+
+.st-key-had_dashboard [data-testid="stHorizontalBlock"],
+.st-key-had_dashboard [data-testid="column"] {
+    min-width: 0;
+}
+
+
+/* ============================================================
+   REFRESH BUTTON ALIGNMENT
+   ============================================================ */
+
+.st-key-had_footer_refresh {
+    display: flex;
+    justify-content: flex-end;
+}
+
+
+/* ============================================================
+   RESPONSIVE DESIGN
+   ============================================================ */
+
+@media (max-width: 1000px) {
+
+    .st-key-had_dashboard .had-metric {
+        flex-wrap: wrap;
+    }
+
+    .st-key-had_dashboard .had-metric-value {
+        font-size: 26px;
+    }
+
+}
+
+@media (max-width: 640px) {
+
+    .st-key-had_dashboard .had-hero {
+        padding: 22px;
+    }
+
+    .st-key-had_dashboard .had-metric {
+        padding: 12px;
+    }
+
+}

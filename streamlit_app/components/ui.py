@@ -141,36 +141,47 @@ def field(label, value):
 # PAGE HEADER AND METRIC CARD
 # ============================================================
 
+
 def page_header(title, caption, action_label=None, action_key=None, action_icon=None):
-    """Page title with optional action and a standard refresh button."""
-    if action_label:
-        left, action_col, refresh_col = st.columns(
-            [4, 1.2, 0.65], vertical_alignment="center"
-        )
-    else:
-        left, refresh_col = st.columns(
-            [4, 0.65], vertical_alignment="center"
-        )
-
-    left.markdown(
-        f"<p class='sa-page-title'>{title}</p>"
-        f"<p class='sa-page-caption'>{caption}</p>",
-        unsafe_allow_html=True,
-    )
-
-    action_clicked = False
-    if action_label:
-        action_clicked = action_col.button(
-            action_label,
-            key=action_key,
-            icon=f":material/{action_icon}:" if action_icon else None,
-            type="primary",
-            width="stretch",
-        )
+    """Page heading with optional action and right-aligned refresh."""
 
     title_key = "_".join(
         part.lower() for part in str(title).split() if part
     )
+
+    # Keep the refresh button in the rightmost column.
+    if action_label:
+        title_col, action_col, refresh_col = st.columns(
+            [5, 1.5, 0.5],
+            gap="small",
+            vertical_alignment="center",
+        )
+    else:
+        title_col, refresh_col = st.columns(
+            [6.5, 0.5],
+            gap="small",
+            vertical_alignment="center",
+        )
+
+    with title_col:
+        st.markdown(
+            f"<p class='sa-page-title'>{safe(title)}</p>"
+            f"<p class='sa-page-caption'>{safe(caption)}</p>",
+            unsafe_allow_html=True,
+        )
+
+    action_clicked = False
+
+    if action_label:
+        with action_col:
+            action_clicked = st.button(
+                action_label,
+                key=action_key,
+                icon=f":material/{action_icon}:" if action_icon else None,
+                type="primary",
+                width="stretch",
+            )
+
     with refresh_col:
         refresh_button(
             key=f"page_refresh_{title_key}",
@@ -430,67 +441,120 @@ def refresh_button(
     width="content",
     label_visibility="collapsed",
 ):
-    """Render the shared circular refresh control and reload fresh data."""
+    """Render a circular refresh button with a centered icon."""
+
     st.markdown(
-        """<style>
-        /* The circular button container */
-        [class*="st-key-ui_refresh_"] button {
-            width: 2.75rem !important;
-            min-width: 2.75rem !important;
-            height: 2.75rem !important;
-            min-height: 2.75rem !important;
-            padding: 0 !important;
-            border: 1px solid rgba(15, 124, 136, 0.24);
-            border-radius: 50% !important;
-            background: #e8f4f6;
-            color: #0f7c88;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-            transition: background 140ms ease, box-shadow 140ms ease,
-                transform 140ms ease;
-        }
-        
-        /* Hover effect */
-        [class*="st-key-ui_refresh_"] button:hover {
-            border-color: #0f7c88;
-            background: #d8eef0;
-            color: #075e68;
-            box-shadow: 0 4px 12px rgba(15, 124, 136, 0.18);
-            transform: rotate(-12deg);
+        """
+        <style>
+        /* Keep refresh button at the right edge */
+        [class*="st-key-page_refresh_"] {
+            display: flex !important;
+            justify-content: flex-end !important;
+            align-items: center !important;
+            width: 100% !important;
         }
 
-        /* Force the inner wrapper to center the icon perfectly */
-        [class*="st-key-ui_refresh_"] button > div {
+        /* Circular button */
+        [class*="st-key-page_refresh_"] button {
+            position: relative !important;
+
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            width: 100% !important;
-            height: 100% !important;
+
+            width: 42px !important;
+            min-width: 42px !important;
+            max-width: 42px !important;
+
+            height: 42px !important;
+            min-height: 42px !important;
+            max-height: 42px !important;
+
+            padding: 0 !important;
+            margin: 0 !important;
+
+            background: #e8f4f6 !important;
+            border: 1px solid #a8d9df !important;
+            border-radius: 50% !important;
+
+            color: #087983 !important;
+
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+            transition: all 0.15s ease;
         }
 
-        /* Hide the text visually but keep it in the DOM for Streamlit */
-        [class*="st-key-ui_refresh_"] button p {
+        /* Remove Streamlit's default inner spacing */
+        [class*="st-key-page_refresh_"] button > div {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+
+            width: 100% !important;
+            height: 100% !important;
+
+            padding: 0 !important;
+            margin: 0 !important;
+            gap: 0 !important;
+        }
+
+        /* Hide the label completely */
+        [class*="st-key-page_refresh_"] button p {
             display: none !important;
         }
-        
-        /* Remove any margins from the icon that might offset it */
-        [class*="st-key-ui_refresh_"] button [data-testid="stIconMaterial"] {
-            margin: 0 !important;
+
+        /* Force icon to exact center */
+        [class*="st-key-page_refresh_"]
+        button [data-testid="stIconMaterial"] {
+            position: absolute !important;
+
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+
+            width: 20px !important;
+            height: 20px !important;
+
             padding: 0 !important;
+            margin: 0 !important;
+
+            color: #087983 !important;
+            font-size: 20px !important;
+            line-height: 1 !important;
         }
-        </style>""",
+
+        /* Hover */
+        [class*="st-key-page_refresh_"] button:hover {
+            background: #d8eef0 !important;
+            border-color: #087983 !important;
+            box-shadow: 0 3px 10px rgba(8, 121, 131, 0.15);
+        }
+
+        /* Keyboard focus */
+        [class*="st-key-page_refresh_"] button:focus-visible {
+            outline: 2px solid #087983 !important;
+            outline-offset: 3px;
+        }
+        </style>
+        """,
         unsafe_allow_html=True,
     )
-    with st.container(key=f"ui_refresh_{key}"):
-        clicked = st.button(
-            label,
-            key=key,
-            icon=":material/refresh:",
-            type="secondary",
-            width=width,
-            help="Reload this page with the latest data",
-        )
+
+    clicked = st.button(
+        label,
+        key=key,
+        icon=":material/refresh:",
+        type="secondary",
+        width=width,
+        help="Reload this page with the latest data",
+    )
+
     if clicked:
         refresh_data()
+
     return clicked
 
 
