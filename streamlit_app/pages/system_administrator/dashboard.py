@@ -9,6 +9,7 @@ user overview, and administrative quick actions.
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from html import escape
+import importlib
 from pathlib import Path
 
 import pandas as pd
@@ -532,7 +533,7 @@ def render_hospital_distribution(hospitals, examinations):
     ]
 
     try:
-        import plotly.graph_objects as go
+        go = importlib.import_module("plotly.graph_objects")
 
     except ImportError:
         frame = pd.DataFrame(
