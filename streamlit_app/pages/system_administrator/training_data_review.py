@@ -318,8 +318,8 @@ def render_queue():
         if h.get("hospital_name")
     })
 
-    hospital_col, status_col, search_col, refresh_col = st.columns(
-        [1.6, 1.5, 2.5, 0.8]
+    hospital_col, status_col, search_col = st.columns(
+        [1.6, 1.5, 2.5]
     )
 
     hospital_filter = hospital_col.selectbox(
@@ -348,14 +348,6 @@ def render_queue():
         label_visibility="collapsed",
         key="tdr_search",
     ).strip().lower()
-
-    if refresh_col.button(
-        "Refresh",
-        icon=":material/refresh:",
-        width="stretch",
-        key="tdr_refresh",
-    ):
-        st.rerun()
 
     # ----------------------------------------------
     # Map filter

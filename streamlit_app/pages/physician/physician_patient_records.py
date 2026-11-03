@@ -321,6 +321,10 @@ def render_patient_row(row):
                 go_to_patient_overview(patient)
 
 
+def _clear_patient_search():
+    st.session_state["physician_patient_records_search"] = ""
+
+
 def render_patient_list(rows):
     with st.container(key="physician_patient_records_page"):
         page_header("Patient Records", "View completed patient X-ray analyses and clinical history.")
@@ -334,9 +338,13 @@ def render_patient_list(rows):
             label_visibility="collapsed",
         ).strip().lower()
 
-        if clear_col.button("Clear", key="pr_clear_search", icon=":material/close:"):
-            st.session_state["physician_patient_records_search"] = ""
-            st.rerun()
+        # FIX: Use on_click callback to safely clear state without crashing
+        clear_col.button(
+            "Clear", 
+            key="pr_clear_search", 
+            icon=":material/close:",
+            on_click=_clear_patient_search
+        )
 
         if search:
             filtered = [r for r in rows if search in " ".join([

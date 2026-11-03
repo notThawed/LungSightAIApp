@@ -21,6 +21,7 @@ from backend.backend_utils.geocode_utils import (
 from streamlit_app.components.map import (
     render_hospital_map,
 )
+from streamlit_app.components.ui import refresh_button
 
 from datetime import datetime, timezone
 import time
@@ -1525,7 +1526,7 @@ def show():
     with outer_center:
         with st.container(key="setup_wizard"):
 
-            top_left, top_right = st.columns([4, 1])
+            top_left, top_right = st.columns([4, 1.7])
 
             with top_left:
                 st.markdown(
@@ -1540,13 +1541,18 @@ def show():
                 )
 
             with top_right:
-                if st.button(
-                    "Sign out",
-                    key="setup_back_to_login",
-                    icon=":material/logout:",
-                    width="stretch",
-                ):
-                    back_to_login()
+                refresh_col, signout_col = st.columns([0.65, 1.1])
+                with refresh_col:
+                    refresh_button(key="setup_wizard_refresh")
+
+                with signout_col:
+                    if st.button(
+                        "Sign out",
+                        key="setup_back_to_login",
+                        icon=":material/logout:",
+                        width="stretch",
+                    ):
+                        back_to_login()
 
             st.markdown(
                 "<div class='ls-page-title'>"

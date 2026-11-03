@@ -1638,14 +1638,6 @@ def render_review_list_page():
             "Review completed chest X-Rays and finalize the patient's examination.",
         )
 
-        if st.button(
-            "Refresh",
-            icon=":material/refresh:",
-            key="review_patient_refresh",
-            width="stretch",
-        ):
-            st.rerun()
-
         try:
             xray_ready = get_xray_ready_examinations(
                 hospital_id=filter_hospital

@@ -224,24 +224,6 @@ def back_to_landing():
 
 def group_follow_ups_by_patient(follow_ups, status_filter):
 
-    """
-    Group follow-ups into one entry per patient.
-
-    - If status_filter is "All", every follow-up counts.
-    - Otherwise only follow-ups matching that status count.
-
-    For each patient:
-        {
-            "patient": {...},
-            "follow_ups": [...],        # sorted by date asc
-            "next_follow_up": {...},    # earliest in list
-            "has_rescheduled": bool,    # any Rescheduled in list
-        }
-
-    Patients are sorted by their next_follow_up date (asc),
-    so the most imminent follow-up appears first.
-    """
-
     filtered = follow_ups
     if status_filter != "All":
         filtered = [
@@ -261,23 +243,35 @@ def group_follow_ups_by_patient(follow_ups, status_filter):
             by_patient[patient_id] = {
                 "patient": patient,
                 "follow_ups": [],
-                "has_rescheduled": False,
             }
 
         by_patient[patient_id]["follow_ups"].append(fu)
 
-        if (fu.get("status") or "") == "Rescheduled":
-            by_patient[patient_id]["has_rescheduled"] = True
-
     entries = list(by_patient.values())
 
     for entry in entries:
-        entry["follow_ups"].sort(key=sort_key_follow_up)
-        entry["next_follow_up"] = entry["follow_ups"][0]
+        # Pick the EARLIEST upcoming (Scheduled / Rescheduled) follow-up.
+        # If none active, fall back to the most recent one.
+        active = [
+            fu for fu in entry["follow_ups"]
+            if (fu.get("status") or "") in ACTIVE_STATUSES
+        ]
+
+        if active:
+            active.sort(key=sort_key_follow_up)
+            entry["next_follow_up"] = active[0]
+        else:
+            entry["follow_ups"].sort(key=sort_key_follow_up, reverse=True)
+            entry["next_follow_up"] = entry["follow_ups"][0]
+
+        # The status pill reflects the NEXT follow-up's actual status.
+        # (Not "Rescheduled" unless the next one itself is Rescheduled.)
+        entry["next_status"] = entry["next_follow_up"].get("status") or "Scheduled"
 
     entries.sort(key=lambda item: sort_key_follow_up(item["next_follow_up"]))
 
     return entries
+
 
 
 def apply_search(entries, query):
@@ -384,14 +378,9 @@ def render_table(entries, page):
             fu_count = len(entry["follow_ups"])
 
             next_code = next_fu.get("follow_up_code") or "—"
-            next_status = next_fu.get("status") or "Scheduled"
+            next_status = entry.get("next_status") or next_fu.get("status") or "Scheduled"
 
-            if entry["has_rescheduled"]:
-                status_label = "Rescheduled"
-                tone = "amber"
-            else:
-                status_label = next_status
-                tone = status_tone(next_status)
+            tone = status_tone(next_status)
 
             if fu_count > 1:
                 code_display = f"{next_code} (+{fu_count - 1})"
@@ -406,7 +395,6 @@ def render_table(entries, page):
 
                 text_cell(columns[0], code_display, strong=True)
 
-                # Patient name — clickable link styled via CSS
                 with columns[1]:
                     st.markdown("<div class='pf-link-cell'>", unsafe_allow_html=True)
                     if st.button(
@@ -422,7 +410,7 @@ def render_table(entries, page):
                     st.markdown("</div>", unsafe_allow_html=True)
 
                 text_cell(columns[2], format_appointment(next_fu))
-                pill_cell(columns[3], status_label, tone)
+                pill_cell(columns[3], next_status, tone)
 
                 if columns[4].button(
                     "View",
@@ -437,6 +425,7 @@ def render_table(entries, page):
                     st.rerun()
 
     render_pagination(page, total_pages, total, start, end)
+
 
 
 def render_pagination(page, total_pages, total, start, end):
@@ -721,7 +710,6 @@ def render_patient_followups(patient, hospital_id):
 # ============================================================
 
 def show():
-
     load_css("followups.css")
     show_flash_message()
 
@@ -732,20 +720,18 @@ def show():
         st.error("You don't have access to Follow-Ups.")
         return
 
+    # Force the default status filter to "Scheduled" on fresh entry
+    if "_pf_fu_last_status" not in st.session_state:
+        st.session_state["pf_fu_status_filter"] = "Scheduled"
+        st.session_state["_pf_fu_last_status"] = "Scheduled"
+
+
     effective_hospital_id = None if role_id == ROLE_SUPERADMIN else hospital_id
 
     page_header(
         "Follow-Ups",
         "Manage patient follow-up visits across every stage of care.",
     )
-
-    if st.button(
-        "Refresh",
-        icon=":material/refresh:",
-        key="pf_fu_refresh",
-        width="stretch",
-    ):
-        st.rerun()
 
     selected_patient_id = st.session_state.get("pf_fu_selected_patient_id")
 
