@@ -903,6 +903,27 @@ def update_examination(
 
         if response.data:
 
+            # A follow-up appointment stays Scheduled after staff check-in.
+            # Complete it only after its linked physician examination is
+            # completed.
+            if fields.get("status") == "Completed":
+                try:
+                    admin_supabase.table("follow_ups").update({
+                        "status": "Completed",
+                        "updated_at": now,
+                    }).eq(
+                        "follow_up_examination_id",
+                        examination_id,
+                    ).in_(
+                        "status",
+                        ["Scheduled", "Rescheduled"],
+                    ).execute()
+                except Exception as follow_up_error:
+                    print(
+                        "Failed to complete linked follow-up: "
+                        f"{follow_up_error}"
+                    )
+
             audit.record_event(
                 "examination.updated",
                 target_id=examination_id,

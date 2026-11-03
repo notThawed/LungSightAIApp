@@ -80,8 +80,8 @@ DIALOG_KEY = "sa_dialog"
 # TABLE CONFIGURATION
 # ============================================================
 
-QUEUE_WIDTHS = [2.5, 1, 1.2, 1.2, 1.2]
-QUEUE_HEADERS = ["Patient", "Pending", "Waiting", "History", "Actions"]
+QUEUE_WIDTHS = [1.7, 1.7, 1.8, 1.5, 0.9, 1.1]
+QUEUE_HEADERS = ["Patient", "Examination Type", "Examination Date", "Waiting", "History", "Actions"]
 
 XRAY_QUEUE_WIDTHS = [2.4, 1.4, 1.6, 1.3, 1.2]
 XRAY_QUEUE_HEADERS = ["Patient", "Requested", "Requested At", "Status", "View"]
@@ -201,6 +201,16 @@ def format_waiting(minutes):
         return f"{minutes} min"
     hours = minutes // 60
     return f"{hours}h {minutes % 60}m"
+
+
+def format_queue_waiting(minutes):
+    """Show elapsed wait in days and time, including shorter waits."""
+    minutes = max(0, int(minutes or 0))
+    days, remainder = divmod(minutes, 24 * 60)
+    hours, mins = divmod(remainder, 60)
+    if days:
+        return f"{days}d {hours}h {mins}m"
+    return f"{hours}h {mins}m"
 
 
 # ============================================================
@@ -649,8 +659,6 @@ def show_complete_exam_dialog(patient, examination):
             ),
         ])
 
-        render_history_buttons(patient, key_prefix=f"pq_exam_{examination_id}")
-
         st.divider()
         section_title("Clinical Data")
 
@@ -995,14 +1003,23 @@ def render_queue_table(grouped, key_prefix="queue"):
                     patient_name(patient),
                     sub=patient_code(patient),
                 )
-                text_cell(columns[1], str(len(examinations)))
+                types = [
+                    examination.get("examination_type") or "Examination"
+                    for examination in examinations
+                ]
+                dates = [
+                    format_datetime(examination_datetime(examination))
+                    for examination in examinations
+                ]
+                text_cell(columns[1], " · ".join(types))
+                text_cell(columns[2], " · ".join(dates))
                 pill_cell(
-                    columns[2],
-                    format_waiting(waiting),
+                    columns[3],
+                    format_queue_waiting(waiting),
                     waiting_tone(waiting),
                 )
 
-                if columns[3].button(
+                if columns[4].button(
                     "History",
                     key=f"{key_prefix}_history_{patient_id}",
                     icon=":material/folder_open:",
@@ -1013,7 +1030,7 @@ def render_queue_table(grouped, key_prefix="queue"):
                     st.rerun()
 
                 if len(examinations) == 1:
-                    if columns[4].button(
+                    if columns[5].button(
                         "Examine",
                         key=f"{key_prefix}_examine_{patient_id}",
                         icon=":material/clinical_notes:",
@@ -1025,7 +1042,7 @@ def render_queue_table(grouped, key_prefix="queue"):
                         st.session_state["edit_patient"] = patient
                         st.rerun()
                 else:
-                    if columns[4].button(
+                    if columns[5].button(
                         "View Exams",
                         key=f"{key_prefix}_view_{patient_id}",
                         icon=":material/list:",
@@ -1117,14 +1134,6 @@ def show():
             "Patient Queue",
             "Review patients awaiting physician care and pending X-Ray requests.",
         )
-
-        if st.button(
-            "Refresh",
-            icon=":material/refresh:",
-            key="pq_refresh",
-            width="stretch",
-        ):
-            st.rerun()
 
         try:
             pending = get_pending_examinations(hospital_id=filter_hospital)

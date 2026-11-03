@@ -3,6 +3,12 @@ from pathlib import Path
 
 import streamlit as st
 
+st.set_page_config(
+    page_title="LungSight",
+    page_icon=":microscope:",
+    layout="wide",
+)
+
 def hide_streamlit_sidebar():
     st.markdown(
         """
@@ -107,15 +113,7 @@ from pages.hospital_administrator import (
 )
 
 
-# ==================================================
-# PAGE CONFIGURATION
-# ==================================================
 
-st.set_page_config(
-    page_title="LungSight",
-    page_icon=":microscope:",
-    layout="wide",
-)
 
 
 # ==================================================

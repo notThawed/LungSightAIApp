@@ -269,14 +269,6 @@ def show():
             "Pick a patient to analyze their X-Ray.",
         )
 
-        if st.button(
-            "Refresh",
-            icon=":material/refresh:",
-            key="xray_queue_refresh",
-            width="stretch",
-        ):
-            st.rerun()
-
         try:
             pending = get_pending_xray_examinations(
                 hospital_id=filter_hospital

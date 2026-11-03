@@ -1,27 +1,728 @@
 /* ==========================================================
-   SYSTEM ADMIN - MEDICAL RECORDS
+   SYSTEM ADMIN - MANAGE MEDICAL RECORDS
    shared/theme/css_content/system_admin_css/manage_medical_records.css
-   Only what is unique to this page. Tables, rows, fields, tabs
-   and buttons come from base.css.
+   Patient records list, overview category cards, exam cards,
+   AI heatmap analysis, report viewer, print styles, and dialogs.
    ========================================================== */
 
-/* attached images (X-rays, scans) get a soft frame */
-.st-key-sa_dialog [data-testid="stImage"] img {
-  border: 1px solid var(--sa-mist);
-  border-radius: 10px;
+/* ----------------------------------------------------------
+   Wide Layout & Shell
+   ---------------------------------------------------------- */
+
+.st-key-manage_medical_records_page,
+.st-key-sa_page {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
 }
 
-/* long clinical text stays readable */
-.st-key-sa_dialog .sa-field p {
-  max-width: 62ch;
+div[data-testid="stMainBlockContainer"],
+.main .block-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
 }
 
-/* the add-record form is long: keep text areas compact */
+/* ----------------------------------------------------------
+   Main Records Patient Table (Level 0)
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_table_mmr_patients"] {
+  background: var(--sa-white);
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px -2px rgba(18, 40, 58, 0.05), 0 2px 6px -1px rgba(18, 40, 58, 0.02);
+  overflow: hidden;
+  margin-top: 0.35rem;
+  margin-bottom: 1.25rem;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-bottom: 0.65rem;
+}
+
+[class*="st-key-sa_head_mmr_patients"] {
+  padding: 0.75rem 1.15rem;
+  background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-bottom: 1px solid #E2E8F0;
+}
+
+[class*="st-key-sa_head_mmr_patients"] .sa-th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+[class*="st-key-sa_row_mmr_patients_"] {
+  padding: 0.85rem 1.15rem;
+  border-bottom: 1px solid #F1F5F9;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+[class*="st-key-sa_row_mmr_patients_"]:last-child {
+  border-bottom: none;
+  padding-bottom: 1.15rem;
+}
+
+[class*="st-key-sa_row_mmr_patients_"]:hover {
+  background-color: #F8FAFC;
+  box-shadow: inset 3px 0 0 0 var(--sa-teal);
+}
+
+[class*="st-key-sa_row_mmr_patients_"] [data-testid="stHorizontalBlock"] {
+  align-items: center !important;
+  gap: 0.5rem;
+}
+
+/* ----------------------------------------------------------
+   Patient ID / Code Badge
+   ---------------------------------------------------------- */
+
+.sa-code-cell {
+  display: flex;
+  align-items: center;
+}
+
+.sa-code-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--sa-teal-dark);
+  background: var(--sa-teal-soft);
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid rgba(15, 124, 136, 0.2);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------
+   Patient Name & Avatar Cell
+   ---------------------------------------------------------- */
+
+.sa-patient-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.sa-patient-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #E8F4F6 0%, #D8EDF2 100%);
+  color: #0B626C;
+  border: 1px solid rgba(15, 124, 136, 0.2);
+  box-shadow: 0 1px 3px rgba(15, 124, 136, 0.08);
+  user-select: none;
+}
+
+.sa-patient-avatar-male {
+  background: linear-gradient(135deg, #E8F1FB 0%, #D2E4F8 100%);
+  color: #2A5FA8;
+  border-color: rgba(42, 95, 168, 0.25);
+}
+
+.sa-patient-avatar-female {
+  background: linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%);
+  color: #9D174D;
+  border-color: rgba(157, 23, 77, 0.25);
+}
+
+.sa-patient-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.15rem 0;
+}
+
+.sa-patient-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sa-patient-sub {
+  font-size: 0.75rem;
+  color: var(--sa-slate);
+  margin-top: 0.2rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ----------------------------------------------------------
+   Table Toolbar & Pagination
+   ---------------------------------------------------------- */
+
+.sa-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.25rem 0.6rem;
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+}
+
+.sa-table-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--sa-white);
+  border: 1px solid #E2E8F0;
+  border-radius: 9999px;
+  font-weight: 600;
+  color: var(--sa-ink);
+  font-size: 0.78rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.sa-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.sa-pagination-info {
+  font-size: 0.84rem;
+  color: var(--sa-slate);
+  font-weight: 500;
+  text-align: center;
+}
+
+.sa-pagination-info b {
+  color: var(--sa-ink);
+}
+
+/* ----------------------------------------------------------
+   Patient Hero Header
+   ---------------------------------------------------------- */
+
+.sa-dialog-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  padding: 1.15rem 1.35rem;
+  background: linear-gradient(135deg, #F8FAFC 0%, #EBF4F6 100%);
+  border: 1px solid #DDE8EB;
+  border-radius: 14px;
+  margin-bottom: 1.25rem;
+}
+
+.sa-dialog-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #0F7C88 0%, #0B626C 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(15, 124, 136, 0.25);
+  user-select: none;
+}
+
+.sa-dialog-avatar-female {
+  background: linear-gradient(135deg, #9D174D 0%, #831843 100%);
+  box-shadow: 0 4px 12px rgba(157, 23, 77, 0.25);
+}
+
+.sa-dialog-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-grow: 1;
+}
+
+.sa-dialog-name {
+  font-family: var(--sa-font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  line-height: 1.2;
+}
+
+.sa-dialog-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
+.sa-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #475569;
+  background: #FFFFFF;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+}
+
+/* ----------------------------------------------------------
+   Level 1: Category Cards
+   ---------------------------------------------------------- */
+
+[data-testid="column"]:has([class*="st-key-mmr_cat_"]) {
+  align-self: flex-start !important;
+  height: fit-content !important;
+}
+
+[class*="st-key-mmr_cat_"] {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 1.35rem 1.25rem 1.25rem;
+  box-shadow: 0 2px 8px rgba(18, 40, 58, 0.04);
+  transition: all 0.2s ease-in-out;
+  height: fit-content !important;
+  min-height: unset !important;
+  display: block !important;
+}
+
+[class*="st-key-mmr_cat_"]:hover {
+  border-color: var(--sa-teal);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 124, 136, 0.12);
+}
+
+.pr-cat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex-grow: 0;
+}
+
+.pr-cat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--sa-teal-soft);
+  color: var(--sa-teal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 2px 6px rgba(15, 124, 136, 0.12);
+  flex-shrink: 0;
+}
+
+.pr-cat-icon svg {
+  width: 26px;
+  height: 26px;
+  stroke: var(--sa-teal);
+}
+
+.pr-cat-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  margin: 0 0 0.25rem 0;
+  line-height: 1.3;
+}
+
+.pr-cat-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--sa-teal-dark);
+  background: var(--sa-teal-soft);
+  padding: 0.18rem 0.65rem;
+  border-radius: 9999px;
+  display: inline-block;
+  margin: 0.1rem 0 0.55rem 0;
+}
+
+.pr-cat-desc {
+  font-size: 0.78rem;
+  color: var(--sa-slate);
+  margin: 0 0 0.95rem 0;
+  line-height: 1.4;
+  min-height: 42px;
+}
+
+/* ----------------------------------------------------------
+   Level 2: Exam & External Record List Cards
+   ---------------------------------------------------------- */
+
+[class*="st-key-mmr_exam_card_"],
+[class*="st-key-mmr_rec_card_"] {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 1.15rem 1.35rem 0.95rem;
+  box-shadow: 0 2px 6px rgba(18, 40, 58, 0.03);
+  margin-bottom: 0.85rem;
+  transition: all 0.18s ease;
+}
+
+[class*="st-key-mmr_exam_card_"]:hover,
+[class*="st-key-mmr_rec_card_"]:hover {
+  border-color: var(--sa-teal);
+  box-shadow: 0 6px 18px rgba(15, 124, 136, 0.10);
+  transform: translateY(-1px);
+}
+
+.pr-exam-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.65rem;
+}
+
+.pr-exam-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid #F1F5F9;
+  margin-bottom: 0.25rem;
+}
+
+.pr-exam-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--sa-teal-dark);
+  margin: 0;
+}
+
+.pr-exam-date {
+  font-size: 0.78rem;
+  color: var(--sa-slate);
+  font-weight: 500;
+}
+
+.pr-exam-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.84rem;
+  padding: 0.2rem 0;
+  gap: 1rem;
+}
+
+.pr-exam-row span {
+  color: var(--sa-slate);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.pr-exam-row b {
+  color: var(--sa-ink);
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+}
+
+.pr-xray-available {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--sa-green);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.pr-xray-missing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #94A3B8;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------
+   Level 3: Report Header & Side Cards
+   ---------------------------------------------------------- */
+
+.pr-report-header {
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.pr-report-title {
+  margin: 0;
+  font-family: var(--sa-font-display);
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+}
+
+.pr-report-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+}
+
+.pr-hero-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.pr-hero-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sa-teal);
+  margin: 0 0 0.65rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.pr-hero-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  margin: 0 0 0.65rem;
+}
+
+.pr-hero-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #F8FAFC;
+  font-size: 0.82rem;
+}
+
+.pr-hero-row:last-child {
+  border-bottom: none;
+}
+
+.pr-hero-row span {
+  color: var(--sa-slate);
+}
+
+.pr-hero-row b {
+  color: var(--sa-ink);
+  font-weight: 600;
+  text-align: right;
+}
+
+.pr-hero-row-block {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.pr-conf-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+
+.pr-conf-bar {
+  width: 100%;
+  height: 8px;
+  background: #E2E8F0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.pr-conf-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--sa-teal) 0%, #0B626C 100%);
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+/* X-Ray & Heatmap */
+.pr-img-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sa-ink);
+  margin-bottom: 0.45rem;
+}
+
+[data-testid="stImage"] img {
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.pr-no-xray,
+.pr-heatmap-placeholder {
+  background: #F8FAFC;
+  border: 1.5px dashed #CBD5E1;
+  border-radius: 12px;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.pr-no-xray-icon,
+.pr-heatmap-icon {
+  font-size: 36px !important;
+  color: #94A3B8;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pr-no-xray-icon svg,
+.pr-heatmap-icon svg {
+  width: 40px;
+  height: 40px;
+  stroke: #94A3B8;
+}
+
+.pr-no-xray-title,
+.pr-heatmap-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #334155;
+  margin: 0;
+}
+
+.pr-no-xray-text,
+.pr-heatmap-text {
+  font-size: 0.82rem;
+  color: #64748B;
+  margin: 0;
+  max-width: 380px;
+}
+
+/* AI Summary Card */
+.pr-ai-summary {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-top: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pr-ai-summary-positive {
+  background: #FFF1F2;
+  border: 1px solid #FECDD3;
+  color: #9F1239;
+}
+
+.pr-ai-summary-negative {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #166534;
+}
+
+.pr-ai-summary-text {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.pr-ai-summary-meta {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.pr-rec-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 1rem;
+}
+
+.pr-rec-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.84rem;
+  color: var(--sa-ink);
+  margin-bottom: 0.45rem;
+}
+
+.pr-rec-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--sa-teal-soft);
+  color: var(--sa-teal-dark);
+  font-weight: 700;
+  font-size: 0.74rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.pr-disclaimer {
+  font-size: 0.76rem;
+  color: #64748B;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  line-height: 1.4;
+  margin-top: 1rem;
+}
+
+/* ----------------------------------------------------------
+   Dialogs (View & Add External Record)
+   ---------------------------------------------------------- */
+
+.st-key-sa_dialog .sa-form-section-title {
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  color: var(--sa-teal-dark) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding-bottom: 0.4rem !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
 .st-key-sa_dialog [data-testid="stForm"] textarea {
   min-height: 4.5rem;
+  border-radius: 8px !important;
 }
 
-/* the records list inside the dialog */
-.st-key-sa_table_records {
-  margin-bottom: 0.4rem;
+.st-key-sa_dialog [data-testid="stTextInput"] input,
+.st-key-sa_dialog [data-testid="stSelectbox"] [data-baseweb="select"] {
+  border-radius: 8px !important;
 }

@@ -10,6 +10,7 @@ from streamlit_app.components.ui import (
     metric_card,
     show_rows,
     pill,
+    safe,
     show_flash_message,
 )
 
@@ -132,51 +133,69 @@ def render_subscription_details(subscription):
     else:
         price_text = "—"
 
-    st.subheader(plan_name)
+    with st.container(key="su_overview_card"):
+        header_col, price_col = st.columns([3, 1.2], vertical_alignment="center")
 
-    st.caption(description)
+        with header_col:
+            st.markdown(
+                f"<div class='su-plan-title-wrap'>"
+                f"<span class='su-plan-eyebrow'>Active Hospital Subscription</span>"
+                f"<h3 class='su-plan-name'>{safe(plan_name)}</h3>"
+                f"<p class='su-plan-desc'>{safe(description)}</p>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
 
-    details_col1, details_col2, details_col3 = st.columns(3)
+        with price_col:
+            st.markdown(
+                f"<div class='su-plan-price-box'>"
+                f"<div class='su-plan-price-val'>{price_text}</div>"
+                f"<div class='su-plan-price-cycle'>billed {safe(billing_cycle.lower())}</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
 
-    with details_col1:
-        show_rows(
-            [
-                ("Billing cycle", billing_cycle),
-                ("Price", price_text),
-            ]
-        )
+        details_col1, details_col2, details_col3 = st.columns(3)
 
-    with details_col2:
-        show_rows(
-            [
-                ("Start date", start_date),
-                ("End date", end_date),
-            ]
-        )
+        with details_col1:
+            show_rows(
+                [
+                    ("Billing cycle", billing_cycle),
+                    ("Price", price_text),
+                ]
+            )
 
-    with details_col3:
-        show_rows(
-            [
-                (
-                    "User limit",
-                    format_limit(
-                        plan.get("max_users")
+        with details_col2:
+            show_rows(
+                [
+                    ("Start date", start_date),
+                    ("End date", end_date),
+                ]
+            )
+
+        with details_col3:
+            show_rows(
+                [
+                    (
+                        "User limit",
+                        format_limit(
+                            plan.get("max_users")
+                        ),
                     ),
-                ),
-                (
-                    "Patient limit",
-                    format_limit(
-                        plan.get("max_patients")
+                    (
+                        "Patient limit",
+                        format_limit(
+                            plan.get("max_patients")
+                        ),
                     ),
-                ),
-                (
-                    "Monthly X-ray limit",
-                    format_limit(
-                        plan.get("max_xrays_per_month")
+                    (
+                        "Monthly X-ray limit",
+                        format_limit(
+                            plan.get("max_xrays_per_month")
+                        ),
                     ),
-                ),
-            ]
-        )
+                ]
+            )
 
 
 # ============================================================
@@ -187,6 +206,7 @@ def render_usage_item(
     title,
     icon,
     data,
+    item_id="item",
 ):
     data = data or {}
 
@@ -217,51 +237,54 @@ def render_usage_item(
         unlimited,
     )
 
-    st.markdown(
-        f"### :material/{icon}: {title}"
-    )
-
-    value_col, status_col = st.columns(
-        [2, 1]
-    )
-
-    with value_col:
-        st.metric(
-            label="Used",
-            value=f"{int(used):,}",
-            delta=f"of {limit_text}",
-            delta_color="off",
+    with st.container(key=f"su_usage_card_{item_id}"):
+        st.markdown(
+            f"<div class='su-usage-head'>"
+            f"<span class='material-symbols-rounded su-usage-icon'>{icon}</span>"
+            f"<h3 class='su-usage-title'>{title}</h3>"
+            f"</div>",
+            unsafe_allow_html=True,
         )
 
-    with status_col:
-        if unlimited:
-            pill(
-                "Unlimited",
-                "green",
-            )
-        elif remaining <= 0:
-            pill(
-                "Limit reached",
-                "red",
-            )
-        elif tone == "amber":
-            pill(
-                "Near limit",
-                "amber",
-            )
-        else:
-            pill(
-                "Available",
-                "green",
+        value_col, status_col = st.columns(
+            [2, 1],
+            vertical_alignment="center",
+        )
+
+        with value_col:
+            st.metric(
+                label="Used",
+                value=f"{int(used):,}",
+                delta=f"of {limit_text}",
+                delta_color="off",
             )
 
-    st.progress(
-        percentage
-    )
+        with status_col:
+            if unlimited:
+                status_html = pill("Unlimited", "green")
+            elif remaining <= 0:
+                status_html = pill("Limit reached", "red")
+            elif tone == "amber":
+                status_html = pill("Near limit", "amber")
+            else:
+                status_html = pill("Available", "green")
 
-    st.caption(
-        f"{remaining_text} remaining"
-    )
+            st.markdown(
+                f"<div class='su-usage-pill-wrap'>{status_html}</div>",
+                unsafe_allow_html=True,
+            )
+
+        st.progress(
+            percentage
+        )
+
+        st.markdown(
+            f"<div class='su-usage-footer'>"
+            f"<span class='su-usage-dot su-usage-dot-{tone}'></span>"
+            f"<span class='su-usage-rem-text'><b>{remaining_text}</b> remaining</span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
 
 # ============================================================
@@ -286,6 +309,7 @@ def render_usage_section(usage):
             title="Users",
             icon="group",
             data=users,
+            item_id="users",
         )
 
     with col2:
@@ -293,6 +317,7 @@ def render_usage_section(usage):
             title="Patients",
             icon="personal_injury",
             data=patients,
+            item_id="patients",
         )
 
     with col3:
@@ -300,6 +325,7 @@ def render_usage_section(usage):
             title="X-rays this month",
             icon="radiology",
             data=xrays,
+            item_id="xrays",
         )
 
 

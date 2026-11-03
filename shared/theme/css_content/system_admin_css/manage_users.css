@@ -1,21 +1,685 @@
 /* ==========================================================
    SYSTEM ADMIN - MANAGE USERS
    shared/theme/css_content/system_admin_css/manage_users.css
-   Only what is unique to this page. The table, pills, avatars,
-   metric cards and dialogs come from base.css.
+   User table, search & filters, role badges, status dots,
+   avatars, row actions, pagination, view cards, and dialogs.
    ========================================================== */
 
-/* the last three columns hold small icon buttons: keep them tight */
+/* ----------------------------------------------------------
+   Wide Layout & Shell
+   ---------------------------------------------------------- */
+
+.st-key-sa_page {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+div[data-testid="stMainBlockContainer"],
+.main .block-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
+}
+
+/* ----------------------------------------------------------
+   Metric Cards Spacing & Typography
+   ---------------------------------------------------------- */
+
+/* Metric card styling inherited directly from base.css */
+
+
+
+/* ----------------------------------------------------------
+   Filter Bar Container
+   ---------------------------------------------------------- */
+
+.st-key-sa_user_filters {
+  background: var(--sa-white);
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 1px 3px rgba(18, 40, 58, 0.03);
+}
+
+.st-key-sa_user_filters [data-testid="stHorizontalBlock"] {
+  align-items: center !important;
+  gap: 0.75rem !important;
+}
+
+/* ----------------------------------------------------------
+   Table Shell & Container
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_table_users"] {
+  background: var(--sa-white);
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px -2px rgba(18, 40, 58, 0.05), 0 2px 6px -1px rgba(18, 40, 58, 0.02);
+  overflow: hidden;
+  margin-top: 0.25rem;
+  margin-bottom: 1.25rem;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-bottom: 0.65rem;
+}
+
+/* ----------------------------------------------------------
+   Table Header
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_head_users"] {
+  padding: 0.75rem 1.15rem;
+  background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-bottom: 1px solid #E2E8F0;
+}
+
+[class*="st-key-sa_head_users"] .sa-th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Actions Header Centering */
+[class*="st-key-sa_head_users"] [data-testid="column"]:last-child {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+[class*="st-key-sa_head_users"] [data-testid="column"]:last-child .sa-th {
+  justify-content: center !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+/* ----------------------------------------------------------
+   Table Rows & Hover Elevation
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_row_users_"] {
+  padding: 0.85rem 1.15rem;
+  border-bottom: 1px solid #F1F5F9;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+[class*="st-key-sa_row_users_"]:last-child {
+  border-bottom: none;
+  padding-bottom: 1.15rem;
+}
+
+[class*="st-key-sa_row_users_"]:hover {
+  background-color: #F8FAFC;
+  box-shadow: inset 3px 0 0 0 var(--sa-teal);
+}
+
 [class*="st-key-sa_row_users_"] [data-testid="stHorizontalBlock"] {
+  align-items: center !important;
+  gap: 0.45rem;
+}
+
+/* ----------------------------------------------------------
+   Employee ID / Code Badge
+   ---------------------------------------------------------- */
+
+.sa-code-cell {
+  display: flex;
+  align-items: center;
+}
+
+.sa-emp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--sa-teal-dark);
+  background: var(--sa-teal-soft);
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid rgba(15, 124, 136, 0.2);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------
+   User Profile & Avatar Cell
+   ---------------------------------------------------------- */
+
+.sa-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.sa-user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #E8F4F6 0%, #D8EDF2 100%);
+  color: #0B626C;
+  border: 1px solid rgba(15, 124, 136, 0.2);
+  box-shadow: 0 1px 3px rgba(15, 124, 136, 0.08);
+  user-select: none;
+}
+
+.sa-user-avatar-male {
+  background: linear-gradient(135deg, #E8F1FB 0%, #D2E4F8 100%);
+  color: #2A5FA8;
+  border-color: rgba(42, 95, 168, 0.25);
+}
+
+.sa-user-avatar-female {
+  background: linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%);
+  color: #9D174D;
+  border-color: rgba(157, 23, 77, 0.25);
+}
+
+.sa-user-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.15rem 0;
+}
+
+.sa-user-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sa-user-email {
+  font-size: 0.75rem;
+  color: var(--sa-slate);
+  margin-top: 0.15rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ----------------------------------------------------------
+   Role Badges
+   ---------------------------------------------------------- */
+
+.sa-role-badge {
+  display: inline-flex;
+  align-items: center;
   gap: 0.35rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
-/* the view / edit / delete icons line up under the "Actions" header */
+.sa-role-superadmin {
+  background: #E8F4F6;
+  color: #0B626C;
+  border: 1px solid rgba(11, 98, 108, 0.25);
+}
+
+.sa-role-hospadmin {
+  background: #F1F0FB;
+  color: #4338CA;
+  border: 1px solid rgba(67, 56, 202, 0.2);
+}
+
+.sa-role-radiologist {
+  background: #E8F1FB;
+  color: #1E40AF;
+  border: 1px solid rgba(30, 64, 175, 0.2);
+}
+
+.sa-role-radtech {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid rgba(146, 64, 14, 0.2);
+}
+
+.sa-role-physician {
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid rgba(6, 95, 70, 0.2);
+}
+
+.sa-role-staff {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid rgba(71, 85, 105, 0.2);
+}
+
+/* ----------------------------------------------------------
+   Hospital Cell
+   ---------------------------------------------------------- */
+
+.sa-hospital-cell {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: #334155;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sa-hospital-cell svg,
+.sa-hospital-cell .material-symbols-rounded {
+  font-size: 1rem;
+  color: var(--sa-slate);
+  flex-shrink: 0;
+}
+
+/* ----------------------------------------------------------
+   Status Indicators
+   ---------------------------------------------------------- */
+
+.sa-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sa-status-pill-active {
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid rgba(6, 95, 70, 0.2);
+}
+
+.sa-status-pill-inactive {
+  background: #F1F5F9;
+  color: #64748B;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.sa-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.sa-status-dot-active {
+  background: #10B981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+}
+
+.sa-status-dot-inactive {
+  background: #94A3B8;
+}
+
+/* ----------------------------------------------------------
+   Last Login Cell
+   ---------------------------------------------------------- */
+
+.sa-login-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.sa-login-date {
+  color: var(--sa-ink);
+  font-weight: 600;
+}
+
+.sa-login-time {
+  color: var(--sa-slate);
+  font-size: 0.74rem;
+  margin-top: 0.15rem;
+}
+
+.sa-login-never {
+  color: #94A3B8;
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+/* ----------------------------------------------------------
+   Row Action Buttons (View, Edit, Delete / Reactivate)
+   ---------------------------------------------------------- */
+
+[class*="st-key-sa_row_users_"] [data-testid="column"]:last-child {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+[class*="st-key-sa_row_users_"] [data-testid="column"]:last-child [data-testid="stHorizontalBlock"] {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+  width: 100% !important;
+}
+
+[class*="st-key-sa_row_users_"] [data-testid="column"]:last-child [data-testid="column"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  min-width: 34px !important;
+}
+
 [class*="st-key-sa_row_users_"] [data-testid^="stBaseButton"] {
-  width: 100%;
+  width: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto !important;
+  background: var(--sa-white) !important;
+  border: 1px solid #DDE7EC !important;
+  box-shadow: 0 1px 2px rgba(14, 34, 50, 0.04) !important;
+  transition: all 0.15s ease-in-out !important;
 }
 
-/* users that are inactive look a little quieter */
-[class*="st-key-sa_row_users_"] .sa-pill-grey {
-  opacity: 0.9;
+[class*="st-key-sa_row_users_"] [data-testid^="stBaseButton"] [data-testid="stIconMaterial"] {
+  font-size: 1.15rem !important;
+  line-height: 1 !important;
+  color: var(--sa-slate) !important;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+[class*="st-key-sa_row_users_"] [data-testid^="stBaseButton"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(14, 34, 50, 0.08) !important;
+}
+
+[class*="st-key-sa_row_users_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] {
+  transform: scale(1.1);
+}
+
+/* View button hover (teal) */
+[class*="st-key-view_"] [data-testid^="stBaseButton"]:hover {
+  background: var(--sa-teal-soft) !important;
+  border-color: var(--sa-teal) !important;
+}
+
+[class*="st-key-view_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] {
+  color: var(--sa-teal) !important;
+}
+
+/* Edit button hover (blue) */
+[class*="st-key-edit_"] [data-testid^="stBaseButton"]:hover {
+  background: var(--sa-blue-soft) !important;
+  border-color: var(--sa-blue) !important;
+}
+
+[class*="st-key-edit_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] {
+  color: var(--sa-blue) !important;
+}
+
+/* Delete / Deactivate button hover (red) */
+[class*="st-key-delete_"] [data-testid^="stBaseButton"]:hover {
+  background: var(--sa-red-soft) !important;
+  border-color: var(--sa-red) !important;
+}
+
+[class*="st-key-delete_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] {
+  color: var(--sa-red) !important;
+}
+
+/* Reactivate button hover (green) */
+[class*="st-key-reactivate_"] [data-testid^="stBaseButton"]:hover {
+  background: var(--sa-green-soft) !important;
+  border-color: var(--sa-green) !important;
+}
+
+[class*="st-key-reactivate_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] {
+  color: var(--sa-green) !important;
+}
+
+/* ----------------------------------------------------------
+   Table Toolbar & Badges
+   ---------------------------------------------------------- */
+
+.sa-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.25rem 0.6rem;
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+}
+
+.sa-table-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--sa-white);
+  border: 1px solid #E2E8F0;
+  border-radius: 9999px;
+  font-weight: 600;
+  color: var(--sa-ink);
+  font-size: 0.78rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+/* ----------------------------------------------------------
+   Pagination Bar
+   ---------------------------------------------------------- */
+
+.sa-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.sa-pagination-info {
+  font-size: 0.84rem;
+  color: var(--sa-slate);
+  font-weight: 500;
+  text-align: center;
+}
+
+.sa-pagination-info b {
+  color: var(--sa-ink);
+}
+
+/* ----------------------------------------------------------
+   Dialog Hero Header & Profile View
+   ---------------------------------------------------------- */
+
+.sa-dialog-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  padding: 1.15rem 1.35rem;
+  background: linear-gradient(135deg, #F8FAFC 0%, #EBF4F6 100%);
+  border: 1px solid #DDE8EB;
+  border-radius: 14px;
+  margin-bottom: 1.25rem;
+}
+
+.sa-dialog-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #0F7C88 0%, #0B626C 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(15, 124, 136, 0.25);
+  user-select: none;
+}
+
+.sa-dialog-avatar-female {
+  background: linear-gradient(135deg, #9D174D 0%, #831843 100%);
+  box-shadow: 0 4px 12px rgba(157, 23, 77, 0.25);
+}
+
+.sa-dialog-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-grow: 1;
+}
+
+.sa-dialog-name {
+  font-family: var(--sa-font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  line-height: 1.2;
+}
+
+.sa-dialog-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
+/* ----------------------------------------------------------
+   View Cards (Inside Dialogs)
+   ---------------------------------------------------------- */
+
+.sa-view-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 1px 3px rgba(18, 40, 58, 0.02);
+}
+
+.sa-view-card-header {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.sa-view-card-header svg {
+  width: 17px;
+  height: 17px;
+  stroke: var(--sa-teal);
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.sa-view-card-header span {
+  display: inline-block;
+  line-height: 1;
+}
+
+.sa-view-card-header .material-symbols-rounded {
+  font-size: 1.1rem;
+  color: var(--sa-teal);
+}
+
+.sa-view-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #F8FAFC;
+  font-size: 0.84rem;
+  gap: 1rem;
+}
+
+.sa-view-row:last-child {
+  border-bottom: none;
+}
+
+.sa-view-label {
+  color: var(--sa-slate);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.sa-view-value {
+  color: var(--sa-ink);
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+}
+
+/* ----------------------------------------------------------
+   Form Section Headers
+   ---------------------------------------------------------- */
+
+.sa-form-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  margin: 1rem 0 0.4rem 0;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sa-form-section-title svg {
+  width: 17px;
+  height: 17px;
+  stroke: var(--sa-teal);
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.sa-form-section-title span {
+  display: inline-block;
+  line-height: 1;
 }

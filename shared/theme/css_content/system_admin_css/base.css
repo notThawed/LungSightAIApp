@@ -61,8 +61,9 @@
    ---------------------------------------------------------- */
 
 .st-key-sa_page {
-  max-width: 1180px;            /* keeps the page from stretching on wide screens */
-  margin: 0 auto;
+  max-width: 100%;
+  width: 100%;
+  margin: 0;
   gap: 1rem;
   color: var(--sa-ink);
   font-family: var(--sa-font-body);
@@ -112,34 +113,44 @@
 
 
 /* ----------------------------------------------------------
-   Metric cards
+   Metric cards (reusable across all System Admin pages)
    ---------------------------------------------------------- */
 
 .sa-metric {
-  margin-bottom: 0.75rem;       /* Streamlit trims 1rem under HTML blocks */
+  margin-bottom: 0.75rem;
   display: flex;
   align-items: center;
-  gap: 0.9rem;
-  padding: 0.95rem 1.1rem;
-  background: var(--sa-white);
-  border: 1px solid var(--sa-mist);
-  border-radius: 12px;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border: 1px solid #CBD5E1;
+  border-left: 5px solid var(--sa-teal);
+  box-shadow: 0 3px 12px -2px rgba(18, 40, 58, 0.05);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  overflow: hidden;
+}
+
+.sa-metric:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(18, 40, 58, 0.12);
 }
 
 .sa-metric-icon {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  background: var(--sa-teal-soft);
-  color: var(--sa-teal);
+  border-radius: 13px;
+  background: var(--sa-teal);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(15, 124, 136, 0.28);
 
   /* draws the icon name (e.g. "groups") as a Material icon */
   font-family: "Material Symbols Rounded";
-  font-size: 1.5rem;
+  font-size: 1.55rem;
   font-weight: normal;
   line-height: 1;
   letter-spacing: normal;
@@ -148,22 +159,121 @@
   font-feature-settings: "liga";
 }
 
-.sa-metric-amber .sa-metric-icon { background: var(--sa-amber-soft); color: #A86B00; }
-.sa-metric-green .sa-metric-icon { background: var(--sa-green-soft); color: var(--sa-green); }
-.sa-metric-red   .sa-metric-icon { background: var(--sa-red-soft);   color: var(--sa-red); }
-.sa-metric-blue  .sa-metric-icon { background: var(--sa-blue-soft);  color: var(--sa-blue); }
+.sa-metric-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+}
 
 .sa-metric-title {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.74rem;
+  font-weight: 800;
   color: var(--sa-slate);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
 }
 
 .sa-metric-value {
-  font-size: 1.65rem;
-  font-weight: 700;
+  font-family: var(--sa-font-display);
+  font-size: 1.85rem;
+  font-weight: 800;
   line-height: 1.1;
   color: var(--sa-ink);
+}
+
+/* ----------------------------------------------------------
+   Metric Card Variants with Rich Clinical Tinted Backgrounds
+   ---------------------------------------------------------- */
+
+/* 1. Teal / Cyan (General Overview, Totals) */
+.sa-metric-teal {
+  background: linear-gradient(135deg, #F0FDFA 0%, #E6F7F8 100%) !important;
+  border: 1px solid #BCE5E8 !important;
+  border-left: 5px solid #0F7C88 !important;
+}
+.sa-metric-teal .sa-metric-icon {
+  background: #0F7C88 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(15, 124, 136, 0.3) !important;
+}
+.sa-metric-teal .sa-metric-title {
+  color: #0F5E68 !important;
+}
+.sa-metric-teal .sa-metric-value {
+  color: #0B4F57 !important;
+}
+
+/* 2. Amber / Gold (Pending, Female, Warnings, Awaiting) */
+.sa-metric-amber {
+  background: linear-gradient(135deg, #FFFDF5 0%, #FEF3C7 100%) !important;
+  border: 1px solid #FDE68A !important;
+  border-left: 5px solid #D97706 !important;
+}
+.sa-metric-amber .sa-metric-icon {
+  background: #D97706 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3) !important;
+}
+.sa-metric-amber .sa-metric-title {
+  color: #92400E !important;
+}
+.sa-metric-amber .sa-metric-value {
+  color: #78350F !important;
+}
+
+/* 3. Green / Emerald (Approved, Active, Completed, Verified) */
+.sa-metric-green {
+  background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%) !important;
+  border: 1px solid #86EFAC !important;
+  border-left: 5px solid #16A34A !important;
+}
+.sa-metric-green .sa-metric-icon {
+  background: #16A34A !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3) !important;
+}
+.sa-metric-green .sa-metric-title {
+  color: #166534 !important;
+}
+.sa-metric-green .sa-metric-value {
+  color: #14532D !important;
+}
+
+/* 4. Blue / Royal (Paid, Male, Accounts, Operations, Hospital) */
+.sa-metric-blue {
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%) !important;
+  border: 1px solid #93C5FD !important;
+  border-left: 5px solid #2563EB !important;
+}
+.sa-metric-blue .sa-metric-icon {
+  background: #2563EB !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+}
+.sa-metric-blue .sa-metric-title {
+  color: #1E40AF !important;
+}
+.sa-metric-blue .sa-metric-value {
+  color: #1E3A8A !important;
+}
+
+/* 5. Red / Rose (Inactive, Rejected, Alerts, Critical) */
+.sa-metric-red {
+  background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%) !important;
+  border: 1px solid #FCA5A5 !important;
+  border-left: 5px solid #DC2626 !important;
+}
+.sa-metric-red .sa-metric-icon {
+  background: #DC2626 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3) !important;
+}
+.sa-metric-red .sa-metric-title {
+  color: #991B1B !important;
+}
+.sa-metric-red .sa-metric-value {
+  color: #7F1D1D !important;
 }
 
 

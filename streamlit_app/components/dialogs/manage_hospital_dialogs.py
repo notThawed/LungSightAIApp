@@ -627,7 +627,7 @@ def show_hospital_staff_dialog(hospital):
 
     with header_col1:
         st.markdown(
-            '<div class="mh-dialog-icon">business</div>',
+            '<div class="mh-dialog-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"/><path d="M10 9h4"/><path d="M12 7v4"/></svg></div>',
             unsafe_allow_html=True,
         )
 
@@ -821,14 +821,7 @@ def show_staff_member_dialog(user_id):
 
         else:
 
-            st.markdown(
-                f"""
-                <div class="mh-profile-avatar">
-                    {safe(_initials_for_profile(name))}
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            st.markdown(f'<div class="mh-profile-avatar">{safe(_initials_for_profile(name))}</div>', unsafe_allow_html=True)
 
     with info_col:
 

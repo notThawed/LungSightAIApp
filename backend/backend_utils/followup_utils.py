@@ -310,12 +310,21 @@ def create_follow_up(
             follow_up_time
         )
 
+        follow_up_code = generate_follow_up_code()
+        if not follow_up_code:
+            return {
+                "success": False,
+                "message": "Could not generate a Follow-Up ID.",
+            }
+
         # ====================================================
         # BUILD PAYLOAD
         # ====================================================
 
         follow_up_data = {
             "patient_id": patient_id,
+
+            "follow_up_code": follow_up_code,
 
             "source_examination_id": examination_id,
 
@@ -1009,7 +1018,12 @@ def get_follow_ups_by_patient(
                     patient_id,
                     examination_type,
                     examination_date,
+                    chief_complaint,
+                    history_of_present_illness,
+                    physical_examination,
                     diagnosis,
+                    plans_orders,
+                    disposition,
                     status,
                     follow_up_sequence
                 ),
@@ -1079,7 +1093,12 @@ def get_upcoming_follow_ups_by_patient(
                     patient_id,
                     examination_type,
                     examination_date,
+                    chief_complaint,
+                    history_of_present_illness,
+                    physical_examination,
                     diagnosis,
+                    plans_orders,
+                    disposition,
                     status,
                     follow_up_sequence
                 ),
@@ -1156,7 +1175,12 @@ def get_follow_up_history(
                     patient_id,
                     examination_type,
                     examination_date,
+                    chief_complaint,
+                    history_of_present_illness,
+                    physical_examination,
                     diagnosis,
+                    plans_orders,
+                    disposition,
                     status,
                     follow_up_sequence
                 ),
@@ -1346,7 +1370,12 @@ def get_hospital_follow_ups(
                     patient_id,
                     examination_type,
                     examination_date,
+                    chief_complaint,
+                    history_of_present_illness,
+                    physical_examination,
                     diagnosis,
+                    plans_orders,
+                    disposition,
                     status,
                     follow_up_sequence
                 ),
@@ -1904,13 +1933,6 @@ def mark_follow_up_arrived(follow_up_id, staff_user_id):
             return {
                 "success": False,
                 "message": link.get("message", "Failed to link examination."),
-            }
-
-        complete = complete_follow_up(follow_up_id)
-        if not complete.get("success"):
-            return {
-                "success": False,
-                "message": complete.get("message", "Failed to complete follow-up."),
             }
 
         return {
