@@ -291,7 +291,9 @@ def _staff_donut(staff):
         return
 
     try:
-        import plotly.graph_objects as go
+        import importlib
+
+        go = importlib.import_module("plotly.graph_objects")
 
     except ImportError:
         data = pd.DataFrame(
