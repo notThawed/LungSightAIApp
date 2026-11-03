@@ -1,0 +1,92 @@
+/* Replace shared/theme/css_content/physician_css/dashboard.css */
+
+
+.pd-heading {
+  position: relative;
+  overflow: hidden;
+  padding: 1.5rem 1.8rem;
+  margin-bottom: 1.1rem;
+  border: 1px solid #a7e2e5;
+  border-radius: 17px;
+  background: linear-gradient(110deg, #086f7b 0%, #0795a2 64%, #d6f6f5 160%);
+  color: white;
+}
+.pd-heading::after {
+  content: '+';
+  position: absolute;
+  right: 2rem;
+  top: -3.3rem;
+  color: rgba(255,255,255,.12);
+  font-size: 13rem;
+  font-weight: 200;
+  pointer-events: none;
+}
+.pd-eyebrow {font-size: .68rem; font-weight: 800; letter-spacing: .18em; color: #c5fbf5;}
+.pd-heading h1 {margin: .35rem 0 .25rem !important; color: white !important; font-size: 1.8rem !important; font-weight: 800 !important;}
+.pd-heading p {margin: 0 !important; color: #e1fbfc !important; font-size: .85rem;}
+
+.pd-metric {
+  min-height: 130px;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid #dce8ef;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 4px 16px rgba(19, 52, 72, .045);
+  border-top: 3px solid var(--pd-accent);
+}
+.pd-teal {--pd-accent:#078d98; --pd-tint:#e5f7f8;}
+.pd-blue {--pd-accent:#2764df; --pd-tint:#eaf1ff;}
+.pd-amber {--pd-accent:#dd8409; --pd-tint:#fff4df;}
+.pd-green {--pd-accent:#0eaa63; --pd-tint:#e4f9ed;}
+.pd-metric-top {display:flex; align-items:center; gap:.6rem;}
+.pd-metric-top .material-symbols-rounded {
+  font-family: inherit !important; font-weight: 800;
+  font-size: 21px; line-height:1; font-feature-settings:'liga';
+  display:grid; place-items:center; width:35px; height:35px;
+  background:var(--pd-tint); color:var(--pd-accent); border-radius:9px;
+}
+.pd-metric-label {color:#52667a; font-size:.69rem; font-weight:800; text-transform:uppercase; letter-spacing:.025em;}
+.pd-metric-number {font-size:2rem; line-height:1.25; font-weight:800; color:#10243d; margin-top:.35rem;}
+.pd-metric-note {color:#718397; font-size:.7rem;}
+
+.pd-section-title {display:flex; align-items:center; gap:.5rem; color:#0f2843; font-size:1rem; margin-bottom:.15rem;}
+.pd-section-title .material-symbols-rounded {font-family: inherit !important; font-weight: 800; font-size:22px; color:#078d98; font-feature-settings:'liga';}
+.pd-section-subtitle {color:#728499; font-size:.75rem; margin-bottom:1rem;}
+.pd-followup {display:flex; justify-content:space-between; gap:1rem; align-items:center; border-bottom:1px solid #e9eff3; padding:.7rem .15rem; font-size:.77rem; color:#18314c;}
+.pd-followup span {white-space:nowrap; color:#087e8a; font-weight:700;}
+@media(max-width:850px) {
+  .pd-heading {padding:1.1rem;}
+  .pd-heading h1 {font-size:1.4rem !important;}
+  .pd-metric {min-height:110px; padding:.85rem;}
+  .pd-metric-number {font-size:1.5rem;}
+}
+
+/* Two-column Quick Actions tiles */
+[class*="st-key-pd_tile_"] button {
+  min-height: 76px !important;
+  padding: 12px 10px !important;
+  border-radius: 12px !important;
+  border: 1px solid #dce9ed !important;
+  background: #f6fbfc !important;
+  color: #0d4654 !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+[class*="st-key-pd_tile_"] button:hover {
+  background: #e6f6f8 !important;
+  border-color: #69c9d0 !important;
+  transform: translateY(-1px);
+}
+[class*="st-key-pd_tile_"] button p {font-size: .78rem !important;}
+[class*="st-key-pd_tile_"] button [data-testid="stIconMaterial"] {
+  color: #008c99 !important;
+  font-size: 22px !important;
+}
+.pd-ai-total {display:flex;align-items:center;justify-content:center;gap:.5rem;margin:-.5rem 0 .8rem;color:#667b89;font-size:.75rem;}
+.pd-ai-total strong {color:#12394b;font-size:1.2rem;}
+.pd-ai-legend {display:flex;justify-content:space-between;align-items:center;padding:.55rem .15rem;border-bottom:1px solid #edf2f5;font-size:.8rem;color:#203b50;}
+.pd-ai-legend span {display:flex;align-items:center;gap:.55rem;}
+.pd-ai-legend i {display:inline-block;width:10px;height:10px;border-radius:50%;}
+.pd-ai-legend strong {font-size:.82rem;}
+.pd-ai-legend small {color:#7c8e9a;font-weight:500;}

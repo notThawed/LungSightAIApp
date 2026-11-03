@@ -1,4 +1,6 @@
+
 from pathlib import Path
+import base64
 import html
 
 import streamlit as st
@@ -7,71 +9,46 @@ from backend import audit
 
 
 # ============================================================
-# PATHS
+# FILE PATHS
 # ============================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 SIDEBAR_CSS_PATH = (
-    PROJECT_ROOT
-    / "shared"
-    / "theme"
-    / "css_content"
-    / "sidebar.css"
+    PROJECT_ROOT / "shared" / "theme"
+    / "css_content" / "sidebar.css"
+)
+
+SIDEBAR_LOGO_PATH = (
+    PROJECT_ROOT / "shared" / "images"
+    / "Modern LungSight Orbit Logo.png"
 )
 
 
 # ============================================================
-# NAVIGATION
+# ROLE NAVIGATION
 # ============================================================
 
 RADTECH_NAV = [
     {
         "section": "Overview",
         "items": [
-            (
-                "Dashboard",
-                "Home dashboard",
-                "dashboard",
-            ),
+            ("Dashboard", "Home dashboard", "dashboard"),
         ],
     },
-
     {
         "section": "Clinical",
         "items": [
-            (
-                "Analyze X-Ray",
-                "Analyze X-ray",
-                "radiology",
-            ),
-            (
-                "Patient Records",
-                "Patient records",
-                "folder_shared",
-            ),
-            (
-                "Manage Examinations",
-                "Examinations",
-                "assignment",
-            ),
-            (
-                "X-ray Queus",
-                "X-ray Queus",
-                "assignment",
-            ),
-
+            ("Analyze X-Ray", "Analyze X-ray", "radiology"),
+            ("Patient Records", "Patient records", "folder_shared"),
+            ("Manage Examinations", "Examinations", "assignment"),
+            ("X-ray Queus", "X-ray Queus", "assignment"),
         ],
     },
-
     {
         "section": "Monitoring",
         "items": [
-            (
-                "Geospatial Map",
-                "Geospatial map",
-                "map",
-            ),
+            ("Geospatial Map", "Geospatial map", "map"),
         ],
     },
 ]
@@ -81,42 +58,17 @@ PHYSICIAN_NAV = [
     {
         "section": "Overview",
         "items": [
-            (
-                "Dashboard",
-                "Home dashboard",
-                "dashboard",
-            ),
-            (
-                "Patient Queue",
-                "Patient queue",
-                "groups",
-            ),
+            ("Dashboard", "Home dashboard", "dashboard"),
+            ("Patient Queue", "Patient queue", "groups"),
         ],
     },
-
     {
         "section": "Clinical",
         "items": [
-            (
-                "Review Patient",
-                "Review patient",
-                "person_search",
-            ),
-            (
-                "Patient Records",
-                "Patient records",
-                "folder_shared",
-            ),
-            (
-                "Inpatient Dashboard",
-                "Inpatient dashboard",
-                "bedroom_parent",
-            ),
-            (
-                "Follow-Ups",
-                "Follow-ups",
-                "assignment",
-            ),
+            ("Review Patient", "Review patient", "person_search"),
+            ("Patient Records", "Patient records", "folder_shared"),
+            ("Inpatient Dashboard", "Inpatient dashboard", "bedroom_parent"),
+            ("Follow-Ups", "Follow-ups", "assignment"),
         ],
     },
 ]
@@ -126,101 +78,44 @@ ADMIN_NAV = [
     {
         "section": "Overview",
         "items": [
-            (
-                "Dashboard",
-                "Home dashboard",
-                "dashboard",
-            ),
+            ("Dashboard", "Home dashboard", "dashboard"),
         ],
     },
-
     {
         "section": "Clinical Management",
         "items": [
-            (
-                "Manage Patients",
-                "Manage Patients",
-                "group",
-            ),
-            (
-                "Manage Examinations",
-                "Manage Examinations",
-                "assignment",
-            ),
-            (
-                "Medical Records",
-                "Manage Medical Records",
-                "description",
-            ),
+            ("Manage Patients", "Manage Patients", "group"),
+            ("Manage Examinations", "Manage Examinations", "assignment"),
+            ("Medical Records", "Manage Medical Records", "description"),
         ],
     },
-
     {
         "section": "System Management",
         "items": [
-            (
-                "User Management",
-                "Manage System Users",
-                "manage_accounts",
-            ),
-            (
-                "Manage Hospitals",
-                "Manage Hospitals",
-                "local_hospital",
-            ),
-            (
-                "Manage Client Applications",
-                "Manage Client Applications",
-                "inbox",
-            ),
-            (
-                "Manage Subscriptions",
-                "Manage Subscriptions",
-                "credit_card",
-            ),
+            ("User Management", "Manage System Users", "manage_accounts"),
+            ("Manage Hospitals", "Manage Hospitals", "local_hospital"),
+            ("Manage Client Applications", "Manage Client Applications", "inbox"),
+            ("Manage Subscriptions", "Manage Subscriptions", "credit_card"),
         ],
     },
-
     {
         "section": "Monitoring & Reports",
         "items": [
-            (
-                "Reports",
-                "View reports",
-                "bar_chart",
-            ),
-            (
-                "Audit Logs",
-                "Audit Logs",
-                "history",
-            ),
-            (
-                "Email Notifications",
-                "Email Notifications",
-                "mail",
-            ),
+            ("Reports", "View reports", "bar_chart"),
+            ("Audit Logs", "Audit Logs", "history"),
+            ("Email Notifications", "Email Notifications", "mail"),
         ],
     },
-
     {
         "section": "AI TRAINING",
         "items": [
-            (
-                "Training",
-                "Data Training",
-                "settings",
-            ),
+            ("Training", "Data Training", "settings"),
         ],
     },
-
     {
         "section": "Configuration",
         "items": [
-            (
-                "System Settings",
-                "Configure system settings",
-                "settings",
-            ),
+            ("System Settings", "Configure system settings", "settings"),
         ],
     },
 ]
@@ -230,43 +125,21 @@ STAFF_NAV = [
     {
         "section": "Overview",
         "items": [
-            (
-                "Dashboard",
-                "Home dashboard",
-                "dashboard",
-            ),
+            ("Dashboard", "Home dashboard", "dashboard"),
         ],
     },
-
     {
         "section": "Patient Management",
         "items": [
-            (
-                "Register Patient",
-                "Register Patient",
-                "person_add",
-            ),
-            (
-                "Patient Records",
-                "Patient Records",
-                "folder_shared",
-            ),
+            ("Register Patient", "Register Patient", "person_add"),
+            ("Patient Records", "Patient Records", "folder_shared"),
         ],
     },
-
     {
         "section": "Clinical Workflow",
         "items": [
-            (
-                "Examinations",
-                "Examinations",
-                "assignment",
-            ),
-            (
-                "Follow-Ups",
-                "Follow-up appointments",
-                "event_available",                
-            ),
+            ("Examinations", "Examinations", "assignment"),
+            ("Follow-Ups", "Follow-up appointments", "event_available"),
         ],
     },
 ]
@@ -276,211 +149,123 @@ HOSPITAL_ADMIN_NAV = [
     {
         "section": "Overview",
         "items": [
-            (
-                "Dashboard",
-                "Home dashboard",
-                "dashboard",
-            ),
-            (
-                "My Hospital",
-                "My Hospital info",
-                "dashboard",
-            ),
+            ("Dashboard", "Home dashboard", "dashboard"),
+            ("My Hospital", "My Hospital info", "dashboard"),
         ],
     },
-
     {
         "section": "Hospital Management",
         "items": [
-            (
-                "Manage Users",
-                "Manage Users",
-                "manage_accounts",
-            ),
-            (
-                "Manage Patients",
-                "Manage Patients",
-                "group",
-            ),
-            (
-                "Manage Examinations",
-                "Manage Examinations",
-                "assignment",
-            ),
+            ("Manage Users", "Manage Users", "manage_accounts"),
+            ("Manage Patients", "Manage Patients", "group"),
+            ("Manage Examinations", "Manage Examinations", "assignment"),
         ],
     },
-
     {
         "section": "Subscription Management",
         "items": [
-            (
-                "Subscription Usage",
-                "Subscription Usage",
-                "data_usage",
-            ),
-            (
-                "Subscription Settings",
-                "Subscription Settings",
-                "payments",
-            ),
+            ("Subscription Usage", "Subscription Usage", "data_usage"),
+            ("Subscription Settings", "Subscription Settings", "payments"),
         ],
     },
-
     {
         "section": "Reports",
         "items": [
-            (
-                "Hospital Reports",
-                "Hospital Reports",
-                "summarize",
-            ),
+            ("Hospital Reports", "Hospital Reports", "summarize"),
         ],
     },
-
     {
         "section": "Security",
         "items": [
-            (
-                "Audit Logs",
-                "Audit Logs",
-                "history",
-            ),
-            (
-                "Email Notifications",
-                "Email Notifications",
-                "mail",
-            ),
+            ("Audit Logs", "Audit Logs", "history"),
+            ("Email Notifications", "Email Notifications", "mail"),
         ],
     },
 ]
 
 
 # ============================================================
-# LOAD CSS
+# LOAD SIDEBAR CSS
 # ============================================================
 
 def load_sidebar_css():
-    """Load the sidebar stylesheet."""
-
-    if not SIDEBAR_CSS_PATH.exists():
-        return
-
-    css = SIDEBAR_CSS_PATH.read_text(
-        encoding="utf-8"
-    )
-
-    st.markdown(
-        f"""<style>
-{css}
-</style>""",
-        unsafe_allow_html=True,
-    )
+    if SIDEBAR_CSS_PATH.exists():
+        css = SIDEBAR_CSS_PATH.read_text(encoding="utf-8")
+        st.markdown(
+            f"<style>{css}</style>",
+            unsafe_allow_html=True,
+        )
 
 
 # ============================================================
-# CURRENT USER
+# HTML ESCAPING
 # ============================================================
 
-def get_current_user():
-    """Return the currently logged-in user."""
-
-    return (
-        st.session_state.get("user")
-        or {}
-    )
-
-
-# ============================================================
-# SAFE TEXT
-# ============================================================
-
-def safe_text(
-    value,
-    fallback="",
-):
-    """Escape user-provided values before inserting into HTML."""
-
+def safe_text(value, fallback=""):
     if value is None or str(value).strip() == "":
         value = fallback
-
-    return html.escape(
-        str(value)
-    )
+    return html.escape(str(value))
 
 
 # ============================================================
-# INITIALS
+# SIDEBAR BRANDING
 # ============================================================
 
-# Titles that should not count as initials ("Dr. Maria Santos" -> MS, not DM)
-NAME_TITLES = {"dr", "dra", "mr", "mrs", "ms", "engr", "atty", "prof"}
+def show_sidebar_branding():
+    """Show the Modern LungSight Orbit logo and LungSight title."""
 
+    logo_html = ""
 
-def get_initials(name):
-    """Turn 'Maria Santos' into 'MS' (used for the avatar circle)."""
+    if SIDEBAR_LOGO_PATH.is_file():
+        encoded = base64.b64encode(
+            SIDEBAR_LOGO_PATH.read_bytes()
+        ).decode("utf-8")
 
-    words = [
-        word
-        for word in str(name).split()
-        if word.strip(".").lower() not in NAME_TITLES
-    ]
-
-    if not words:
-        return "U"
-
-    if len(words) == 1:
-        return words[0][0].upper()
-
-    return (words[0][0] + words[-1][0]).upper()
-
-
-# ============================================================
-# NAVIGATION VALIDATION
-# ============================================================
-
-def ensure_valid_current_page(
-    valid_pages,
-):
-    """Reset the current page if it is not available."""
-
-    current_page = st.session_state.get(
-        "current_page"
-    )
-
-    if current_page not in valid_pages:
-        st.session_state.current_page = (
-            valid_pages[0]
+        logo_html = (
+            '<img class="ls-sidebar-brand-logo" '
+            f'src="data:image/png;base64,{encoded}" '
+            'alt="LungSight logo">'
         )
+
+    # Use one continuous HTML string to prevent raw HTML output.
+    branding_html = (
+        '<div class="ls-sidebar-brand-row">'
+        f'{logo_html}'
+        '<span class="ls-sidebar-brand-title">LungSight</span>'
+        '</div>'
+    )
+
+    with st.container(key="sidebar_branding"):
+        st.markdown(
+            branding_html,
+            unsafe_allow_html=True,
+        )
+
+
+# ============================================================
+# CURRENT PAGE VALIDATION
+# ============================================================
+
+def ensure_valid_current_page(valid_pages):
+    if not valid_pages:
+        return
+
+    if st.session_state.get("current_page") not in valid_pages:
+        st.session_state.current_page = valid_pages[0]
 
 
 # ============================================================
 # NAVIGATION BUTTON
 # ============================================================
 
-def nav_button(
-    label,
-    page,
-    icon,
-    key,
-):
-    """Render one sidebar navigation button."""
-
-    is_active = (
-        st.session_state.current_page
-        == page
-    )
-
-    button_type = (
-        "primary"
-        if is_active
-        else "secondary"
-    )
+def nav_button(label, page, icon, key):
+    is_active = st.session_state.current_page == page
 
     if st.button(
         label,
         key=key,
         icon=f":material/{icon}:",
-        type=button_type,
+        type="primary" if is_active else "secondary",
         width="stretch",
     ):
         st.session_state.current_page = page
@@ -488,120 +273,23 @@ def nav_button(
 
 
 # ============================================================
-# SIDEBAR HEADER
-# Logo and brand on top, then a small card with the signed-in user.
+# NAVIGATION MENU
 # ============================================================
 
-def show_header(role_label):
-
-    user = get_current_user()
-
-    user_name = user.get("name") or "User"
-
-    hospital_logo_url = (
-        user.get("hospital_logo_url")
-        or ""
-    )
-    profile_picture_url = (
-        user.get("profile_picture_url")
-        or user.get("profile_picture")
-        or user.get("avatar_url")
-        or ""
-    )
-
-    # ---- logo: the hospital's logo, or a hospital icon as a fallback ----
-
-    if hospital_logo_url:
-
-        logo_html = (
-            '<img class="ls-sidebar-logo" '
-            f'src="{html.escape(hospital_logo_url)}" '
-            'alt="Hospital logo">'
-        )
-
-    else:
-
-        logo_html = (
-            '<div class="ls-sidebar-logo ls-sidebar-logo-fallback">'
-            '<span class="ls-sidebar-icon">settings</span>'
-            "</div>"
-        )
-
-    avatar_html = (
-        '<img class="ls-sidebar-avatar ls-sidebar-avatar-image" '
-        f'src="{html.escape(profile_picture_url)}" alt="Profile picture">'
-        if profile_picture_url
-        else (
-            '<div class="ls-sidebar-avatar">'
-            f'{safe_text(get_initials(user_name))}</div>'
-        )
-    )
-
-    # ---- everything is written as one HTML string (no blank lines) ----
-
-    with st.container(
-        key="sidebar_header"
-    ):
-
-        st.markdown(
-            '<div class="ls-sidebar-brandbar">'
-            f"{logo_html}"
-            '<div class="ls-sidebar-brand">LungSight</div>'
-            "</div>"
-            '<div class="ls-sidebar-usercard">'
-            f"{avatar_html}"
-            '<div class="ls-sidebar-usertext">'
-            f'<div class="ls-sidebar-username" title="{safe_text(user_name)}">'
-            f"{safe_text(user_name)}</div>"
-            f'<div class="ls-sidebar-role">{safe_text(role_label)}</div>'
-            "</div>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-
-# ============================================================
-# SIDEBAR MENU
-# ============================================================
-
-def show_menu(
-    role_key,
-    nav_sections,
-):
-    """Render the sidebar navigation grouped into sections."""
-
-    with st.container(
-        key="sidebar_nav"
-    ):
+def show_menu(role_key, nav_sections):
+    with st.container(key="sidebar_nav"):
 
         for section in nav_sections:
+            section_name = safe_text(section.get("section", ""))
 
-            section_name = section.get("section")
-            items = section.get("items", [])
-
-            # ------------------------------------------------
-            # Section label
-            # ------------------------------------------------
-
+            # Single-line HTML prevents Markdown code rendering.
             st.markdown(
-                f"""
-                <div class="ls-sidebar-section-label">
-                    {safe_text(section_name)}
-                </div>
-                """,
+                f'<div class="ls-sidebar-section-label">'
+                f'{section_name}</div>',
                 unsafe_allow_html=True,
             )
 
-            # ------------------------------------------------
-            # Section navigation buttons
-            # ------------------------------------------------
-
-            for (
-                page,
-                label,
-                icon,
-            ) in items:
-
+            for page, label, icon in section.get("items", []):
                 nav_button(
                     label=label,
                     page=page,
@@ -611,15 +299,13 @@ def show_menu(
 
 
 # ============================================================
-# SIDEBAR ACCOUNT
+# ACCOUNT CONTROLS
 # ============================================================
 
 def show_account(role_key):
-    """Render profile and logout controls."""
+    """Keep Manage Profile and Logout functional."""
 
-    with st.container(
-        key="sidebar_account"
-    ):
+    with st.container(key="sidebar_account"):
 
         nav_button(
             "Manage Profile",
@@ -634,7 +320,6 @@ def show_account(role_key):
             icon=":material/logout:",
             width="stretch",
         ):
-
             audit.record_logout()
 
             st.session_state.logged_in = False
@@ -648,41 +333,23 @@ def show_account(role_key):
 # MAIN SIDEBAR
 # ============================================================
 
-def show_sidebar(
-    role_key,
-    role_label,
-    nav_sections,
-):
-    """Build the complete sidebar."""
-
+def show_sidebar(role_key, role_label, nav_sections):
     load_sidebar_css()
 
-    valid_pages = []
-
-    for section in nav_sections:
-        for item in section.get("items", []):
-            valid_pages.append(item[0])
+    valid_pages = [
+        item[0]
+        for section in nav_sections
+        for item in section.get("items", [])
+    ]
 
     valid_pages.append("Profile")
 
-    ensure_valid_current_page(
-        valid_pages
-    )
+    ensure_valid_current_page(valid_pages)
 
     with st.sidebar:
-
-        show_header(
-            role_label
-        )
-
-        show_menu(
-            role_key,
-            nav_sections,
-        )
-
-        show_account(
-            role_key
-        )
+        show_sidebar_branding()
+        show_menu(role_key, nav_sections)
+        show_account(role_key)
 
     return st.session_state.current_page
 
@@ -692,45 +359,30 @@ def show_sidebar(
 # ============================================================
 
 def show_radtech_sidebar():
-
     return show_sidebar(
-        "radtech",
-        "Radiology Technologist",
-        RADTECH_NAV,
+        "radtech", "Radiology Technologist", RADTECH_NAV
     )
 
 
 def show_physician_sidebar():
-
     return show_sidebar(
-        "physician",
-        "Physician",
-        PHYSICIAN_NAV,
+        "physician", "Physician", PHYSICIAN_NAV
     )
 
 
 def show_admin_sidebar():
-
     return show_sidebar(
-        "admin",
-        "Administrator",
-        ADMIN_NAV,
+        "admin", "Administrator", ADMIN_NAV
     )
 
 
 def show_staff_sidebar():
-
     return show_sidebar(
-        "staff",
-        "Staff",
-        STAFF_NAV,
+        "staff", "Staff", STAFF_NAV
     )
 
 
 def show_hospital_admin_sidebar():
-
     return show_sidebar(
-        "hospital_admin",
-        "Hospital Admin",
-        HOSPITAL_ADMIN_NAV,
+        "hospital_admin", "Hospital Admin", HOSPITAL_ADMIN_NAV
     )

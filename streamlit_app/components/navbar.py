@@ -1,5 +1,5 @@
+
 from pathlib import Path
-import base64
 import html
 
 import streamlit as st
@@ -13,13 +13,6 @@ from backend import audit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-LOGO_PATH = (
-    PROJECT_ROOT
-    / "shared"
-    / "images"
-    / "LungSight Logo.png"
-)
-
 NAVBAR_CSS_PATH = (
     PROJECT_ROOT
     / "shared"
@@ -30,78 +23,91 @@ NAVBAR_CSS_PATH = (
 
 
 # ============================================================
-# LOAD CSS
+# LOAD NAVBAR CSS
 # ============================================================
 
 def _load_navbar_css() -> None:
+    if NAVBAR_CSS_PATH.exists():
+        css = NAVBAR_CSS_PATH.read_text(
+            encoding="utf-8"
+        )
 
-    if not NAVBAR_CSS_PATH.exists():
-        return
-
-    css = NAVBAR_CSS_PATH.read_text(
-        encoding="utf-8"
-    )
-
-    st.markdown(
-        f"<style>{css}</style>",
-        unsafe_allow_html=True,
-    )
+        st.markdown(
+            f"<style>{css}</style>",
+            unsafe_allow_html=True,
+        )
 
 
 # ============================================================
-# ROLE LABEL
+# ROLE LABELS
 # ============================================================
 
-def _role_label(
-    role_value: str | None
-) -> str:
+def _role_label(role_value: str | None) -> str:
+    """
+    Return a readable role name for the navbar.
+
+    Handles differences in capitalization and common
+    role naming variations.
+    """
 
     role_labels = {
-
-        "radtech":
-            "RadTech",
-
-        "Radiology Technologist":
-            "Radiology Technologist",
-
-        "physician":
-            "Physician",
-
-        "Hospital Admin":
-            "Hospital Admin",
-
-        "Hospital administrator":
-            "Hospital Admin",
-
-        "Administrator":
-            "Administrator",
-
-        "Staff":
-            "Staff",
+        "radtech": "Radiology Technologist",
+        "radiology technologist": "Radiology Technologist",
+        "radiologic technologist": "Radiology Technologist",
+        "radiologist": "Radiologist",
+        "physician": "Physician",
+        "hospital admin": "Hospital Admin",
+        "hospital administrator": "Hospital Admin",
+        "administrator": "Hospital Admin",
+        "superadmin": "System Administrator",
+        "super admin": "System Administrator",
+        "system administrator": "System Administrator",
+        "system admin": "System Administrator",
+        "staff": "Staff",
     }
 
+    if not role_value:
+        return "User"
+
+    normalized_role = str(role_value).strip().lower()
+
     return role_labels.get(
-        role_value,
-        role_value or "User",
+        normalized_role,
+        str(role_value).strip(),
     )
 
 
 # ============================================================
-# INITIALS
+# PORTAL TITLE
 # ============================================================
 
-def _initials(
-    name: str
-) -> str:
+def _portal_title(role_value: str | None) -> str:
+    """
+    Generate the portal title based on the user's role.
 
+    Examples:
+        Staff -> Staff Portal
+        Physician -> Physician Portal
+        Superadmin -> System Administrator Portal
+    """
+
+    role_name = _role_label(role_value)
+
+    return f"{role_name} Portal"
+
+
+# ============================================================
+# USER INITIALS
+# ============================================================
+
+def _initials(name: str) -> str:
     if not name:
         return "U"
 
     parts = [
-        segment
-        for segment
-        in name.strip().split()
-        if segment
+        part
+        for part in name.strip().split()
+        if part
     ]
 
     if not parts:
@@ -111,25 +117,21 @@ def _initials(
         return parts[0][0].upper()
 
     return (
-        f"{parts[0][0]}"
-        f"{parts[-1][0]}"
+        f"{parts[0][0]}{parts[-1][0]}"
     ).upper()
 
 
 # ============================================================
-# ESCAPE TEXT
+# ESCAPE HTML TEXT
 # ============================================================
 
-def _safe_text(
-    value,
-    fallback="",
-):
-
-    if value is None:
+def _safe_text(value, fallback=""):
+    if value is None or str(value).strip() == "":
         value = fallback
 
     return html.escape(
-        str(value)
+        str(value),
+        quote=True,
     )
 
 
@@ -137,60 +139,28 @@ def _safe_text(
 # AVATAR HTML
 # ============================================================
 
-def _avatar_html(
-    user: dict
-) -> str:
-
+def _avatar_html(user: dict) -> str:
     avatar_url = (
-        user.get(
-            "profile_picture_url"
-        )
-        or user.get(
-            "profile_picture"
-        )
-        or user.get(
-            "avatar_url"
-        )
+        user.get("profile_picture_url")
+        or user.get("profile_picture")
+        or user.get("avatar_url")
     )
 
     if avatar_url:
-
         return (
-            '<img '
-            f'src="{html.escape(avatar_url)}" '
-            'alt="User profile" '
-            'class="ls-nav-avatar-image">'
+            '<img class="ls-nav-avatar-image" '
+            f'src="{html.escape(str(avatar_url), quote=True)}" '
+            'alt="User profile">'
         )
 
     initials = _initials(
-        user.get(
-            "name",
-            "User",
-        )
+        user.get("name") or "User"
     )
 
     return (
         '<div class="ls-nav-avatar-fallback">'
-        f'{initials}'
+        f'{html.escape(initials)}'
         '</div>'
-    )
-
-
-# ============================================================
-# LUNGSIGHT LOGO
-# ============================================================
-
-def _logo_data_uri() -> str:
-
-    if not LOGO_PATH.exists():
-        return ""
-
-    encoded = base64.b64encode(
-        LOGO_PATH.read_bytes()
-    ).decode("utf-8")
-
-    return (
-        f"data:image/png;base64,{encoded}"
     )
 
 
@@ -207,13 +177,10 @@ def show_top_navbar(
 
     audit.flush_audit_warnings()
 
-    user = (
-        st.session_state.get("user")
-        or {}
-    )
+    user = st.session_state.get("user") or {}
 
     # --------------------------------------------------------
-    # User information
+    # USER INFORMATION
     # --------------------------------------------------------
 
     user_name = _safe_text(
@@ -221,60 +188,97 @@ def show_top_navbar(
         "User",
     )
 
+    role_name = _role_label(
+        user.get("role")
+    )
+
     role_text = _safe_text(
-        _role_label(
-            user.get("role")
-        ),
+        role_name,
         "User",
     )
 
+    avatar_html = _avatar_html(user)
+
+    # --------------------------------------------------------
+    # PORTAL INFORMATION
+    # --------------------------------------------------------
+
+    portal_title = _safe_text(
+        _portal_title(user.get("role")),
+        "User Portal",
+    )
+
+    # --------------------------------------------------------
+    # HOSPITAL INFORMATION
+    # --------------------------------------------------------
+
     hospital_name = _safe_text(
         user.get("hospital_name"),
-        "-",
-    )
-    hospital_logo_url = user.get("hospital_logo_url") or ""
-    hospital_logo_html = (
-        '<img class="ls-nav-hospital-logo" '
-        f'src="{html.escape(hospital_logo_url)}" alt="Hospital logo">'
-        if hospital_logo_url
-        else ""
+        "LungSightAI",
     )
 
-    # --------------------------------------------------------
-    # Avatar
-    # --------------------------------------------------------
-
-    avatar_html = _avatar_html(
-        user
+    hospital_logo_url = (
+        user.get("hospital_logo_url")
+        or ""
     )
 
-    # --------------------------------------------------------
-    # LungSight logo
-    # --------------------------------------------------------
+    hospital_logo_html = ""
 
-    logo_uri = _logo_data_uri()
-
-    if logo_uri:
-
-        logo_html = (
-            '<img '
-            f'src="{logo_uri}" '
-            'class="ls-nav-brand-logo" '
-            'alt="LungSight logo">'
+    if hospital_logo_url:
+        hospital_logo_html = (
+            '<img class="ls-nav-hospital-logo" '
+            f'src="{html.escape(str(hospital_logo_url), quote=True)}" '
+            'alt="Hospital logo">'
         )
 
-    else:
+    # --------------------------------------------------------
+    # HOSPITAL HTML
+    # --------------------------------------------------------
 
-        logo_html = ""
+    hospital_html = (
+        '<div class="ls-nav-hospital-wrap">'
+        f'{hospital_logo_html}'
+        '<div class="ls-nav-hospital-name">'
+        f'{hospital_name}'
+        '</div>'
+        '</div>'
+    )
 
     # --------------------------------------------------------
-    # Navbar
-    #
-    # Three columns:
-    #
-    # LEFT   = LungSight
-    # CENTER = Hospital name
-    # RIGHT  = User profile
+    # CENTER PORTAL TITLE HTML
+    # --------------------------------------------------------
+
+    portal_html = (
+        '<div class="ls-nav-portal-wrap">'
+        '<div class="ls-nav-portal-title">'
+        f'{portal_title}'
+        '</div>'
+        '<div class="ls-nav-portal-subtitle">'
+        'LungSightAI'
+        '</div>'
+        '</div>'
+    )
+
+    # --------------------------------------------------------
+    # PROFILE HTML
+    # --------------------------------------------------------
+
+    profile_html = (
+        '<div class="ls-nav-profile-wrap">'
+        '<div class="ls-nav-user-text">'
+        '<div class="ls-nav-user-name">'
+        f'{user_name}'
+        '</div>'
+        '<div class="ls-nav-user-role">'
+        f'{role_text}'
+        '</div>'
+        '</div>'
+        f'{avatar_html}'
+        '</div>'
+    )
+
+    # --------------------------------------------------------
+    # RENDER NAVBAR
     # --------------------------------------------------------
 
     with st.container(
@@ -283,54 +287,32 @@ def show_top_navbar(
 
         left_col, center_col, right_col = (
             st.columns(
-                [1.5, 3, 1.8],
+                [1, 1, 1],
+                gap="small",
                 vertical_alignment="center",
             )
         )
 
-        # ====================================================
-        # LEFT
-        # ====================================================
+        # LEFT: HOSPITAL INFORMATION
 
         with left_col:
-
             st.markdown(
-                f"""<div class="ls-nav-left-wrap">
-{logo_html}
-<div class="ls-nav-appname">LungSight</div>
-</div>""",
+                hospital_html,
                 unsafe_allow_html=True,
             )
 
-        # ====================================================
-        # CENTER
-        # ====================================================
+        # CENTER: ROLE PORTAL TITLE
 
         with center_col:
-
             st.markdown(
-                f"""<div class="ls-nav-hospital-wrap">
-{hospital_logo_html}
-<div class="ls-nav-hospital-name">
-{hospital_name}
-</div>
-</div>""",
+                portal_html,
                 unsafe_allow_html=True,
             )
 
-        # ====================================================
-        # RIGHT
-        # ====================================================
+        # RIGHT: USER PROFILE
 
         with right_col:
-
             st.markdown(
-                f"""<div class="ls-nav-profile-wrap">
-{avatar_html}
-<div class="ls-nav-user-text">
-<div class="ls-nav-user-name">{user_name}</div>
-<div class="ls-nav-user-role">{role_text}</div>
-</div>
-</div>""",
+                profile_html,
                 unsafe_allow_html=True,
             )

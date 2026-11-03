@@ -537,6 +537,37 @@ def get_all_patients():
 
     return response.data or []
 
+def get_hospital_patients(hospital_id):
+    """
+    Retrieve patients belonging to one hospital.
+
+    hospital_id must come from the authenticated
+    user's trusted server-side context.
+    """
+
+    if not hospital_id:
+        raise ValueError("Hospital ID is required.")
+
+    response = (
+        admin_supabase
+        .table("patients")
+        .select("""
+            patient_id,
+            patient_code,
+            first_name,
+            middle_name,
+            last_name,
+            suffix,
+            status,
+            created_at,
+            hospital_id
+        """)
+        .eq("hospital_id", hospital_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    return response.data or []
 
 def generate_patient_id():
 

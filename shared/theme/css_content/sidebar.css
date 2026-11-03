@@ -1,37 +1,22 @@
-@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap");
 
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 
 /* ============================================================
-   LUNGSIGHT SIDEBAR
+   LUNGSIGHT SIDEBAR - TEAL BLUE THEME
    ============================================================ */
 
 :root {
-    --sb-bg: #ffffff;
-
-    --sb-ink: #12283a;
-    --sb-text: #3f5566;
-    --sb-muted: #6b7f8e;
-
-    --sb-border: #dde8eb;
-
-    --sb-hover-bg: #f4f8f9;
-    --sb-hover-border: #bcd3d8;
-
-    --sb-accent: #0f7c88;
-    --sb-accent-dark: #0b626c;
-    --sb-accent-bg: #e8f4f6;
-
-    --sb-font-display:
-        "Barlow Condensed",
-        Arial,
-        sans-serif;
-
-    --sb-font-body:
-        "Manrope",
-        system-ui,
-        -apple-system,
-        "Segoe UI",
-        sans-serif;
+    --sb-bg: #087983;
+    --sb-bg-deep: #066872;
+    --sb-text: #f0fcfd;
+    --sb-muted: #c4e8eb;
+    --sb-white: #ffffff;
+    --sb-border: rgba(255, 255, 255, 0.18);
+    --sb-hover: rgba(255, 255, 255, 0.12);
+    --sb-active: #ffffff;
+    --sb-active-text: #073c49;
+    --sb-accent: #a9f1f0;
+    --sb-font: "Manrope", sans-serif;
 }
 
 
@@ -39,526 +24,255 @@
    SIDEBAR FRAME
    ============================================================ */
 
-[data-testid="stSidebar"],
-[data-testid="stSidebarContent"] {
-    background: var(--sb-bg) !important;
-    font-family: var(--sb-font-body);
-}
-
-
-/*
-   Keep the sidebar compact.
-
-   Do NOT make this too wide. Long labels are allowed to wrap.
-*/
-
 [data-testid="stSidebar"] {
-    border-right: 1px solid var(--sb-border);
-
     min-width: 255px !important;
     max-width: 255px !important;
+    background: var(--sb-bg) !important;
+    border-right: none !important;
+}
+
+[data-testid="stSidebarContent"] {
+    background: linear-gradient(
+        180deg,
+        var(--sb-bg) 0%,
+        var(--sb-bg-deep) 100%
+    ) !important;
+
+    padding: 1.1rem 0.75rem 1.25rem !important;
+    font-family: var(--sb-font);
 }
 
 
 /* ============================================================
-   HIDE STREAMLIT DEFAULT ELEMENTS
+   HIDE DEFAULT STREAMLIT NAVIGATION
    ============================================================ */
 
+[data-testid="stSidebarNav"],
+[data-testid="stSidebarHeader"],
 [data-testid="stSidebar"] [style*="col-resize"] {
     display: none !important;
 }
 
 
-[data-testid="stSidebarNav"] {
-    display: none !important;
-}
-
-
-[data-testid="stSidebarHeader"] {
-    display: none !important;
-}
-
-
 /* ============================================================
-   SIDEBAR HEADER
+   LUNGSIGHT BRANDING
    ============================================================ */
 
-.st-key-sidebar_header {
-    gap: 0;
-
-    padding:
-        0.35rem
-        0.15rem
-        1.45rem;
-
-    margin-top: 0 !important;
-
-    margin-bottom: 0.25rem;
-
+.st-key-sidebar_branding {
+    padding: 0.6rem 0.35rem 2rem;
+    margin-bottom: 0.65rem;
     border-bottom: 1px solid var(--sb-border);
 }
 
-
-.st-key-sidebar_header
-[data-testid="stElementContainer"]:first-child {
-    margin-top: 0 !important;
-}
-
-
-/* ============================================================
-   LOGO + BRAND
-   ============================================================ */
-
-.st-key-sidebar_header .ls-sidebar-brandbar {
+.ls-sidebar-brand-row {
     display: flex;
-
-    flex-direction: column;
-
     align-items: center;
-
-    gap: 0.5rem;
-}
-
-
-.st-key-sidebar_header .ls-sidebar-logo {
-    display: block;
-
-    width: 60px;
-    height: 60px;
-
-    box-sizing: border-box;
-
-    object-fit: contain;
-
-    padding: 0.28rem;
-
-    background: #ffffff;
-
-    border: 1px solid var(--sb-border);
-
-    border-radius: 15px;
-
-    box-shadow:
-        0 6px 16px -10px
-        rgba(18, 40, 58, 0.35);
-}
-
-
-/* ============================================================
-   LOGO FALLBACK
-   ============================================================ */
-
-.st-key-sidebar_header
-.ls-sidebar-logo-fallback {
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    padding: 0;
-
-    background: var(--sb-accent-bg);
-
-    color: var(--sb-accent);
-}
-
-
-.st-key-sidebar_header
-.ls-sidebar-icon {
-    font-family:
-        "Material Symbols Rounded";
-
-    font-size: 1.85rem;
-
-    font-weight: normal;
-
-    line-height: 1;
-
-    letter-spacing: normal;
-
-    text-transform: none;
-
-    white-space: nowrap;
-
-    font-feature-settings: "liga";
-}
-
-
-/* ============================================================
-   LUNGSIGHT WORDMARK
-   ============================================================ */
-
-.st-key-sidebar_header .ls-sidebar-brand {
-    font-family: var(--sb-font-display);
-
-    font-size: 1.75rem;
-
-    font-weight: 700;
-
-    line-height: 1;
-
-    letter-spacing: 0.045em;
-
-    color: var(--sb-ink);
-}
-
-
-/* ============================================================
-   USER CARD
-   ============================================================ */
-
-.st-key-sidebar_header .ls-sidebar-usercard {
-    display: flex;
-
-    align-items: center;
-
+    justify-content: flex-start;
     gap: 0.65rem;
-
-    margin-top: 0.95rem;
-
-    padding:
-        0.6rem
-        0.65rem;
-
-    background: var(--sb-hover-bg);
-
-    border: 1px solid var(--sb-border);
-
-    border-radius: 12px;
-
-    font-family: var(--sb-font-body);
-}
-
-
-/* ============================================================
-   USER AVATAR
-   ============================================================ */
-
-.st-key-sidebar_header .ls-sidebar-avatar {
-    width: 36px;
-    height: 36px;
-
-    flex-shrink: 0;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 50%;
-
-    background: var(--sb-accent);
-
-    color: #ffffff;
-
-    font-size: 0.8rem;
-
-    font-weight: 700;
-
-    letter-spacing: 0.02em;
-}
-
-.st-key-sidebar_header .ls-sidebar-avatar-image {
-    object-fit: cover;
-    border: 1px solid var(--sb-border);
-}
-
-
-/* ============================================================
-   USER TEXT
-   ============================================================ */
-
-.st-key-sidebar_header .ls-sidebar-usertext {
     min-width: 0;
-
-    display: flex;
-
-    flex-direction: column;
-
-    align-items: flex-start;
-
-    gap: 0.22rem;
 }
 
+.ls-sidebar-brand-logo {
+    display: block;
+    width: 76px;
+    height: 76px;
+    flex-shrink: 0;
+    object-fit: contain;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 3px;
+}
 
-.st-key-sidebar_header .ls-sidebar-username {
-    max-width: 100%;
-
-    font-size: 0.86rem;
-
-    font-weight: 700;
-
+.ls-sidebar-brand-title {
+    color: var(--sb-white);
+    font-family: var(--sb-font);
+    font-size: 1.18rem;
+    font-weight: 800;
+    letter-spacing: -0.035em;
     line-height: 1.2;
-
-    color: var(--sb-ink);
-
     white-space: nowrap;
-
-    overflow: hidden;
-
-    text-overflow: ellipsis;
-}
-
-
-.st-key-sidebar_header .ls-sidebar-role {
-    max-width: 100%;
-
-    color: var(--sb-accent-dark);
-
-    font-size: 0.62rem;
-
-    font-weight: 700;
-
-    line-height: 1.25;
-
-    letter-spacing: 0.05em;
-
-    text-transform: uppercase;
-
-    white-space: normal;
-
-    overflow-wrap: anywhere;
 }
 
 
 /* ============================================================
-   NAVIGATION AREA
+   NAVIGATION CONTAINER
    ============================================================ */
 
 .st-key-sidebar_nav {
-    gap: 0.35rem;
-
-    padding:
-        0
-        0.05rem;
+    gap: 0.2rem !important;
+    padding: 0 !important;
 }
 
 
 /* ============================================================
-   SECTION HEADER
-   ============================================================
-
-   IMPORTANT:
-
-   The section is intentionally separated from the buttons.
-
-   Example:
-
-   CLINICAL MANAGEMENT
-   ───────────────────────
-
-   [ Manage Patients ]
-
-   This is deliberately NOT a line beside the text.
+   SECTION HEADINGS
    ============================================================ */
 
-.st-key-sidebar_nav
-.ls-sidebar-section-label {
+.st-key-sidebar_nav .ls-sidebar-section-label {
     display: block;
-
-    width: 100%;
-
-    box-sizing: border-box;
-
-    margin-top: 1.45rem;
-
-    margin-bottom: 0.75rem;
-
-    padding:
-        0
-        0.3rem
-        0.5rem;
+    margin: 1.55rem 0 0.65rem;
+    padding: 0 0.7rem;
 
     color: var(--sb-muted);
-
-    font-family: var(--sb-font-body);
-
-    font-size: 0.62rem;
-
-    font-weight: 700;
-
-    line-height: 1.2;
-
-    letter-spacing: 0.085em;
-
+    font-family: var(--sb-font);
+    font-size: 0.63rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
     text-transform: uppercase;
-
-    border-bottom: 1px solid var(--sb-border);
 }
 
-
-/*
-   The first section should not have a huge top gap.
-*/
-
 .st-key-sidebar_nav
-.ls-sidebar-section-label:first-child {
-    margin-top: 0.45rem;
+[data-testid="stElementContainer"]:first-child
+.ls-sidebar-section-label {
+    margin-top: 0.35rem;
 }
 
 
 /* ============================================================
-   EXTRA SPACE AFTER SECTION DIVIDER
+   NAVIGATION AND ACCOUNT BUTTONS
    ============================================================ */
 
-/*
-   This creates the visual breathing room that was missing.
-
-   Section
-   divider
-          ↓
-       SPACE
-          ↓
-   first button
-*/
-
-.st-key-sidebar_nav
-.ls-sidebar-section-label
-+ div {
-    margin-top: 0.15rem;
-}
-
-
-/* ============================================================
-   NAVIGATION BUTTON
-   ============================================================ */
-
-.st-key-sidebar_nav button {
+.st-key-sidebar_nav button,
+.st-key-sidebar_account button {
     width: 100%;
-
-    min-height: 43px;
-
-    padding:
-        0.5rem
-        0.65rem;
+    min-height: 44px;
+    padding: 0.65rem 0.85rem;
 
     background: transparent !important;
-
-    border: 1px solid var(--sb-border) !important;
-
-    border-radius: 8px;
-
-    box-shadow: none;
+    border: 1px solid transparent !important;
+    border-radius: 9px !important;
+    box-shadow: none !important;
 
     transition:
-        background 0.15s ease,
-        border-color 0.15s ease,
-        transform 0.15s ease;
+        background 0.18s ease,
+        transform 0.18s ease;
 }
 
 
 /* ============================================================
-   BUTTON CONTENT
+   BUTTON CONTENT ALIGNMENT
    ============================================================ */
 
-.st-key-sidebar_nav button > div {
+.st-key-sidebar_nav button > div,
+.st-key-sidebar_nav button > div > span,
+.st-key-sidebar_account button > div,
+.st-key-sidebar_account button > div > span {
     width: 100%;
-
     justify-content: flex-start;
-}
-
-
-.st-key-sidebar_nav button > div > span {
-    width: 100%;
-
-    justify-content: flex-start;
-
-    gap: 0.55rem;
+    align-items: center;
+    gap: 0.8rem;
 }
 
 
 /* ============================================================
-   MATERIAL ICONS
+   BUTTON TEXT
    ============================================================ */
 
-.st-key-sidebar_nav
-[data-testid="stIconMaterial"] {
-    flex-shrink: 0;
-
-    font-family:
-        "Material Symbols Rounded" !important;
-
-    color: var(--sb-muted);
-
-    font-size: 1.12rem;
-
-    line-height: 1;
-}
-
-
-/* ============================================================
-   BUTTON LABEL
-   ============================================================ */
-
-.st-key-sidebar_nav button p {
+.st-key-sidebar_nav button p,
+.st-key-sidebar_account button p {
     margin: 0;
+    color: var(--sb-text) !important;
 
-    color: var(--sb-text);
-
-    font-family: var(--sb-font-body);
-
-    font-size: 0.83rem;
-
+    font-family: var(--sb-font);
+    font-size: 0.82rem;
     font-weight: 500;
-
-    line-height: 1.35;
-
+    line-height: 1.4;
     text-align: left;
 
     white-space: normal;
-
     overflow-wrap: anywhere;
 }
 
 
 /* ============================================================
-   BUTTON HOVER
+   BUTTON ICONS
    ============================================================ */
 
-.st-key-sidebar_nav button:hover {
-    background: var(--sb-hover-bg) !important;
-
-    border-color: var(--sb-hover-border) !important;
-
-    transform: translateX(1px);
-}
-
-
-.st-key-sidebar_nav button:hover p {
-    color: var(--sb-ink);
-}
-
-
-.st-key-sidebar_nav button:hover
-[data-testid="stIconMaterial"] {
-    color: var(--sb-accent);
+.st-key-sidebar_nav [data-testid="stIconMaterial"],
+.st-key-sidebar_account [data-testid="stIconMaterial"] {
+    flex-shrink: 0;
+    color: var(--sb-muted) !important;
+    font-size: 1.2rem;
 }
 
 
 /* ============================================================
-   ACTIVE PAGE
+   HOVER STATES
+   ============================================================ */
+
+.st-key-sidebar_nav button:hover,
+.st-key-sidebar_account button:hover {
+    background: var(--sb-hover) !important;
+    border-color: transparent !important;
+    transform: translateX(2px);
+}
+
+.st-key-sidebar_nav button:hover p,
+.st-key-sidebar_nav button:hover [data-testid="stIconMaterial"],
+.st-key-sidebar_account button:hover p,
+.st-key-sidebar_account button:hover [data-testid="stIconMaterial"] {
+    color: var(--sb-white) !important;
+}
+
+
+/* ============================================================
+   ACTIVE NAVIGATION
    ============================================================ */
 
 .st-key-sidebar_nav
+button[data-testid="stBaseButton-primary"],
+.st-key-sidebar_account
 button[data-testid="stBaseButton-primary"] {
-    background: var(--sb-accent-bg) !important;
-
-    border-color: var(--sb-accent) !important;
+    background: var(--sb-active) !important;
+    border-color: var(--sb-active) !important;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12) !important;
 }
-
 
 .st-key-sidebar_nav
+button[data-testid="stBaseButton-primary"] p,
+.st-key-sidebar_account
 button[data-testid="stBaseButton-primary"] p {
-    color: var(--sb-accent-dark);
-
-    font-weight: 600;
+    color: var(--sb-active-text) !important;
+    font-weight: 800;
 }
-
 
 .st-key-sidebar_nav
 button[data-testid="stBaseButton-primary"]
+[data-testid="stIconMaterial"],
+.st-key-sidebar_account
+button[data-testid="stBaseButton-primary"]
 [data-testid="stIconMaterial"] {
-    color: var(--sb-accent);
+    color: var(--sb-active-text) !important;
+}
+
+
+/* ============================================================
+   ACCOUNT CONTROLS - MANAGE PROFILE / LOGOUT
+   ============================================================ */
+
+.st-key-sidebar_account {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--sb-border);
+}
+
+
+/* ============================================================
+   LOGOUT HOVER
+   ============================================================ */
+
+[class*="st-key-logout_"] button:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+}
+
+[class*="st-key-logout_"] button:hover p,
+[class*="st-key-logout_"] button:hover
+[data-testid="stIconMaterial"] {
+    color: #ffffff !important;
 }
 
 
@@ -566,176 +280,36 @@ button[data-testid="stBaseButton-primary"]
    KEYBOARD FOCUS
    ============================================================ */
 
-.st-key-sidebar_nav
-button:focus-visible {
-    outline: 2px solid var(--sb-accent);
-
-    outline-offset: 2px;
+.st-key-sidebar_nav button:focus-visible,
+.st-key-sidebar_account button:focus-visible {
+    outline: 2px solid var(--sb-accent) !important;
+    outline-offset: 3px;
 }
 
 
 /* ============================================================
-   ACCOUNT AREA
+   RESPONSIVE
    ============================================================ */
 
-.st-key-sidebar_account {
-    display: flex;
+@media (max-width: 900px) {
+    [data-testid="stSidebar"] {
+        min-width: 245px !important;
+        max-width: 245px !important;
+    }
 
-    flex-direction: column;
+    .ls-sidebar-brand-logo {
+        width: 66px;
+        height: 66px;
+    }
 
-    gap: 0.4rem;
+    .ls-sidebar-brand-title {
+        font-size: 1.08rem;
+    }
 
-    margin-top: 1.5rem;
-
-    padding-top: 1.2rem;
-
-    border-top: 1px solid var(--sb-border);
-}
-
-
-/* ============================================================
-   ACCOUNT BUTTONS
-   ============================================================ */
-
-.st-key-sidebar_account button {
-    width: 100%;
-
-    min-height: 43px;
-
-    padding:
-        0.5rem
-        0.65rem;
-
-    justify-content: flex-start;
-
-    background: transparent !important;
-
-    border: 1px solid var(--sb-border) !important;
-
-    border-radius: 8px;
-
-    box-shadow: none;
-
-    transition:
-        background 0.15s ease,
-        border-color 0.15s ease;
-}
-
-
-.st-key-sidebar_account button > div {
-    width: 100%;
-
-    justify-content: flex-start;
-}
-
-
-.st-key-sidebar_account button > div > span {
-    width: 100%;
-
-    justify-content: flex-start;
-
-    gap: 0.55rem;
-}
-
-
-/* ============================================================
-   ACCOUNT ICONS
-   ============================================================ */
-
-.st-key-sidebar_account
-[data-testid="stIconMaterial"] {
-    flex-shrink: 0;
-
-    font-family:
-        "Material Symbols Rounded" !important;
-
-    color: var(--sb-muted);
-
-    font-size: 1.12rem;
-}
-
-
-/* ============================================================
-   ACCOUNT LABEL
-   ============================================================ */
-
-.st-key-sidebar_account button p {
-    margin: 0;
-
-    color: var(--sb-text);
-
-    font-family: var(--sb-font-body);
-
-    font-size: 0.83rem;
-
-    font-weight: 500;
-
-    line-height: 1.35;
-
-    text-align: left;
-
-    white-space: normal;
-}
-
-
-/* ============================================================
-   ACCOUNT HOVER
-   ============================================================ */
-
-.st-key-sidebar_account button:hover {
-    background: var(--sb-hover-bg) !important;
-
-    border-color: var(--sb-hover-border) !important;
-}
-
-
-.st-key-sidebar_account button:hover p {
-    color: var(--sb-ink);
-}
-
-
-/* ============================================================
-   ACCOUNT ACTIVE
-   ============================================================ */
-
-.st-key-sidebar_account
-button[data-testid="stBaseButton-primary"] {
-    background: var(--sb-accent-bg) !important;
-
-    border-color: var(--sb-accent) !important;
-}
-
-
-.st-key-sidebar_account
-button[data-testid="stBaseButton-primary"] p {
-    color: var(--sb-accent-dark);
-
-    font-weight: 600;
-}
-
-
-.st-key-sidebar_account
-button[data-testid="stBaseButton-primary"]
-[data-testid="stIconMaterial"] {
-    color: var(--sb-accent);
-}
-
-
-/* ============================================================
-   LOGOUT
-   ============================================================ */
-
-[class*="st-key-logout_"] button:hover {
-    border-color: #e5b5b0 !important;
-
-    background: #fdf5f4 !important;
-}
-
-
-[class*="st-key-logout_"] button:hover p,
-[class*="st-key-logout_"] button:hover
-[data-testid="stIconMaterial"] {
-    color: #b3402f;
+    .st-key-sidebar_nav button p,
+    .st-key-sidebar_account button p {
+        font-size: 0.8rem;
+    }
 }
 
 
@@ -744,52 +318,8 @@ button[data-testid="stBaseButton-primary"]
    ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
-
-    [data-testid="stSidebar"] * {
+    .st-key-sidebar_nav button,
+    .st-key-sidebar_account button {
         transition: none !important;
-    }
-}
-
-
-/* ============================================================
-   SMALL SCREEN
-   ============================================================ */
-
-@media (max-width: 900px) {
-
-    [data-testid="stSidebar"] {
-        min-width: 245px !important;
-        max-width: 245px !important;
-    }
-
-
-    .st-key-sidebar_header
-    .ls-sidebar-logo {
-        width: 56px;
-        height: 56px;
-    }
-
-
-    .st-key-sidebar_header
-    .ls-sidebar-icon {
-        font-size: 1.7rem;
-    }
-
-
-    .st-key-sidebar_header
-    .ls-sidebar-brand {
-        font-size: 1.65rem;
-    }
-
-
-    .st-key-sidebar_header
-    .ls-sidebar-username {
-        font-size: 0.83rem;
-    }
-
-
-    .st-key-sidebar_nav button p,
-    .st-key-sidebar_account button p {
-        font-size: 0.8rem;
     }
 }
