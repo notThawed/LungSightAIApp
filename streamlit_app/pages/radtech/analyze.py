@@ -36,6 +36,8 @@ from streamlit_app.components.ui import (
     page_header,
     show_rows,
     full_name,
+    initials,
+    safe,
     show_flash_message,
 )
 
@@ -187,13 +189,18 @@ def render_empty_results():
 
     st.markdown(
         "<div class='rx-empty'>"
-        "<div class='rx-empty-icon'>crop_free</div>"
-        "<p class='rx-empty-title'>Submission Summary</p>"
+        "<div class='rx-empty-icon-wrap'>"
+        "<span class='material-symbols-rounded rx-empty-icon'>radiology</span>"
+        "</div>"
+        "<p class='rx-empty-title'>Diagnostic Workstation</p>"
         "<p class='rx-empty-text'>"
-        "Upload an X-ray image and click "
-        "\"Analyze Image\" to submit it for "
-        "physician review."
+        "Upload a chest radiograph on the left to begin AI pathology screening and generate attention heatmaps."
         "</p>"
+        "<div class='rx-empty-steps'>"
+        "<div class='rx-empty-step-item'><span class='rx-step-num'>1</span><span>Upload DICOM, PNG, or JPEG X-Ray</span></div>"
+        "<div class='rx-empty-step-item'><span class='rx-step-num'>2</span><span>Execute AI Multi-Stage Classification</span></div>"
+        "<div class='rx-empty-step-item'><span class='rx-step-num'>3</span><span>Verify Heatmap & Commit for Physician</span></div>"
+        "</div>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -210,7 +217,7 @@ def _progress_steps_html(current_step):
         "Running AI detection model...",
         "Running pneumonia classification...",
         "Running COVID vs Viral classification...",
-        "Preparing summary",
+        "Preparing diagnostic summary...",
     ]
 
     rows = []
@@ -219,23 +226,27 @@ def _progress_steps_html(current_step):
 
         if index < current_step:
             cls = "rx-step-done"
-            icon = "✓"
+            status_glyph = "<span class='material-symbols-rounded'>check_circle</span>"
         elif index == current_step:
             cls = "rx-step-active"
-            icon = "⟳"
+            status_glyph = "<span class='material-symbols-rounded rx-step-spin'>sync</span>"
         else:
             cls = "rx-step-pending"
-            icon = "·"
+            status_glyph = "<span class='material-symbols-rounded'>radio_button_unchecked</span>"
 
         rows.append(
             f"<div class='rx-step {cls}'>"
-            f"<span class='rx-step-icon'>{icon}</span>"
+            f"<span class='rx-step-icon'>{status_glyph}</span>"
             f"<span class='rx-step-label'>{label}</span>"
             "</div>"
         )
 
     return (
         "<div class='rx-progress-card'>"
+        "<div class='rx-progress-header'>"
+        "<span class='material-symbols-rounded rx-progress-head-icon'>smart_toy</span>"
+        "<span>AI Diagnostic Pipeline</span>"
+        "</div>"
         + "".join(rows)
         + "</div>"
     )
@@ -530,7 +541,7 @@ def show_analysis_complete_dialog():
 
     st.markdown(
         "<div class='rx-dialog-done'>"
-        "<span class='rx-dialog-check'>check_circle</span>"
+        "<span class='material-symbols-rounded rx-dialog-check'>check_circle</span>"
         "<p class='rx-dialog-done-title'>Analysis Successful</p>"
         "<p class='rx-dialog-done-text'>"
         "The X-ray has been processed and is ready "
@@ -564,12 +575,11 @@ def render_submission_summary(request, patient, uploaded_file, result):
 
     st.markdown(
         "<div class='rx-submission-banner'>"
-        "<span class='rx-submission-icon'>check_circle</span>"
+        "<span class='material-symbols-rounded rx-submission-icon'>check_circle</span>"
         "<div>"
-        "<p class='rx-submission-title'>Analysis Complete</p>"
+        "<p class='rx-submission-title'>AI Analysis Complete</p>"
         "<p class='rx-submission-text'>"
-        "The X-ray has been processed and is ready "
-        "for physician review."
+        "The radiograph has been evaluated and is ready for physician verification."
         "</p>"
         "</div>"
         "</div>",
@@ -578,79 +588,88 @@ def render_submission_summary(request, patient, uploaded_file, result):
 
     pneu_type = result.get("pneumonia_type")
     if pneu_type == "inconclusive":
-        pneu_display = "⚠️ Inconclusive"
+        pneu_display = "Inconclusive"
+        pneu_tag_class = "rx-tag-amber"
     elif pneu_type:
         pneu_display = pneu_type.replace("_", " ").title()
+        pneu_tag_class = "rx-tag-red" if any(w in pneu_type for w in ["covid", "viral", "bacterial"]) else "rx-tag-blue"
     else:
-        pneu_display = "—"
+        pneu_display = "None Detected"
+        pneu_tag_class = "rx-tag-green"
 
-    main_label = result.get("label", "—")
+    main_label = str(result.get("label", "—")).strip().lower()
     if main_label == "inconclusive":
-        main_display = "⚠️ Inconclusive (Low Confidence)"
+        main_display = "Inconclusive (Low Confidence)"
+        main_tag_class = "rx-tag-amber"
+    elif main_label == "positive":
+        main_display = "Positive for Infiltration"
+        main_tag_class = "rx-tag-red"
+    elif main_label == "negative":
+        main_display = "Negative / Normal"
+        main_tag_class = "rx-tag-green"
     else:
         main_display = main_label.title()
+        main_tag_class = "rx-tag-slate"
+
+    req_id = str(request.get("request_id") or "—")
+    req_code = f"#{req_id[:8]}" if req_id != "—" else "—"
 
     st.markdown(
         "<div class='rx-summary-card'>"
 
         "<div class='rx-summary-row'>"
         "<span>Request ID</span>"
-        f"<b>{request.get('request_id', '—')}</b>"
+        f"<b class='rx-mono-val'>{safe(req_code)}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
-        "<span>Patient</span>"
-        f"<b>{patient_name(patient)}</b>"
+        "<span>Patient Name</span>"
+        f"<b>{safe(patient_name(patient))}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
         "<span>Patient Code</span>"
-        f"<b>{patient_code(patient)}</b>"
+        f"<span class='rx-ref-pill'>{safe(patient_code(patient))}</span>"
         "</div>"
 
         "<div class='rx-summary-row'>"
-        "<span>Body Part</span>"
-        f"<b>{request.get('body_part') or 'Chest'}</b>"
+        "<span>Body Part & Priority</span>"
+        f"<b>{safe(request.get('body_part') or 'Chest')} · {safe(request.get('priority') or 'Routine')}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
-        "<span>Priority</span>"
-        f"<b>{request.get('priority') or 'Routine'}</b>"
+        "<span>Source File</span>"
+        f"<b class='rx-file-val'>{safe(uploaded_file.name)}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
-        "<span>Image File</span>"
-        f"<b>{uploaded_file.name}</b>"
-        "</div>"
-
-        "<div class='rx-summary-row'>"
-        "<span>Image Quality</span>"
-        "<b>Passed</b>"
+        "<span>Quality Status</span>"
+        "<span class='rx-tag rx-tag-green'><span class='material-symbols-rounded'>verified</span> Passed Check</span>"
         "</div>"
 
         "<div class='rx-summary-row'>"
         "<span>AI Findings</span>"
-        f"<b>{main_display}</b>"
+        f"<span class='rx-tag {main_tag_class}'>{safe(main_display)}</span>"
         "</div>"
 
         "<div class='rx-summary-row'>"
-        "<span>Pneumonia Type</span>"
-        f"<b>{pneu_display}</b>"
+        "<span>Pneumonia Classification</span>"
+        f"<span class='rx-tag {pneu_tag_class}'>{safe(pneu_display)}</span>"
         "</div>"
 
         "<div class='rx-summary-row'>"
-        "<span>AI Processing</span>"
-        "<b>Complete</b>"
+        "<span>AI Engine</span>"
+        "<span class='rx-tag rx-tag-teal'>Complete · Multi-Model v1</span>"
         "</div>"
 
         "<div class='rx-summary-row'>"
-        "<span>Submitted</span>"
+        "<span>Timestamp</span>"
         f"<b>{timestamp_now()}</b>"
         "</div>"
 
         "<div class='rx-summary-row'>"
-        "<span>Submitted By</span>"
-        f"<b>{current_user_name()}</b>"
+        "<span>Technologist</span>"
+        f"<b>{safe(current_user_name())}</b>"
         "</div>"
 
         "</div>",
@@ -659,14 +678,21 @@ def render_submission_summary(request, patient, uploaded_file, result):
 
     st.markdown(
         "<p class='rx-summary-note'>"
-        "The X-ray has been submitted to the physician's "
-        "queue for review and interpretation."
+        "<span class='material-symbols-rounded'>info</span>"
+        "The X-ray and Grad-CAM heatmap will be committed to the physician review queue upon saving."
         "</p>",
         unsafe_allow_html=True,
     )
 
     st.divider()
-    st.markdown("### AI Attention Heatmap")
+
+    st.markdown(
+        "<div class='rx-heatmap-header'>"
+        "<span class='material-symbols-rounded'>blur_on</span>"
+        "<span>AI Attention Heatmap (Grad-CAM)</span>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
     gradcam_result = st.session_state.get("gradcam_result")
 
@@ -674,20 +700,20 @@ def render_submission_summary(request, patient, uploaded_file, result):
         gradcam_result
         and gradcam_result.get("overlay") is not None
     ):
-        st.image(
-            gradcam_result["overlay"],
-            caption=(
-                "Grad-CAM visualization. "
-                "Highlighted areas show image regions "
-                "that influenced the model's prediction. "
-                "This visualization is not a diagnosis."
-            ),
-            width="stretch",
-        )
+        with st.container(key="rx_heatmap_box"):
+            st.image(
+                gradcam_result["overlay"],
+                caption=(
+                    "Grad-CAM Heatmap Visualization: Highlighted regions "
+                    "indicate features that influenced the neural network prediction. "
+                    "This is an interpretability aid and not a clinical diagnosis."
+                ),
+                width="stretch",
+            )
     else:
         st.info(
-            "Heatmap unavailable. The original AI "
-            "prediction is still available."
+            "Heatmap unavailable for this study. The primary AI "
+            "prediction was recorded successfully."
         )
 
 
@@ -826,26 +852,30 @@ def show():
 
         st.markdown(
             "<div class='rx-guard'>"
-            "<div class='rx-guard-icon'>person_search</div>"
+            "<div class='rx-guard-icon'>"
+            "<span class='material-symbols-rounded'>person_search</span>"
+            "</div>"
             "<p class='rx-guard-title'>No Patient Selected</p>"
             "<p class='rx-guard-text'>"
-            "Pick a patient from the X-Ray Queue to analyze their X-Ray."
+            "Pick a patient from the X-Ray Queue to analyze their chest X-ray and generate AI diagnostics."
             "</p>"
             "</div>",
             unsafe_allow_html=True,
         )
 
-        if st.button(
-            "Go Back to Queue",
-            key="rx_guard_back",
-            icon=":material/arrow_back:",
-            type="primary",
-            width="stretch",
-        ):
-            reset_analysis_state()
-            st.session_state.pop("rx_upload", None)
-            st.session_state.current_page = "X-ray Queus"
-            st.rerun()
+        _, center_col, _ = st.columns([1, 1.2, 1])
+        with center_col:
+            if st.button(
+                "Back to X-Ray Queue",
+                key="rx_guard_back",
+                icon=":material/arrow_back:",
+                type="primary",
+                width="stretch",
+            ):
+                reset_analysis_state()
+                st.session_state.pop("rx_upload", None)
+                st.session_state.current_page = "X-ray Queus"
+                st.rerun()
 
         return
 
@@ -855,8 +885,9 @@ def show():
     )
 
     if st.button(
-        "← Back to X-Ray Queue",
+        "Back to X-Ray Queue",
         key="rx_back_to_queue",
+        icon=":material/arrow_back:",
     ):
         go_back_to_queue()
 

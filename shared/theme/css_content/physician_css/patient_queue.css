@@ -1,128 +1,323 @@
 /* ==========================================================
-   PHYSICIAN - PATIENT QUEUE
+   LUNGSIGHT — PHYSICIAN
+   Patient Clinical Queue & Consultation Triage
    shared/theme/css_content/physician_css/patient_queue.css
-
-   Only styles unique to the Patient Queue page.
-
-   The shared component styles (.sa-pill, .sa-metric, .sa-th,
-   .sa-cell, .sa-row, .sa-note, buttons, inputs, dialogs, ...)
-   come from:
-       shared/theme/css_content/system_admin_css/base.css
-
-   base.css scopes everything to:
-       .st-key-sa_page      (the page)
-       .st-key-sa_dialog    (the inside of dialogs)
-
-   The physician page wraps its content in
-       st.container(key="sa_page")
-   and each dialog wraps its content in
-       st.container(key="sa_dialog")
-   so those shared styles apply here too.
-
-   Nothing below should redefine .sa-* component classes.
+   Modern, medical-grade physician diagnostic triage queue:
+   widescreen canvas, active consultation metrics, priority badges,
+   radiology study request tables, and clinical consultation dialogs.
    ========================================================== */
 
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 /* ----------------------------------------------------------
-   Page
+   MATERIAL SYMBOLS
    ---------------------------------------------------------- */
 
-.st-key-sa_page {
-  width: 100%;
+.material-symbols-rounded,
+.material-symbols-outlined {
+    font-family: 'Material Symbols Rounded' !important;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 19px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    vertical-align: middle;
 }
 
+/* ----------------------------------------------------------
+   DESIGN TOKENS
+   ---------------------------------------------------------- */
+
+:root {
+    --pq-teal:          #0F7C88;
+    --ph-teal-dark:     #0B626C;
+    --pq-teal-soft:     #E6F7F8;
+    --pq-teal-glow:     rgba(15, 124, 136, 0.2);
+
+    --pq-blue:          #2563EB;
+    --pq-blue-soft:     #EFF6FF;
+
+    --pq-cyan:          #38BDF8;
+
+    --pq-green:         #16A34A;
+    --pq-green-soft:    #F0FDF4;
+
+    --pq-amber:         #D97706;
+    --pq-amber-soft:    #FFFDF5;
+
+    --pq-red:           #DC2626;
+    --pq-red-soft:      #FEF2F2;
+
+    --pq-ink:           #0F172A;
+    --pq-slate:         #475569;
+    --pq-muted:         #64748B;
+
+    --pq-border:        #CBD5E1;
+    --pq-border-light:  #E2E8F0;
+
+    --pq-surface:       #FFFFFF;
+    --pq-film:          #F8FAFC;
+
+    --pq-radius-sm:     8px;
+    --pq-radius-md:     14px;
+    --pq-radius-lg:     18px;
+
+    --pq-font-display:  'Space Grotesk', 'Fraunces', Georgia, serif;
+    --pq-font-body:     'Manrope', system-ui, -apple-system, sans-serif;
+
+    --pq-shadow-xs:     0 1px 3px rgba(18, 40, 58, 0.04);
+    --pq-shadow-sm:     0 4px 16px -2px rgba(18, 40, 58, 0.06);
+    --pq-shadow-md:     0 10px 28px -4px rgba(18, 40, 58, 0.10);
+}
 
 /* ----------------------------------------------------------
-   Refresh button
+   WIDESCREEN CANVAS
+   ---------------------------------------------------------- */
+
+div[data-testid="stMainBlockContainer"],
+.main .block-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    padding-top: 1.25rem !important;
+    padding-bottom: 3.5rem !important;
+}
+
+.st-key-sa_page {
+    font-family: var(--pq-font-body);
+    color: var(--pq-ink);
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    animation: pqFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pqFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ----------------------------------------------------------
+   REFRESH BUTTON TOOLBAR
    ---------------------------------------------------------- */
 
 .st-key-physician_queue_refresh {
-  margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: flex-end;
 }
 
+.st-key-physician_queue_refresh button {
+    background: #FFFFFF !important;
+    border: 1px solid var(--pq-border) !important;
+    border-radius: var(--pq-radius-sm) !important;
+    font-size: 0.84rem !important;
+    font-weight: 750 !important;
+    color: var(--pq-slate) !important;
+    padding: 0.45rem 1rem !important;
+    box-shadow: var(--pq-shadow-xs) !important;
+    transition: all 0.2s ease !important;
+}
+
+.st-key-physician_queue_refresh button:hover {
+    background: var(--pq-film) !important;
+    border-color: var(--pq-teal) !important;
+    color: var(--pq-teal) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: var(--pq-shadow-sm) !important;
+}
 
 /* ----------------------------------------------------------
-   Metric row: keep all four cards the same height
+   METRIC ROW
    ---------------------------------------------------------- */
 
-.st-key-sa_page [data-testid="stHorizontalBlock"] {
-  align-items: stretch;
+.st-key-sa_page .sa-metric {
+    position: relative;
+    background: #FFFFFF;
+    border: 1px solid var(--pq-border-light);
+    border-radius: var(--pq-radius-md);
+    padding: 1.25rem 1.4rem;
+    box-shadow: var(--pq-shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 1.15rem;
+    overflow: hidden;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.22s ease,
+                border-color 0.22s ease;
+    height: 100%;
 }
 
+.st-key-sa_page .sa-metric::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    width: 100%;
+}
+
+.st-key-sa_page .sa-metric-blue::before {
+    background: linear-gradient(90deg, #2563EB 0%, #38BDF8 100%);
+}
+
+.st-key-sa_page .sa-metric-amber::before {
+    background: linear-gradient(90deg, #D97706 0%, #FBBF24 100%);
+}
+
+.st-key-sa_page .sa-metric-green::before {
+    background: linear-gradient(90deg, #16A34A 0%, #34D399 100%);
+}
+
+.st-key-sa_page .sa-metric-red::before {
+    background: linear-gradient(90deg, #DC2626 0%, #F87171 100%);
+}
+
+.st-key-sa_page .sa-metric:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--pq-shadow-md);
+    border-color: #CBD5E1;
+}
+
+.st-key-sa_page .sa-metric-title {
+    font-size: 0.74rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--pq-muted);
+    margin-bottom: 0.25rem;
+}
+
+.st-key-sa_page .sa-metric-value {
+    font-family: var(--pq-font-display);
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--pq-ink);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
 
 /* ----------------------------------------------------------
-   Queue tables
+   QUEUE & X-RAY TABLES
+   Containers: .st-key-physician_queue_table_pending, .st-key-physician_xray_table_xray
    ---------------------------------------------------------- */
 
 .st-key-physician_queue_table_pending,
 .st-key-physician_xray_table_xray {
-  margin-top: 0.25rem;
+    background: #FFFFFF;
+    border: 1px solid var(--pq-border-light);
+    border-radius: var(--pq-radius-md);
+    box-shadow: var(--pq-shadow-sm);
+    padding: 0.5rem;
+    margin-top: 0.65rem;
+    margin-bottom: 2rem;
+    overflow: hidden;
 }
 
-
-/* ----------------------------------------------------------
-   Row action buttons: keep them compact inside tables
-   ---------------------------------------------------------- */
-
-.st-key-physician_queue_table_pending [data-testid^="stBaseButton"],
-.st-key-physician_xray_table_xray  [data-testid^="stBaseButton"] {
-  min-height: 2rem;
-  padding: 0.25rem 0.65rem;
+/* Row action buttons inside queue tables */
+.st-key-physician_queue_table_pending button,
+.st-key-physician_xray_table_xray button {
+    border-radius: 8px !important;
+    font-size: 0.8rem !important;
+    font-weight: 750 !important;
+    padding: 0.35rem 0.75rem !important;
+    min-height: 2rem !important;
+    transition: all 0.2s ease !important;
 }
 
+.st-key-physician_queue_table_pending button[kind="primary"],
+.st-key-physician_xray_table_xray button[kind="primary"] {
+    background: linear-gradient(135deg, var(--pq-teal) 0%, #20A3B2 100%) !important;
+    border: none !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 3px 10px rgba(15, 124, 136, 0.25) !important;
+}
+
+.st-key-physician_queue_table_pending button[kind="primary"]:hover,
+.st-key-physician_xray_table_xray button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #0B626C 0%, var(--pq-teal) 100%) !important;
+    box-shadow: 0 5px 14px rgba(15, 124, 136, 0.35) !important;
+    transform: translateY(-1px) !important;
+}
+
+.st-key-physician_queue_table_pending button:not([kind="primary"]),
+.st-key-physician_xray_table_xray button:not([kind="primary"]) {
+    background: #FFFFFF !important;
+    border: 1px solid var(--pq-border) !important;
+    color: var(--pq-slate) !important;
+}
+
+.st-key-physician_queue_table_pending button:not([kind="primary"]):hover,
+.st-key-physician_xray_table_xray button:not([kind="primary"]):hover {
+    background: var(--pq-film) !important;
+    border-color: var(--pq-teal) !important;
+    color: var(--pq-teal) !important;
+    transform: translateY(-1px) !important;
+}
 
 /* ----------------------------------------------------------
-   Dialog spacing
+   DIALOGS & CONSULTATION MODALS
+   Container: .st-key-sa_dialog
    ---------------------------------------------------------- */
 
 .st-key-sa_dialog {
-  gap: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 0.5rem 0;
 }
 
 .st-key-sa_dialog .sa-section-title {
-  margin-top: 0.35rem;
+    font-family: var(--pq-font-display);
+    font-size: 1.05rem;
+    font-weight: 750;
+    color: var(--pq-ink);
+    letter-spacing: -0.01em;
+    margin-top: 0.75rem;
+    margin-bottom: 0.25rem;
 }
 
-
-/* ----------------------------------------------------------
-   Examination dialog: keep vitals columns aligned
-   ---------------------------------------------------------- */
-
-.st-key-sa_dialog [data-testid="stHorizontalBlock"] {
-  align-items: stretch;
+.st-key-sa_dialog button[kind="primary"] {
+    background: linear-gradient(135deg, var(--pq-teal) 0%, #20A3B2 100%) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    color: #FFFFFF !important;
+    font-weight: 750 !important;
+    padding: 0.6rem 1.4rem !important;
+    box-shadow: 0 4px 14px rgba(15, 124, 136, 0.25) !important;
 }
 
-
-/* ----------------------------------------------------------
-   Alerts inside dialogs
-   ---------------------------------------------------------- */
-
-.st-key-sa_dialog [data-testid="stAlert"] {
-  border-radius: 8px;
+.st-key-sa_dialog button:not([kind="primary"]) {
+    border-radius: 10px !important;
+    border: 1px solid var(--pq-border) !important;
+    font-weight: 600 !important;
 }
 
-
 /* ----------------------------------------------------------
-   History dialog pills
-   ---------------------------------------------------------- */
-
-.st-key-sa_dialog .sa-pill {
-  margin-bottom: 0.2rem;
-}
-
-
-/* ----------------------------------------------------------
-   Responsive layout
+   RESPONSIVE
    ---------------------------------------------------------- */
 
 @media (max-width: 900px) {
-  .st-key-sa_page [data-testid="stHorizontalBlock"] {
-    gap: 0.6rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .st-key-sa_page [data-testid="stHorizontalBlock"] {
-    gap: 0.5rem;
-  }
+    div[data-testid="stMainBlockContainer"],
+    .main .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
 }
