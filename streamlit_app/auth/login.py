@@ -8,7 +8,7 @@ from backend import audit
 from shared.assets import load_css, image_path
 
 
-LOGO_FILE = "LungSight_Logo-nobg.png"
+LOGO_FILE = "Futuristic Medical LungSight Logo.png"
 HOSPITAL_IMAGE_FILE = "Hospital-bg01.png"
 
 
