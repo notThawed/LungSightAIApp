@@ -9,7 +9,7 @@ st.set_page_config(
         Path(__file__).resolve().parents[1]
         / "shared"
         / "images"
-        / "Futuristic Medical LungSight Logo.png"
+        / "White Lung Icon with Green Medical Cross.png"
     ),
     layout="wide",
 )
