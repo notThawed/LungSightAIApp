@@ -820,7 +820,11 @@ def show_examination_form(patient, examination=None):
 
         with tab_form:
             # 1. Vital Signs
-            st.markdown("<div class='sa-form-section-title'>1. Initial Vital Signs</div>", unsafe_allow_html=True)
+            st.markdown(
+                "<div class='sa-form-section-title'>1. Initial Vital Signs</div>",
+                unsafe_allow_html=True,
+            )
+
             v1, v2, v3 = st.columns(3)
 
             bp_sys = v1.number_input(
@@ -828,7 +832,12 @@ def show_examination_form(patient, examination=None):
                 min_value=0,
                 max_value=300,
                 step=1,
-                value=int(_get_vitals_value(existing_vitals, "bp_systolic") or 120),
+                value=(
+                    int(_get_vitals_value(existing_vitals, "bp_systolic"))
+                    if _get_vitals_value(existing_vitals, "bp_systolic") is not None
+                    else None
+                ),
+                placeholder="Enter systolic BP",
                 key="exam_bp_sys",
             )
 
@@ -837,7 +846,12 @@ def show_examination_form(patient, examination=None):
                 min_value=0,
                 max_value=200,
                 step=1,
-                value=int(_get_vitals_value(existing_vitals, "bp_diastolic") or 80),
+                value=(
+                    int(_get_vitals_value(existing_vitals, "bp_diastolic"))
+                    if _get_vitals_value(existing_vitals, "bp_diastolic") is not None
+                    else None
+                ),
+                placeholder="Enter diastolic BP",
                 key="exam_bp_dia",
             )
 
@@ -846,23 +860,55 @@ def show_examination_form(patient, examination=None):
                 min_value=30.0,
                 max_value=45.0,
                 step=0.1,
-                value=float(_get_vitals_value(existing_vitals, "temperature") or 36.5),
+                format="%.1f",
+                value=(
+                    float(_get_vitals_value(existing_vitals, "temperature"))
+                    if _get_vitals_value(existing_vitals, "temperature") is not None
+                    else None
+                ),
+                placeholder="Enter temperature",
                 key="exam_temperature",
             )
 
             st.write("")
-
             # 2. Informed Consent
-            st.markdown("<div class='sa-form-section-title'>2. Informed Consent & Signature</div>", unsafe_allow_html=True)
-
-            signed_by_name = st.text_input(
-                "Patient or Guardian Full Name",
-                value=(
-                    (existing_consent or {}).get("signed_by_name")
-                    or patient_name(patient)
-                ),
-                key="exam_consent_name",
+            st.markdown(
+                "<div class='sa-form-section-title'>2. Informed Consent & Signature</div>",
+                unsafe_allow_html=True,
             )
+
+            # Get registered guardian / emergency contact information
+            emergency_contact_name = (
+                patient.get("emergency_contact_name") or ""
+            ).strip()
+
+            emergency_contact_number = (
+                patient.get("emergency_contact_no") or ""
+            ).strip()
+
+            default_consent_name = (
+                emergency_contact_name
+                or patient_name(patient)
+            )
+
+            contact_col1, contact_col2 = st.columns(2)
+
+            with contact_col1:
+                signed_by_name = st.text_input(
+                    "Patient or Guardian Full Name",
+                    value=default_consent_name,
+                    placeholder="Enter patient or guardian name",
+                    key="exam_consent_name",
+                )
+
+            with contact_col2:
+                emergency_number = st.text_input(
+                    "Emergency Contact Number",
+                    value=emergency_contact_number,
+                    placeholder="No emergency contact number recorded",
+                    key="exam_emergency_contact_number",
+                    disabled=True,
+                )
 
             guardian_name = None
             guardian_relation = None
@@ -910,6 +956,7 @@ def show_examination_form(patient, examination=None):
                 height=140,
                 width=540,
                 drawing_mode="freedraw",
+                return_image_data=True,
                 key=f"signature_canvas_{examination_id or 'new'}",
             )
 

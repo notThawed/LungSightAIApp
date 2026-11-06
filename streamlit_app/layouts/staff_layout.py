@@ -5,6 +5,7 @@ from pages.staff import dashboard, followups
 from pages.system_administrator import manage_patients, manage_examinations, manage_medical_records
 
 from pages.hospital_administrator import subscription_gate
+from pages import profile
 
 def show_staff_layout():
 
@@ -31,3 +32,6 @@ def show_staff_layout():
 
     if page == "Follow-Ups":
         followups.show()
+
+    if page == "Profile":
+        profile.show()
