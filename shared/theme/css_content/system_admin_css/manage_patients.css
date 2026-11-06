@@ -498,7 +498,19 @@ div[data-testid="stMainBlockContainer"],
 }
 
 .sa-view-card-header .material-symbols-rounded {
-  font-size: 1.05rem;
+    font-family: 'Material Symbols Rounded' !important;
+    font-size: 1.1rem !important;
+
+    color: var(--sa-teal);
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    line-height: 1;
+    flex-shrink: 0;
+
+    font-feature-settings: 'liga';
 }
 
 .sa-view-row {
@@ -552,7 +564,24 @@ div[data-testid="stMainBlockContainer"],
 }
 
 .sa-form-section-title .material-symbols-rounded {
-  font-size: 1.05rem;
+    font-family: 'Material Symbols Rounded' !important;
+    font-size: 1.15rem !important;
+    font-weight: normal !important;
+
+    color: var(--sa-teal-dark);
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 22px;
+    height: 22px;
+
+    line-height: 1;
+    flex-shrink: 0;
+
+    font-feature-settings: 'liga';
+    vertical-align: middle;
 }
 
 .sa-form-dob-box {
@@ -563,15 +592,22 @@ div[data-testid="stMainBlockContainer"],
   margin: 0.25rem 0 0.75rem;
 }
 
-.sa-form-dob-title {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--sa-ink);
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-bottom: 0.35rem;
+.sa-form-dob-title .material-symbols-rounded {
+    font-family: 'Material Symbols Rounded' !important;
+    font-size: 18px !important;
+
+    color: var(--sa-teal-dark);
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    line-height: 1;
+    flex-shrink: 0;
+
+    font-feature-settings: 'liga';
 }
+
 
 .sa-form-dob-hint {
   font-size: 0.74rem;

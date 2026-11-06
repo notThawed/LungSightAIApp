@@ -1,4 +1,11 @@
+/* ==========================================================
+   GOOGLE FONTS
+   ========================================================== */
+
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+
+/* Google Material Symbols Rounded */
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block');
 
 /* ==========================================================
    SYSTEM ADMIN - BASE (reusable)
@@ -13,6 +20,34 @@
      .st-key-sa_dialog  the inside of dialogs (dialogs render
                         outside the page, so they need their own key)
    ========================================================== */
+
+/* ==========================================================
+   MATERIAL SYMBOLS - GLOBAL ICON SUPPORT
+   ========================================================== */
+
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded' !important;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 20px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+
+    -webkit-font-smoothing: antialiased;
+    font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24;
+}
 
 :root {
   --sa-film:       #F2F6F7;

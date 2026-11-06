@@ -2,10 +2,11 @@ import streamlit as st
 from components.sidebar import show_radtech_sidebar
 from components.navbar import show_top_navbar
 
-from pages.radtech import dashboard, analyze, geospatial, profile, xray_queue
+from pages.radtech import dashboard, analyze, geospatial, xray_queue
 from pages.system_administrator import manage_examinations, manage_patients
 
 from pages.hospital_administrator import subscription_gate
+from pages import profile
 
 
 # ============================================================

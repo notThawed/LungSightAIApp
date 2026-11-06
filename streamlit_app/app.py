@@ -5,7 +5,12 @@ import streamlit as st
 
 st.set_page_config(
     page_title="LungSight",
-    page_icon=":microscope:",
+    page_icon=str(
+        Path(__file__).resolve().parents[1]
+        / "shared"
+        / "images"
+        / "White Lung Icon with Green Medical Cross.png"
+    ),
     layout="wide",
 )
 

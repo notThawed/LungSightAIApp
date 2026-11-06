@@ -13,7 +13,7 @@ from streamlit_app.auth.client_application import (
 from shared.assets import load_css, image_path
 
 
-LOGO_FILE = "LungSight_Logo-nobg.png"
+LOGO_FILE = "Futuristic Medical LungSight Logo.png"
 HERO_IMAGE_FILE = "hero_xray_preview.jpg"
 
 
