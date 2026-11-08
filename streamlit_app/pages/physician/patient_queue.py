@@ -17,6 +17,7 @@ via mark_follow_up_arrived() — not by physicians.
 import streamlit as st
 
 from datetime import datetime, date, time, timezone
+from zoneinfo import ZoneInfo
 
 from backend.fetches import (
     get_pending_examinations,
@@ -124,49 +125,70 @@ def patient_code(patient):
 # DATE / TIME HELPERS
 # ============================================================
 
+PH_TIMEZONE = ZoneInfo("Asia/Manila")
+
+
 def parse_datetime(value):
-    if not value:
+    """Parse a Supabase timestamptz value into an aware datetime."""
+    if value is None or value == "":
         return None
+
     try:
         if isinstance(value, datetime):
             dt = value
+        elif isinstance(value, date):
+            return None
         else:
-            value = str(value)
-            if value.endswith("Z"):
-                value = value.replace("Z", "+00:00")
-            dt = datetime.fromisoformat(value)
+            raw = str(value).strip().replace("Z", "+00:00")
+            dt = datetime.fromisoformat(raw)
+
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+
         return dt
-    except Exception:
+
+    except (TypeError, ValueError):
         return None
 
 
 def format_datetime(value):
-    if not value:
+    """Show timezone-aware timestamps in Philippine Standard Time."""
+    dt = parse_datetime(value)
+
+    if dt is None:
         return "—"
-    try:
-        dt = parse_datetime(value)
-        if not dt:
-            return str(value)
-        if dt.tzinfo is not None:
-            dt = dt.astimezone()
-        return dt.strftime("%B %d, %Y at %I:%M %p")
-    except Exception:
-        return str(value)
+
+    return dt.astimezone(PH_TIMEZONE).strftime(
+        "%B %d, %Y at %I:%M %p"
+    )
 
 
 def examination_datetime(examination):
-    return examination.get("examination_date") or examination.get("created_at")
+    """Prefer the actual check-in timestamp over a date-only midnight value."""
+    return (
+        examination.get("time_in")
+        or examination.get("created_at")
+        or examination.get("examination_date")
+    )
+
+
+def examination_wait_start(examination):
+    """Use the examination queue entry time for elapsed waiting."""
+    return (
+        examination.get("time_in")
+        or examination.get("created_at")
+    )
 
 
 def medical_record_datetime(record):
     return record.get("record_date") or record.get("created_at")
 
 
-def xray_request_datetime(examination):
+def xray_request_datetime(request):
+    """Only use an actual request timestamp, never examination creation/update."""
     return (
-        examination.get("xray_requested_at")
-        or examination.get("requested_at")
-        or examination.get("created_at")
+        request.get("xray_requested_at")
+        or request.get("requested_at")
     )
 
 
@@ -174,21 +196,21 @@ def xray_request_datetime(examination):
 # WAITING TIME
 # ============================================================
 
-def waiting_minutes(created_at_str):
-    if not created_at_str:
-        return 0
-    try:
-        created = datetime.fromisoformat(str(created_at_str).replace("Z", "+00:00"))
-        if created.tzinfo is None:
-            created = created.replace(tzinfo=timezone.utc)
-        now = datetime.now(timezone.utc)
-        delta = now - created
-        return max(0, int(delta.total_seconds() // 60))
-    except Exception:
-        return 0
+def waiting_minutes(value):
+    """Calculate elapsed minutes using UTC instants."""
+    dt = parse_datetime(value)
+
+    if dt is None:
+        return None
+
+    delta = datetime.now(timezone.utc) - dt.astimezone(timezone.utc)
+    return max(0, int(delta.total_seconds() // 60))
+
 
 
 def waiting_tone(minutes):
+    if minutes is None:
+        return "grey"
     if minutes < 10:
         return "green"
     if minutes < 30:
@@ -197,15 +219,32 @@ def waiting_tone(minutes):
 
 
 def format_waiting(minutes):
-    if minutes < 60:
-        return f"{minutes} min"
-    hours = minutes // 60
-    return f"{hours}h {minutes % 60}m"
+    """
+    Format waiting time into days, hours, and minutes.
+    """
 
+    if minutes is None:
+        return "—"
+
+    minutes = max(0, int(minutes))
+
+    days, remainder = divmod(minutes, 1440)
+
+    hours, remaining_minutes = divmod(remainder, 60)
+
+    if days > 0:
+        return f"{days}d {hours}h {remaining_minutes}m"
+
+    if hours > 0:
+        return f"{hours}h {remaining_minutes}m"
+
+    return f"{remaining_minutes}m"
 
 def format_queue_waiting(minutes):
     """Show elapsed wait in days and time, including shorter waits."""
-    minutes = max(0, int(minutes or 0))
+    if minutes is None:
+        return "—"
+    minutes = max(0, int(minutes))
     days, remainder = divmod(minutes, 24 * 60)
     hours, mins = divmod(remainder, 60)
     if days:
@@ -281,17 +320,23 @@ def group_pending_by_patient(pending_exams):
             by_patient[patient_id] = {
                 "patient": patient,
                 "exams": [],
-                "oldest_waiting": 0,
+                "oldest_waiting": None,
             }
 
         by_patient[patient_id]["exams"].append(examination)
 
-        waiting = waiting_minutes(examination.get("created_at"))
-        if waiting > by_patient[patient_id]["oldest_waiting"]:
+        waiting = waiting_minutes(examination_wait_start(examination))
+        if waiting is not None and (
+            by_patient[patient_id]["oldest_waiting"] is None
+            or waiting > by_patient[patient_id]["oldest_waiting"]
+        ):
             by_patient[patient_id]["oldest_waiting"] = waiting
 
     grouped = list(by_patient.values())
-    grouped.sort(key=lambda item: item["oldest_waiting"], reverse=True)
+    grouped.sort(
+        key=lambda item: item["oldest_waiting"] if item["oldest_waiting"] is not None else -1,
+        reverse=True,
+    )
     return grouped
 
 
@@ -560,12 +605,22 @@ def show_xray_request_dialog(examination):
 
         st.divider()
         section_title("X-Ray Request")
+
         show_rows([
             ("Requested Examination", "Chest X-Ray"),
             ("Requested At", format_datetime(requested_at)),
             ("Time Since Request", format_waiting(waiting)),
-            ("Status", pill("Pending", "amber")),
         ])
+
+        st.markdown(
+            f"""
+            <div class="sa-row">
+                <span>Status</span>
+                <b>{pill("Pending", "amber")}</b>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
         st.divider()
         st.info(
@@ -602,7 +657,7 @@ def show_pending_exams_dialog(patient, examinations):
             examinations,
             key=lambda item: item.get("created_at") or "",
         ):
-            waiting = waiting_minutes(examination.get("created_at"))
+            waiting = waiting_minutes(examination_wait_start(examination))
 
             st.markdown(
                 f"**{examination.get('examination_type') or 'Examination'}**"
@@ -837,6 +892,21 @@ def show_complete_exam_dialog(patient, examination):
                 "Radiologic Technologist."
             )
 
+            clinical_indication = st.text_area(
+                "Clinical Indication / Reason for X-Ray",
+                value="",
+                placeholder=(
+                    "Enter the clinical reason for requesting the X-Ray. "
+                    "Example: Evaluate for suspected pneumonia."
+                ),
+                height=100,
+                key=f"pq_exam_{examination_id}_clinical_indication",
+                help=(
+                    "Describe the clinical question or suspected condition "
+                    "that the requested X-Ray should help evaluate."
+                ),
+            )
+
         st.divider()
         cancel_col, save_col = st.columns(2)
 
@@ -865,6 +935,13 @@ def show_complete_exam_dialog(patient, examination):
 
     if order == "No Request" and not diagnosis.strip():
         st.error("Diagnosis is required.")
+        return
+
+    if order == "Chest X-Ray" and not clinical_indication.strip():
+        st.error(
+            "Please provide a clinical indication before "
+            "requesting the X-Ray."
+        )
         return
 
     try:
@@ -933,7 +1010,9 @@ def show_complete_exam_dialog(patient, examination):
             requested_by=user_id,
             body_part="Chest",
             priority="Routine",
-            clinical_indication=(chief_complaint.strip() or None),
+            clinical_indication=(
+                clinical_indication.strip() or None
+            ),
         )
 
         clear_dialog_state()

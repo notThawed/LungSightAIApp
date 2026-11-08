@@ -15,12 +15,16 @@ from backend.fetches import (
     get_xray_ai_result,
     get_xray_ai_heatmap,
     get_all_patients,
+    get_patient_xray_history,
 )
 from backend.backend_utils.severity_utils import get_latest_severity, get_severity_alert
 
 from streamlit_app.components.ui import (
     page_header, empty_state, section_title, show_rows, full_name,
     format_date, pill, show_flash_message,
+)
+from streamlit_app.components.xray_comparison import (
+    show_xray_comparison,
 )
 
 from shared.assets import load_css
@@ -419,6 +423,39 @@ def render_patient_overview(patient):
         "</div>",
         unsafe_allow_html=True,
     )
+
+    # --------------------------------------------
+    # X-RAY COMPARISON
+    # --------------------------------------------
+    patient_id = patient.get("patient_id")
+    hospital_id = current_hospital_id()
+
+    scoped_hospital_id = (
+        None
+        if current_role_id() == ROLE_SUPERADMIN
+        else hospital_id
+    )
+
+    try:
+        xray_history = get_patient_xray_history(
+            patient_id,
+            hospital_id=scoped_hospital_id,
+        )
+    except Exception:
+        xray_history = []
+
+    if len(xray_history) >= 2:
+        if st.button(
+            "Compare X-Rays",
+            key=f"pr_compare_xray_{patient_id}",
+            icon=":material/compare:",
+            type="primary",
+            width="stretch",
+        ):
+            show_xray_comparison(
+                patient_id=patient_id,
+                hospital_id=scoped_hospital_id,
+            )
 
     st.markdown(
         "<div class='pr-hero-card'>"

@@ -380,6 +380,287 @@
     line-height: 1.4;
 }
 
+
+/* ============================================================
+   ANALYZE X-RAY — PATIENT CLINICAL CONTEXT
+   ============================================================ */
+
+.rx-patient-card {
+    width: 100%;
+    padding: 22px 24px;
+    margin: 18px 0 24px;
+
+    background: #ffffff;
+    border: 1px solid #dce6f1;
+    border-radius: 16px;
+
+    box-shadow: 0 4px 18px rgba(15, 35, 75, 0.045);
+
+    border-top: 3px solid #0b91b2;
+}
+
+
+/* ============================================================
+   PATIENT HEADER
+   ============================================================ */
+
+.rx-patient-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.rx-patient-identity {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    min-width: 0;
+}
+
+.rx-patient-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+
+    border-radius: 14px;
+
+    background: linear-gradient(
+        135deg,
+        #e4f3ff,
+        #d9f4f1
+    );
+
+    color: #07558b;
+    font-size: 19px;
+    font-weight: 800;
+
+    border: 1px solid #c6e4f0;
+}
+
+.rx-patient-identity-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.rx-patient-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    color: #58809a;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+}
+
+.rx-patient-eyebrow .material-symbols-rounded {
+    font-size: 15px;
+}
+
+.rx-patient-name {
+    color: #102a4b;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.rx-patient-id {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    color: #60768f;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.rx-patient-id .material-symbols-rounded {
+    font-size: 15px;
+}
+
+
+/* ============================================================
+   EXAMINATION TYPE AND PRIORITY
+   ============================================================ */
+
+.rx-patient-request {
+    display: flex;
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 9px;
+    flex-shrink: 0;
+}
+
+.rx-request-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    padding: 8px 12px;
+    border-radius: 9px;
+
+    background: #eaf4ff;
+    color: #155a9e;
+
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.rx-request-type .material-symbols-rounded {
+    font-size: 17px;
+}
+
+.rx-priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    padding: 5px 10px;
+    border-radius: 20px;
+
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.rx-priority-badge .material-symbols-rounded {
+    font-size: 14px;
+}
+
+.rx-priority-routine {
+    background: #e6f7f0;
+    color: #147c55;
+    border: 1px solid #bce8d5;
+}
+
+.rx-priority-urgent {
+    background: #fff2dd;
+    color: #a9630c;
+    border: 1px solid #f2d5a1;
+}
+
+.rx-priority-stat {
+    background: #ffebeb;
+    color: #b72d39;
+    border: 1px solid #f3c4c9;
+}
+
+
+/* ============================================================
+   CLINICAL INFORMATION
+   ============================================================ */
+
+.rx-patient-card-divider {
+    height: 1px;
+    background: #e5ebf3;
+    margin: 20px 0 17px;
+}
+
+.rx-clinical-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-bottom: 13px;
+
+    color: #17375e;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.rx-clinical-section-header .material-symbols-rounded {
+    font-size: 19px;
+    color: #0b91b2;
+}
+
+.rx-clinical-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.rx-clinical-item {
+    padding: 15px 17px;
+
+    background: #f7faff;
+    border: 1px solid #e2eaf4;
+    border-radius: 11px;
+
+    min-width: 0;
+}
+
+.rx-clinical-item-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    margin-bottom: 10px;
+
+    color: #54718f;
+    font-size: 11px;
+    font-weight: 800;
+
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
+}
+
+.rx-clinical-item-header .material-symbols-rounded {
+    font-size: 17px;
+    color: #0d85ad;
+}
+
+.rx-clinical-item-value {
+    color: #17314f;
+    font-size: 13px;
+    font-weight: 550;
+    line-height: 1.65;
+
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+
+/* ============================================================
+   RESPONSIVE DESIGN
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+    .rx-patient-card {
+        padding: 18px;
+        margin: 14px 0 20px;
+    }
+
+    .rx-patient-card-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .rx-patient-request {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .rx-clinical-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rx-patient-name {
+        font-size: 16px;
+    }
+
+}
+
+
 /* =========================================================
    WORKSPACE SPLIT PANELS (Input & Output)
    ========================================================= */

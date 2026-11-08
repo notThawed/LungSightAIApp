@@ -251,11 +251,11 @@ CIVIL_STATUS_OPTIONS = [
 # ============================================================
 
 ROLE_SUPERADMIN = 1
+ROLE_RADTECH = 4
 
 CAN_EDIT_ROLES = [
     1,
     3,
-    4,
     6,
     7,
 ]
@@ -301,6 +301,46 @@ def get_user_context():
         current_user.get("hospital_id"),
         hospital_name,
     )
+
+
+def current_role_id():
+    """Return the signed-in user's role ID as an integer when possible."""
+    user = st.session_state.get("user") or {}
+    try:
+        return int(user.get("role_id"))
+    except (TypeError, ValueError):
+        return None
+
+
+def can_edit_patients():
+    return current_role_id() in CAN_EDIT_ROLES
+
+
+def can_delete_patients():
+    return current_role_id() in CAN_DELETE_ROLES
+
+
+def can_register_patients():
+    return can_edit_patients()
+
+
+def queue_patient_dialog(action, patient):
+    """Close the active dialog before opening another on the next rerun."""
+    st.session_state["patient_dialog_action"] = action
+    st.session_state["patient_dialog_patient"] = patient
+    st.rerun()
+
+
+def render_pending_patient_dialog():
+    """Open a queued dialog at page level, never inside another dialog."""
+    action = st.session_state.pop("patient_dialog_action", None)
+    patient = st.session_state.pop("patient_dialog_patient", None)
+
+    if action == "edit" and patient:
+        if not can_edit_patients():
+            st.error("You do not have permission to edit patient records.")
+            return
+        show_edit_patient_dialog(patient)
 
 
 def find_duplicate_patient(
@@ -415,6 +455,12 @@ def show_view_patient(patient):
                 f"<span class='material-symbols-rounded'>emergency</span> Emergency / Guardian Contact"
                 f"</div>"
                 f"<div class='sa-view-row'><span class='sa-view-label'>Guardian name</span><span class='sa-view-value'>{safe(patient.get('emergency_contact_name'))}</span></div>"
+                f"<div class='sa-view-row'>"
+                f"<span class='sa-view-label'>Relationship</span>"
+                f"<span class='sa-view-value'>"
+                f"{safe(patient.get('emergency_contact_relationship'))}"
+                f"</span>"
+                f"</div>"
                 f"<div class='sa-view-row'><span class='sa-view-label'>Emergency number</span><span class='sa-view-value'>{safe(patient.get('emergency_contact_no'))}</span></div>"
                 f"</div>"
                 f"<div class='sa-view-card'>"
@@ -427,8 +473,7 @@ def show_view_patient(patient):
                 unsafe_allow_html=True,
             )
 
-        (current_user, _, _, _) = get_user_context()
-        can_edit = current_user.get("role_id") in CAN_EDIT_ROLES
+        can_edit = can_edit_patients()
 
         if can_edit:
             close_col, edit_col = st.columns(2)
@@ -443,7 +488,7 @@ def show_view_patient(patient):
                     type="primary",
                     width="stretch",
                 ):
-                    show_edit_patient_dialog(patient)
+                    queue_patient_dialog("edit", patient)
         else:
             close_button(f"close_patient_{patient_id}")
 
@@ -454,6 +499,14 @@ def show_view_patient(patient):
 
 def render_patient_form(patient=None):
     is_edit = patient is not None
+
+    if is_edit and not can_edit_patients():
+        st.error("You do not have permission to edit patient records.")
+        return
+    if not is_edit and not can_register_patients():
+        st.error("You do not have permission to register patients.")
+        return
+
     form_prefix = "edit_" if is_edit else "new_"
     patient = patient or {}
 
@@ -685,6 +738,34 @@ def render_patient_form(patient=None):
             key=f"{form_prefix}emergency_number",
         )
 
+        relationship_options = [
+            "Not specified",
+            "Mother",
+            "Father",
+            "Spouse",
+            "Son",
+            "Daughter",
+            "Brother",
+            "Sister",
+            "Grandparent",
+            "Legal Guardian",
+            "Other",
+        ]
+
+        existing_relationship = (
+            patient.get("emergency_contact_relationship")
+            or "Not specified"
+        )
+
+        if existing_relationship not in relationship_options:
+            relationship_options.append(existing_relationship)
+
+        emergency_relationship = st.selectbox(
+            "Relationship to Patient",
+            options=relationship_options,
+            index=relationship_options.index(existing_relationship),
+            key=f"{form_prefix}emergency_relationship",
+        )
         # 6. Hospital Assignment
         selected_hospital = None
         if is_superadmin:
@@ -768,17 +849,29 @@ def render_patient_form(patient=None):
         "address": address.strip() or None,
         "emergency_contact_name": emergency_name.strip() or None,
         "emergency_contact_no": emergency_number.strip() or None,
+        "emergency_contact_relationship": (
+            emergency_relationship
+            if emergency_name.strip()
+            and emergency_relationship != "Not specified"
+            else None
+        ),
         "hospital_id": hospital_id,
     }
 
     try:
         if is_edit:
+            if not can_edit_patients():
+                errors.error("You do not have permission to edit patient records.")
+                return
             update_patient(
                 patient_id=patient["patient_id"],
                 **details,
             )
             remember("Patient updated.")
         else:
+            if not can_register_patients():
+                errors.error("You do not have permission to register patients.")
+                return
             duplicate = find_duplicate_patient(
                 get_all_patients() or [],
                 first_name,
@@ -826,6 +919,9 @@ def render_patient_form(patient=None):
     width="large",
 )
 def show_add_patient_form():
+    if not can_register_patients():
+        st.error("You do not have permission to register patients.")
+        return
     with st.container(key="sa_dialog"):
         render_patient_form()
 
@@ -839,6 +935,9 @@ def show_add_patient_form():
     width="large",
 )
 def show_edit_patient_dialog(patient):
+    if not can_edit_patients():
+        st.error("You do not have permission to edit patient records.")
+        return
     with st.container(key="sa_dialog"):
         render_patient_form(patient)
 
@@ -852,6 +951,9 @@ def show_edit_patient_dialog(patient):
     width="small",
 )
 def show_delete_patient_dialog(patient):
+    if not can_delete_patients():
+        st.error("You do not have permission to delete patient records.")
+        return
     with st.container(key="sa_dialog"):
         st.markdown(
             f"<p class='sa-dialog-text'>"
@@ -870,6 +972,9 @@ def show_delete_patient_dialog(patient):
             "Delete patient",
         ):
             try:
+                if not can_delete_patients():
+                    st.error("You do not have permission to delete patient records.")
+                    return
                 delete_patient(patient["patient_id"])
                 remember("Patient deleted.")
                 st.rerun()
@@ -1019,8 +1124,8 @@ def render_patient_table(
         )
         return
 
-    can_edit = role_id in CAN_EDIT_ROLES
-    can_delete = role_id in CAN_DELETE_ROLES
+    can_edit = can_edit_patients()
+    can_delete = can_delete_patients()
 
     PAGE_SIZE = 15
     total_items = len(patients)
@@ -1170,14 +1275,20 @@ def show():
     role_id = current_user.get("role_id")
 
     with st.container(key="sa_page"):
-        if page_header(
-            "Manage patients",
-            "Register and manage patient demographic information.",
-            "Register patient",
-            "register_patient_button",
-            "person_add",
-        ):
-            show_add_patient_form()
+        if can_register_patients():
+            if page_header(
+                "Manage Patients",
+                "Register and manage patient demographic information.",
+                "Register patient",
+                "register_patient_button",
+                "person_add",
+            ):
+                show_add_patient_form()
+        else:
+            page_header(
+                "Patient Records",
+                "View patient demographic information and records.",
+            )
 
         patients = load_patients()
 
@@ -1231,3 +1342,6 @@ def show():
             matches,
             role_id,
         )
+
+        # Resolve a dialog transition only after the main page is rendered.
+        render_pending_patient_dialog()

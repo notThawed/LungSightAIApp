@@ -28,6 +28,7 @@ from backend.fetches import (
     get_xray_ai_heatmap,
     get_examinations_by_patient,
     get_medical_records_by_patient,
+    get_patient_xray_history,
 )
 
 from backend.crud import (
@@ -60,6 +61,9 @@ from streamlit_app.components.ui import (
 )
 
 from streamlit_app.components.curb65_widget import render_curb65
+from streamlit_app.components.xray_comparison import (
+    show_xray_comparison,
+)
 
 from shared.assets import load_css
 
@@ -337,6 +341,75 @@ def format_follow_up_when(follow_up):
 
 
 # ============================================================
+# FOLLOW-UP TIME SELECTOR (12-HOUR CLOCK)
+# ============================================================
+
+def followup_time_selector(label, default_time, key_prefix):
+    """Choose a local appointment time with an explicit AM/PM control."""
+    default_time = default_time or time(9, 0)
+    hour_12 = default_time.hour % 12 or 12
+    period = "AM" if default_time.hour < 12 else "PM"
+
+    st.markdown(f"**{label}**")
+    hour_col, minute_col, period_col = st.columns([1, 1, 1])
+    with hour_col:
+        hour = st.selectbox(
+            "Hour", list(range(1, 13)),
+            index=hour_12 - 1, key=f"{key_prefix}_hour",
+        )
+    with minute_col:
+        minute = st.selectbox(
+            "Minute", list(range(60)),
+            index=default_time.minute,
+            format_func=lambda n: f"{n:02d}",
+            key=f"{key_prefix}_minute",
+        )
+    with period_col:
+        am_pm = st.selectbox(
+            "AM / PM", ["AM", "PM"],
+            index=0 if period == "AM" else 1,
+            key=f"{key_prefix}_period",
+        )
+
+    hour_24 = (hour % 12) + (12 if am_pm == "PM" else 0)
+    return time(hour_24, minute)
+
+
+# ============================================================
+# CLINICAL CONTEXT DATA
+# ============================================================
+
+def get_history_of_present_illness(examination):
+    """Use the selected examination's HPI, refetching when absent.
+
+    Never substitute chief complaint or clinical indication for HPI.
+    """
+    value = examination.get("history_of_present_illness")
+    if value is not None and str(value).strip():
+        return value
+
+    examination_id = examination.get("examination_id")
+    if not examination_id:
+        return None
+
+    try:
+        response = (
+            admin_supabase.table("examinations")
+            .select("history_of_present_illness")
+            .eq("examination_id", examination_id)
+            .limit(1)
+            .execute()
+        )
+        records = response.data or []
+        if records:
+            return records[0].get("history_of_present_illness")
+    except Exception:
+        # A missing column or a query failure should not break the review page.
+        pass
+    return None
+
+
+# ============================================================
 # STATE
 # ============================================================
 
@@ -511,10 +584,8 @@ def show_schedule_followup_dialog(patient, examination):
         key="review_fu_date",
     )
 
-    follow_up_time = st.time_input(
-        "Follow-Up Time *",
-        value=time(9, 0),
-        key="review_fu_time",
+    follow_up_time = followup_time_selector(
+        "Follow-Up Time *", time(9, 0), "review_fu",
     )
 
     follow_up_notes = st.text_area(
@@ -608,10 +679,8 @@ def show_edit_followup_dialog(follow_up):
         key="review_fu_edit_date",
     )
 
-    new_time = st.time_input(
-        "Follow-Up Time *",
-        value=existing_time,
-        key="review_fu_edit_time",
+    new_time = followup_time_selector(
+        "Follow-Up Time *", existing_time, "review_fu_edit",
     )
 
     new_notes = st.text_area(
@@ -835,7 +904,7 @@ def render_clinical_context(examination, request):
         ("Chief Complaint", examination.get("chief_complaint") or "—"),
         (
             "History of Present Illness",
-            examination.get("history_of_present_illness") or "—",
+            get_history_of_present_illness(examination) or "—",
         ),
         (
             "Physical Examination",
@@ -1508,6 +1577,56 @@ def render_review_report_page(patient, examination):
     with left_col:
 
         render_xray_section(examination)
+
+        # --------------------------------------------
+        # X-RAY COMPARISON
+        # --------------------------------------------
+        patient_id = patient.get("patient_id")
+        hospital_id = current_hospital_id()
+
+        try:
+            xray_history = get_patient_xray_history(
+                patient_id,
+                hospital_id=(
+                    None
+                    if current_role_id() == ROLE_SUPERADMIN
+                    else hospital_id
+                ),
+            )
+        except Exception:
+            xray_history = []
+
+        current_index = next(
+            (
+                index
+                for index, record in enumerate(xray_history)
+                if str(record.get("examination_id"))
+                == str(exam_id)
+            ),
+            None,
+        )
+
+        has_previous_xray = (
+            current_index is not None
+            and current_index < len(xray_history) - 1
+        )
+
+        if has_previous_xray:
+            if st.button(
+                "Compare with Previous X-Ray",
+                key=f"review_compare_xray_{exam_id}",
+                icon=":material/compare:",
+                width="stretch",
+            ):
+                show_xray_comparison(
+                    patient_id=patient_id,
+                    hospital_id=(
+                        None
+                        if current_role_id() == ROLE_SUPERADMIN
+                        else hospital_id
+                    ),
+                    current_examination_id=exam_id,
+                )
 
         render_clinical_context(examination, request)
 

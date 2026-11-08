@@ -450,6 +450,7 @@ def create_patient(
     emergency_contact_no=None,
     created_by=None,
     hospital_id=None,
+    emergency_contact_relationship=None,
 ):
     """
     Create a new patient.
@@ -483,6 +484,7 @@ def create_patient(
             ),
             "created_by": created_by,
             "hospital_id": hospital_id,
+            "emergency_contact_relationship": emergency_contact_relationship,
         }
 
         response = (
@@ -532,6 +534,7 @@ def update_patient(
     address=None,
     emergency_contact_name=None,
     emergency_contact_no=None,
+    emergency_contact_relationship=None,
     hospital_id=None,
 ):
     """
@@ -563,6 +566,7 @@ def update_patient(
             "emergency_contact_no": (
                 emergency_contact_no
             ),
+            "emergency_contact_relationship": emergency_contact_relationship,
             "hospital_id": hospital_id,
             "updated_at": datetime.now(
                 timezone.utc
