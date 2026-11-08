@@ -254,6 +254,23 @@ def _get_vitals_value(vitals, field_name):
             return vital[field_name]
     return None
 
+def format_vital_value(value, unit=""):
+    """
+    Format a saved vital sign without treating zero
+    or other valid numeric values as missing.
+    """
+
+    if value is None or value == "":
+        return "—"
+
+    formatted = str(value)
+
+    if unit:
+        return f"{formatted} {unit}"
+
+    return formatted
+
+
 
 # ============================================================
 # UI COMPONENTS & CELLS
@@ -414,14 +431,57 @@ def render_table_pagination(current_page, total_pages, total_items, start_idx, e
 # DIALOG STATE
 # ============================================================
 
+EXAM_FORM_KEYS = (
+    "exam_bp_sys",
+    "exam_bp_dia",
+    "exam_temperature",
+    "exam_signer_type",
+    "exam_guardian_name",
+    "exam_guardian_relation",
+    "exam_patient_signer_name",
+    "exam_emergency_contact_number",
+    "exam_consent_confirm",
+    "exam_ai_consent_checkbox",
+)
+
+
+def clear_examination_form_state():
+    """Clear temporary form widgets without touching saved database records."""
+    for key in list(st.session_state.keys()):
+        if key in EXAM_FORM_KEYS or key.startswith("signature_canvas_"):
+            st.session_state.pop(key, None)
+
+        # The new form keys include a patient ID and form instance number.
+        elif key.startswith("exam_form_"):
+            st.session_state.pop(key, None)
+
+
 def open_dialog(name, **state):
+    """Open a dialog with a fresh form instance when starting an examination."""
+    if name == "create":
+        clear_examination_form_state()
+
+        # Never carry an examination from another patient into creation mode.
+        st.session_state["selected_examination"] = None
+        st.session_state["selected_medical_record"] = None
+
+        # A fresh instance also protects against closing a dialog using X.
+        st.session_state["exam_form_instance"] = (
+            st.session_state.get("exam_form_instance", 0) + 1
+        )
+
     st.session_state["examination_dialog"] = name
+
     for key, value in state.items():
         st.session_state[key] = value
+
     st.rerun()
 
 
 def close_dialog():
+    """Close the dialog and discard unsaved examination widget values."""
+    clear_examination_form_state()
+
     st.session_state["examination_dialog"] = None
     st.session_state["selected_examination"] = None
     st.session_state["selected_medical_record"] = None
@@ -447,7 +507,7 @@ def show_patient_history(patient):
             action_col1, action_col2 = st.columns([2.5, 1.5], vertical_alignment="center")
             with action_col2:
                 if st.button(
-                    "Examine Patient",
+                    "Create Initial Examination",
                     key=f"hist_cta_examine_{patient['patient_id']}",
                     icon=":material/clinical_notes:",
                     type="primary",
@@ -524,6 +584,69 @@ def show_patient_history(patient):
                 close_dialog()
                 st.rerun()
 
+# ============================================================
+# VITAL SIGNS — MERGE LATEST AVAILABLE READINGS
+# ============================================================
+
+def merge_examination_vitals(vitals):
+    """
+    Combine vital sign records belonging to one examination.
+
+    Uses the latest non-null reading for each field.
+    Blood pressure is kept as a systolic/diastolic pair.
+    """
+
+    if not vitals:
+        return {}
+
+    if isinstance(vitals, dict):
+        vitals = [vitals]
+
+    records = sorted(
+        vitals,
+        key=lambda row: (
+            row.get("recorded_at")
+            or row.get("created_at")
+            or ""
+        ),
+        reverse=True,
+    )
+
+    merged = {}
+
+    fields = [
+        "temperature",
+        "pulse_rate",
+        "respiratory_rate",
+        "spo2",
+        "heart_rate",
+        "weight_kg",
+        "height_cm",
+        "bmi",
+        "oxygen_support",
+    ]
+
+    for record in records:
+        for field in fields:
+            value = record.get(field)
+
+            if (
+                field not in merged
+                and value is not None
+                and value != ""
+            ):
+                merged[field] = value
+
+    for record in records:
+        systolic = record.get("bp_systolic")
+        diastolic = record.get("bp_diastolic")
+
+        if systolic is not None and diastolic is not None:
+            merged["bp_systolic"] = systolic
+            merged["bp_diastolic"] = diastolic
+            break
+
+    return merged
 
 # ============================================================
 # EXAMINATION DETAILS DIALOG
@@ -532,10 +655,20 @@ def show_patient_history(patient):
 @st.dialog("Examination Details", width="large")
 def show_examination_details(patient, examination):
     examination_id = examination["examination_id"]
+
     consents = get_examination_consents(examination_id) or []
     consent = consents[0] if consents else None
-    vitals = get_examination_vitals(examination_id) or []
-    vital = vitals[0] if vitals else {}
+
+    try:
+        vitals = get_examination_vitals(examination_id) or []
+    except Exception as error:
+        st.error(f"Unable to retrieve vital signs: {error}")
+        vitals = []
+
+    if isinstance(vitals, dict):
+        vitals = [vitals]
+
+    vital = merge_examination_vitals(vitals)
 
     with st.container(key="sa_dialog"):
         render_patient_hero(patient)
@@ -571,8 +704,15 @@ def show_examination_details(patient, examination):
             if vital:
                 bp_sys = vital.get("bp_systolic")
                 bp_dia = vital.get("bp_diastolic")
-                bp_val = f"{bp_sys}/{bp_dia}" if (bp_sys or bp_dia) else "—"
-                temp = vital.get("temperature")
+
+                if bp_sys is not None and bp_dia is not None:
+                    bp_val = f"{bp_sys}/{bp_dia}"
+                else:
+                    bp_val = "—"
+
+                temp = format_vital_value(
+                    vital.get("temperature")
+                )
                 pulse = vital.get("pulse_rate")
                 resp = vital.get("respiratory_rate")
                 spo2 = vital.get("spo2")
@@ -589,7 +729,7 @@ def show_examination_details(patient, examination):
                         </div>
                         <div class="sa-vital-card">
                             <span class="sa-vital-label">Temperature</span>
-                            <span class="sa-vital-value">{temp or '—'} <span class="sa-vital-unit">°C</span></span>
+                            <span class="sa-vital-value">{temp} <span class="sa-vital-unit">°C</span></span>
                         </div>
                         <div class="sa-vital-card">
                             <span class="sa-vital-label">Pulse Rate</span>
@@ -635,12 +775,32 @@ def show_examination_details(patient, examination):
         with tab_consent:
             if consent:
                 show_rows([
-                    ("Consent type", consent.get("consent_type") or "General Examination"),
-                    ("Consent given", "Yes" if consent.get("given") else "No"),
-                    ("Signed by", consent.get("signed_by_name") or "—"),
-                    ("Signer type", consent.get("signed_by_type") or "patient"),
-                    ("Guardian name", consent.get("guardian_name") or "—"),
-                    ("Relationship", consent.get("guardian_relation") or "—"),
+                    (
+                        "Consent type",
+                        consent.get("consent_type") or "—",
+                    ),
+                    (
+                        "Consent given",
+                        "Yes" if consent.get("given") else "No",
+                    ),
+                    (
+                        "Signed by",
+                        consent.get("signed_by_name") or "—",
+                    ),
+                    (
+                        "Signer type",
+                        (
+                            consent.get("signed_by_type") or "—"
+                        ).title(),
+                    ),
+                    (
+                        "Guardian name",
+                        consent.get("guardian_name") or "—",
+                    ),
+                    (
+                        "Relationship",
+                        consent.get("guardian_relation") or "—",
+                    ),
                 ])
 
                 sig_path = consent.get("signature_path")
@@ -802,6 +962,17 @@ def show_examination_form(patient, examination=None):
     is_edit = examination is not None
     examination_id = examination.get("examination_id") if examination else None
 
+    # Every patient and every new dialog instance gets independent widget state.
+    form_instance = st.session_state.get("exam_form_instance", 0)
+    form_prefix = f"exam_form_{patient['patient_id']}_{examination_id or 'new'}_{form_instance}"
+
+    if is_edit and str(examination.get("patient_id")) != str(patient.get("patient_id")):
+        st.error(
+            "Patient mismatch detected: this examination does not belong "
+            "to the selected patient."
+        )
+        return
+
     existing_consent = None
     existing_vitals = []
 
@@ -838,7 +1009,7 @@ def show_examination_form(patient, examination=None):
                     else None
                 ),
                 placeholder="Enter systolic BP",
-                key="exam_bp_sys",
+                key=f"{form_prefix}_exam_bp_sys",
             )
 
             bp_dia = v2.number_input(
@@ -852,7 +1023,7 @@ def show_examination_form(patient, examination=None):
                     else None
                 ),
                 placeholder="Enter diastolic BP",
-                key="exam_bp_dia",
+                key=f"{form_prefix}_exam_bp_dia",
             )
 
             temperature = v3.number_input(
@@ -867,7 +1038,7 @@ def show_examination_form(patient, examination=None):
                     else None
                 ),
                 placeholder="Enter temperature",
-                key="exam_temperature",
+                key=f"{form_prefix}_exam_temperature",
             )
 
             st.write("")
@@ -877,7 +1048,10 @@ def show_examination_form(patient, examination=None):
                 unsafe_allow_html=True,
             )
 
-            # Get registered guardian / emergency contact information
+            # ============================================================
+            # INFORMED CONSENT - SIGNER INFORMATION
+            # ============================================================
+
             emergency_contact_name = (
                 patient.get("emergency_contact_name") or ""
             ).strip()
@@ -886,57 +1060,116 @@ def show_examination_form(patient, examination=None):
                 patient.get("emergency_contact_no") or ""
             ).strip()
 
-            default_consent_name = (
-                emergency_contact_name
-                or patient_name(patient)
+            registered_relationship = (
+                patient.get("emergency_contact_relationship") or ""
+            ).strip()
+
+            existing_consent = existing_consent or {}
+
+            patient_is_minor = is_minor(patient.get("date_of_birth"))
+
+            default_signer_type = (
+                existing_consent.get("signed_by_type")
+                or ("guardian" if patient_is_minor else "patient")
             )
 
-            contact_col1, contact_col2 = st.columns(2)
+            signer_options = ["patient", "guardian"]
 
-            with contact_col1:
-                signed_by_name = st.text_input(
-                    "Patient or Guardian Full Name",
-                    value=default_consent_name,
-                    placeholder="Enter patient or guardian name",
-                    key="exam_consent_name",
-                )
-
-            with contact_col2:
-                emergency_number = st.text_input(
-                    "Emergency Contact Number",
-                    value=emergency_contact_number,
-                    placeholder="No emergency contact number recorded",
-                    key="exam_emergency_contact_number",
-                    disabled=True,
-                )
+            signed_by_type = st.radio(
+                "Who is signing the consent?",
+                options=signer_options,
+                index=signer_options.index(default_signer_type)
+                if default_signer_type in signer_options
+                else 0,
+                format_func=lambda value: (
+                    "Patient" if value == "patient"
+                    else "Guardian / Authorized Representative"
+                ),
+                horizontal=True,
+                key=f"{form_prefix}_exam_signer_type",
+            )
 
             guardian_name = None
             guardian_relation = None
-            signed_by_type = "patient"
 
-            if is_minor(patient.get("date_of_birth")):
-                signed_by_type = "guardian"
+            if signed_by_type == "guardian":
+
+                default_guardian_name = (
+                    existing_consent.get("guardian_name")
+                    or emergency_contact_name
+                    or ""
+                )
+
+                default_relation = (
+                    existing_consent.get("guardian_relation")
+                    or registered_relationship
+                    or ""
+                )
+
                 guardian_col, relation_col = st.columns(2)
 
                 guardian_name = guardian_col.text_input(
-                    "Guardian Name",
-                    value=(
-                        (existing_consent or {}).get("guardian_name")
-                        or patient.get("emergency_contact_name")
-                        or ""
-                    ),
-                    key="exam_guardian_name",
+                    "Guardian / Representative Name",
+                    value=default_guardian_name,
+                    placeholder="Enter full name",
+                    key=f"{form_prefix}_exam_guardian_name",
                 )
 
-                relation_options = ["Parent", "Guardian", "Spouse", "Sibling", "Other"]
-                current_relation = (existing_consent or {}).get("guardian_relation") or "Parent"
+                relationship_options = [
+                    "Not specified",
+                    "Mother",
+                    "Father",
+                    "Spouse",
+                    "Son",
+                    "Daughter",
+                    "Brother",
+                    "Sister",
+                    "Grandparent",
+                    "Legal Guardian",
+                    "Other",
+                ]
+
+                if default_relation and default_relation not in relationship_options:
+                    relationship_options.append(default_relation)
 
                 guardian_relation = relation_col.selectbox(
-                    "Guardian Relationship",
-                    relation_options,
-                    index=relation_options.index(current_relation) if current_relation in relation_options else 0,
-                    key="exam_guardian_relation",
+                    "Relationship to Patient",
+                    options=relationship_options,
+                    index=(
+                        relationship_options.index(default_relation)
+                        if default_relation in relationship_options
+                        else 0
+                    ),
+                    key=f"{form_prefix}_exam_guardian_relation",
                 )
+
+                if guardian_relation == "Not specified":
+                    guardian_relation = None
+
+                signed_by_name = guardian_name
+
+            else:
+
+                signed_by_name = (
+                    existing_consent.get("signed_by_name")
+                    if existing_consent.get("signed_by_type") == "patient"
+                    else None
+                ) or patient_name(patient)
+
+                st.text_input(
+                    "Patient Full Name",
+                    value=patient_name(patient) if not is_edit else signed_by_name,
+                    disabled=True,
+                    key=f"{form_prefix}_exam_patient_signer_name",
+                )
+
+            st.text_input(
+                "Registered Emergency Contact Number",
+                value=emergency_contact_number,
+                disabled=True,
+                key=f"{form_prefix}_exam_emergency_contact_number",
+            )
+
 
             if existing_consent and existing_consent.get("signature_path"):
                 existing_sig_url = get_consent_signature_url(existing_consent["signature_path"])
@@ -957,12 +1190,12 @@ def show_examination_form(patient, examination=None):
                 width=540,
                 drawing_mode="freedraw",
                 return_image_data=True,
-                key=f"signature_canvas_{examination_id or 'new'}",
+                key=f"signature_canvas_{form_prefix}",
             )
 
             consent_confirmed = st.checkbox(
                 "I confirm that the patient/guardian has willingly given informed consent for this examination.",
-                key="exam_consent_confirm",
+                key=f"{form_prefix}_exam_consent_confirm",
                 value=True if is_edit else False,
             )
 
@@ -972,8 +1205,8 @@ def show_examination_form(patient, examination=None):
 
             ai_consent = st.checkbox(
                 "The patient has been informed and consents to their de-identified X-ray and clinical data being used to train the LungSight AI model.",
-                key="exam_ai_consent_checkbox",
-                value=True,
+                key=f"{form_prefix}_exam_ai_consent_checkbox",
+                value=False,
             )
 
             errors = st.container()
@@ -1035,6 +1268,22 @@ def show_examination_form(patient, examination=None):
 
     if not signed_by_name.strip():
         errors.error("Patient/Guardian name is required.")
+        return
+
+    if signed_by_type == "guardian":
+
+        if not guardian_name or not guardian_name.strip():
+            errors.error("Guardian name is required.")
+            return
+
+        if not guardian_relation:
+            errors.error("Please select the guardian relationship.")
+            return
+
+    if patient_is_minor and signed_by_type == "patient":
+        errors.error(
+            "A minor requires an appropriately authorized signer."
+        )
         return
 
     if not consent_confirmed:
@@ -1255,6 +1504,12 @@ def show_filters(patients, hospitals=None):
 
     return matches
 
+def examination_action_label():
+    if current_role_id() == ROLE_STAFF:
+        return "Initial Examination"
+
+    return "View Examinations"
+
 
 # ============================================================
 # PATIENT TABLE WITH PAGINATION
@@ -1307,9 +1562,13 @@ def render_patient_table(patients):
                     patient_contact_cell(cols[5], patient.get("contact_number"), patient.get("emergency_contact_no"))
 
                     if cols[6].button(
-                        "Examine",
+                        examination_action_label(),
                         key=f"examine_{patient_id}",
-                        icon=":material/clinical_notes:",
+                        icon=(
+                            ":material/add_circle:"
+                            if current_role_id() == ROLE_STAFF
+                            else ":material/visibility:"
+                        ),
                         width="stretch",
                     ):
                         open_dialog("history", selected_patient=patient)
@@ -1329,9 +1588,13 @@ def render_patient_table(patients):
                     patient_contact_cell(cols[4], patient.get("contact_number"), patient.get("emergency_contact_no"))
 
                     if cols[5].button(
-                        "Examine",
+                        examination_action_label(),
                         key=f"examine_{patient_id}",
-                        icon=":material/clinical_notes:",
+                        icon=(
+                            ":material/add_circle:"
+                            if current_role_id() == ROLE_STAFF
+                            else ":material/visibility:"
+                        ),
                         width="stretch",
                     ):
                         open_dialog("history", selected_patient=patient)
@@ -1419,7 +1682,7 @@ def show():
     elif dialog == "create" and st.session_state.get("create_examination_patient"):
         show_examination_form(
             st.session_state["create_examination_patient"],
-            st.session_state.get("selected_examination"),
+            examination=None,
         )
 
     elif dialog == "delete" and st.session_state.get("delete_examination_target"):

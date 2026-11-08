@@ -512,6 +512,7 @@ def get_all_patients():
             address,
             emergency_contact_name,
             emergency_contact_no,
+            emergency_contact_relationship,
             status,
             created_at,
             created_by,
@@ -1499,6 +1500,86 @@ def get_xray_ai_result(
 
         return None
 
+def get_patient_xray_history(patient_id, hospital_id=None):
+    """
+    Return all examinations with uploaded X-rays for one patient.
+
+    The returned list is sorted newest to oldest.
+    Only the newest uploaded image per examination is used.
+
+    hospital_id is required for hospital-scoped users.
+    """
+    if not patient_id:
+        return []
+
+    # Verify the patient belongs to the authorized hospital.
+    patient_query = (
+        admin_supabase
+        .table("patients")
+        .select("patient_id, hospital_id")
+        .eq("patient_id", patient_id)
+    )
+
+    if hospital_id is not None:
+        patient_query = patient_query.eq("hospital_id", hospital_id)
+
+    patient_rows = patient_query.limit(1).execute().data or []
+
+    if not patient_rows:
+        return []
+
+    examinations = get_examinations_by_patient(patient_id) or []
+    history = []
+
+    for exam in examinations:
+        exam_id = exam.get("examination_id")
+
+        if not exam_id:
+            continue
+
+        request = get_xray_request_by_examination(exam_id)
+
+        if not request:
+            continue
+
+        images = get_xray_images_by_request(
+            request.get("request_id")
+        ) or []
+
+        # Ignore examinations without uploaded X-rays.
+        images = [
+            image for image in images
+            if image.get("image_id") and image.get("image_path")
+        ]
+
+        if not images:
+            continue
+
+        # Existing fetch function orders images by uploaded_at DESC.
+        image = images[0]
+
+        history.append({
+            "examination_id": exam_id,
+            "examination_date": exam.get("examination_date"),
+            "created_at": exam.get("created_at"),
+            "status": exam.get("status"),
+            "examination_type": exam.get("examination_type"),
+            "image_id": image.get("image_id"),
+            "image_path": image.get("image_path"),
+            "uploaded_at": image.get("uploaded_at"),
+        })
+
+    history.sort(
+        key=lambda item: (
+            str(item.get("examination_date") or ""),
+            str(item.get("created_at") or ""),
+            str(item.get("uploaded_at") or ""),
+            str(item.get("examination_id") or ""),
+        ),
+        reverse=True,
+    )
+
+    return history
 
 # ==========================================
 # X-RAY REVIEW

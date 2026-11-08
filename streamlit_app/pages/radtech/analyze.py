@@ -185,23 +185,137 @@ def render_context_card(patient, examination, request):
 # EMPTY RIGHT PANEL
 # ============================================================
 
-def render_empty_results():
+def render_context_card(patient, examination, request):
+    """
+    Render the patient information and clinical details.
+    HTML lines have no leading indentation.
+    """
+
+    name = patient_name(patient) or "Unknown Patient"
+    code = patient_code(patient) or "—"
+
+    body_part = request.get("body_part") or "Chest"
+    priority = request.get("priority") or "Routine"
+
+    chief_complaint = (
+        examination.get("chief_complaint")
+        or "No chief complaint recorded."
+    )
+
+    clinical_indication = (
+        request.get("clinical_indication")
+        or "No clinical indication provided."
+    )
+
+    patient_initials = initials(
+        patient_name(patient)
+    ) or "PT"
+
+    priority_class = {
+        "routine": "rx-priority-routine",
+        "urgent": "rx-priority-urgent",
+        "stat": "rx-priority-stat",
+    }.get(
+        str(priority).strip().lower(),
+        "rx-priority-routine",
+    )
+
+    html_content = f"""
+<div class="rx-patient-card">
+<div class="rx-patient-card-header">
+<div class="rx-patient-identity">
+<div class="rx-patient-avatar">{safe(patient_initials)}</div>
+<div class="rx-patient-identity-info">
+<div class="rx-patient-eyebrow">
+<span class="material-symbols-rounded">personal_injury</span>
+<span>SELECTED PATIENT</span>
+</div>
+<div class="rx-patient-name">{safe(name)}</div>
+<div class="rx-patient-id">
+<span class="material-symbols-rounded">badge</span>
+<span>{safe(code)}</span>
+</div>
+</div>
+</div>
+<div class="rx-patient-request">
+<div class="rx-request-type">
+<span class="material-symbols-rounded">radiology</span>
+<span>{safe(body_part)} X-Ray</span>
+</div>
+<div class="rx-priority-badge {priority_class}">
+<span class="material-symbols-rounded">flag</span>
+<span>{safe(priority)} Priority</span>
+</div>
+</div>
+</div>
+<div class="rx-patient-card-divider"></div>
+<div class="rx-clinical-section-header">
+<span class="material-symbols-rounded">clinical_notes</span>
+<span>Clinical Information</span>
+</div>
+<div class="rx-clinical-grid">
+<div class="rx-clinical-item">
+<div class="rx-clinical-item-header">
+<span class="material-symbols-rounded">description</span>
+<span>Chief Complaint</span>
+</div>
+<div class="rx-clinical-item-value">{safe(chief_complaint)}</div>
+</div>
+<div class="rx-clinical-item">
+<div class="rx-clinical-item-header">
+<span class="material-symbols-rounded">stethoscope</span>
+<span>Clinical Indication</span>
+</div>
+<div class="rx-clinical-item-value">{safe(clinical_indication)}</div>
+</div>
+</div>
+</div>
+"""
 
     st.markdown(
-        "<div class='rx-empty'>"
-        "<div class='rx-empty-icon-wrap'>"
-        "<span class='material-symbols-rounded rx-empty-icon'>radiology</span>"
-        "</div>"
-        "<p class='rx-empty-title'>Diagnostic Workstation</p>"
-        "<p class='rx-empty-text'>"
-        "Upload a chest radiograph on the left to begin AI pathology screening and generate attention heatmaps."
-        "</p>"
-        "<div class='rx-empty-steps'>"
-        "<div class='rx-empty-step-item'><span class='rx-step-num'>1</span><span>Upload DICOM, PNG, or JPEG X-Ray</span></div>"
-        "<div class='rx-empty-step-item'><span class='rx-step-num'>2</span><span>Execute AI Multi-Stage Classification</span></div>"
-        "<div class='rx-empty-step-item'><span class='rx-step-num'>3</span><span>Verify Heatmap & Commit for Physician</span></div>"
-        "</div>"
-        "</div>",
+        html_content,
+        unsafe_allow_html=True,
+    )
+
+# ============================================================
+# EMPTY RIGHT PANEL — DIAGNOSTIC WORKSTATION
+# ============================================================
+
+def render_empty_results():
+    """
+    Display the diagnostic workstation placeholder
+    before an X-ray image has been analyzed.
+    """
+
+    html_content = """
+<div class="rx-empty">
+<div class="rx-empty-icon-wrap">
+<span class="material-symbols-rounded rx-empty-icon">radiology</span>
+</div>
+<h3 class="rx-empty-title">Diagnostic Workstation</h3>
+<p class="rx-empty-text">
+Upload a chest radiograph on the left to begin AI
+pathology screening and generate attention heatmaps.
+</p>
+<div class="rx-empty-steps">
+<div class="rx-empty-step-item">
+<span class="rx-step-num">1</span>
+<span>Upload DICOM, PNG, or JPEG X-Ray</span>
+</div>
+<div class="rx-empty-step-item">
+<span class="rx-step-num">2</span>
+<span>Execute AI Multi-Stage Classification</span>
+</div>
+<div class="rx-empty-step-item">
+<span class="rx-step-num">3</span>
+<span>Verify Heatmap &amp; Commit for Physician</span>
+</div>
+</div>
+</div>
+"""
+
+    st.markdown(
+        html_content,
         unsafe_allow_html=True,
     )
 
