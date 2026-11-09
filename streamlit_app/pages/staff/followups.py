@@ -6,7 +6,9 @@ Staff — Follow-Ups.
 Landing: search + filter + active follow-ups list + KPIs
 Detail: patient + appointment + parent + previous + actions
 """
-
+import io
+from PIL import Image
+from streamlit_drawable_canvas import st_canvas
 import streamlit as st
 from datetime import date, datetime, time as time_cls, timedelta
 from zoneinfo import ZoneInfo
@@ -18,7 +20,10 @@ from backend.backend_utils.followup_utils import (
     get_follow_up_counts,
     cancel_follow_up,
     reschedule_follow_up,
+    save_follow_up_consent,
 )
+
+from backend.fetches import get_examination_consents
 
 from streamlit_app.components.ui import (
     page_header,
@@ -183,65 +188,285 @@ def back_to_landing():
 # DIALOG — CONFIRM ARRIVAL
 # ============================================================
 
-@st.dialog("Confirm Patient Arrival", width="small")
-def show_confirm_arrival_dialog(fu):
+def render_follow_up_consent_form(key_prefix, patient):
+    """Follow-Up consent, using the same registered signer details as General Examination."""
+    st.divider()
+    section_title("Treatment Consent")
 
+    patient = patient or {}
+    registered_patient_name = patient_name(patient).strip()
+    registered_guardian_name = (patient.get("emergency_contact_name") or "").strip()
+    registered_number = (
+        patient.get("emergency_contact_no")
+        or patient.get("emergency_contact_number")
+        or ""
+    ).strip()
+    registered_relation = (patient.get("emergency_contact_relationship") or "").strip()
+
+    dob = patient.get("date_of_birth")
+    minor = False
+    try:
+        birthday = date.fromisoformat(str(dob)[:10])
+        today = date.today()
+        minor = (today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day))) < 18
+    except (TypeError, ValueError):
+        pass
+
+    signer_type = st.radio(
+        "Who is signing the consent?",
+        options=["patient", "guardian"],
+        index=1 if minor else 0,
+        format_func=lambda v: "Patient" if v == "patient" else "Guardian / Authorized Representative",
+        horizontal=True,
+        key=f"{key_prefix}_signer_type",
+    )
+
+    guardian_name = None
+    guardian_relation = None
+    if signer_type == "guardian":
+        guardian_name = st.text_input(
+            "Guardian / Representative Name",
+            value=registered_guardian_name,
+            placeholder="Enter full name",
+            key=f"{key_prefix}_guardian_name",
+        ).strip()
+        relationships = [
+            "Not specified", "Mother", "Father", "Spouse", "Son", "Daughter",
+            "Brother", "Sister", "Grandparent", "Legal Guardian", "Other",
+        ]
+        if registered_relation and registered_relation not in relationships:
+            relationships.append(registered_relation)
+        guardian_relation = st.selectbox(
+            "Relationship to Patient",
+            options=relationships,
+            index=relationships.index(registered_relation) if registered_relation in relationships else 0,
+            key=f"{key_prefix}_guardian_relation",
+        )
+        if guardian_relation == "Not specified":
+            guardian_relation = None
+        signed_by_name = guardian_name
+    else:
+        signed_by_name = registered_patient_name
+        st.text_input(
+            "Patient Full Name",
+            value=registered_patient_name,
+            disabled=True,
+            key=f"{key_prefix}_patient_name",
+        )
+        if minor:
+            st.warning("The registered patient is a minor. Select an appropriately authorized guardian or representative.")
+
+    st.text_input(
+        "Registered Emergency Contact Number",
+        value=registered_number,
+        disabled=True,
+        key=f"{key_prefix}_emergency_contact_number",
+    )
+
+    st.markdown("**Digital Signature (Draw below)**")
+    st.caption("The patient or authorized representative must sign personally.")
+    canvas = st_canvas(
+        stroke_width=2,
+        stroke_color="#0F172A",
+        background_color="#FFFFFF",
+        height=140,
+        width=500,
+        drawing_mode="freedraw",
+        return_image_data=True,
+        key=f"{key_prefix}_signature",
+    )
+
+    signature_bytes = None
+    if canvas is not None and canvas.image_data is not None:
+        import numpy as np
+        pixels = canvas.image_data.astype("uint8")
+        # Detect non-white strokes in the returned canvas image.
+        rgb = pixels[:, :, :3]
+        has_strokes = bool(np.any(rgb < 230))
+        if has_strokes:
+            image = Image.fromarray(pixels, "RGBA")
+            buffer = io.BytesIO()
+            image.save(buffer, format="PNG")
+            signature_bytes = buffer.getvalue()
+
+    confirmed = st.checkbox(
+        "I confirm that the patient or authorized representative was informed, "
+        "had the opportunity to ask questions, and voluntarily consented to this examination.",
+        key=f"{key_prefix}_confirmed",
+    )
+
+    return {
+        "confirmed": confirmed,
+        "signed_by_name": signed_by_name.strip(),
+        "signed_by_type": signer_type,
+        "guardian_name": guardian_name,
+        "guardian_relation": guardian_relation,
+        "signature_bytes": signature_bytes,
+        "minor_patient_signing": minor and signer_type == "patient",
+    }
+
+@st.dialog("Record Missing Follow-Up Consent", width="large")
+def show_missing_consent_dialog(fu):
+    examination_id = fu.get("follow_up_examination_id")
+
+    if not examination_id:
+        st.error("This follow-up has no linked examination.")
+        return
+
+    existing = get_examination_consents(examination_id)
+
+    if existing:
+        st.warning(
+            "A consent record already exists. "
+            "Review it before making changes."
+        )
+        return
+
+    exam = fu.get("follow_up_examination") or {}
+    if isinstance(exam, list):
+        exam = exam[0] if exam else {}
+    if exam.get("status") in ("Completed", "Admitted", "Discharged", "Cancelled"):
+        st.warning(
+            "This examination is finalized. A staff member cannot add a new "
+            "consent retroactively. Refer it to an authorized records-correction "
+            "process; do not backdate or invent a signature."
+        )
+        return
+
+    st.markdown(
+        f"**Follow-Up:** {fu.get('follow_up_code')}"
+    )
+    st.caption(
+        "This records consent for the existing examination. "
+        "It does not create another examination or check-in."
+    )
+
+    patient = fu.get("patients") or {}
+    if isinstance(patient, list):
+        patient = patient[0] if patient else {}
+    consent_data = render_follow_up_consent_form(
+        f"recovery_{examination_id}", patient
+    )
+
+    if st.button(
+        "Save Consent to Existing Examination",
+        type="primary",
+        width="stretch",
+        key=f"save_recovery_consent_{examination_id}",
+    ):
+        if consent_data["minor_patient_signing"]:
+            st.error("A minor requires an appropriately authorized signer.")
+            return
+        if (
+            not consent_data["confirmed"]
+            or not consent_data["signed_by_name"]
+            or not consent_data["signature_bytes"]
+        ):
+            st.error("Complete the consent and signature.")
+            return
+
+        result = save_follow_up_consent(
+            examination_id=examination_id,
+            staff_user_id=current_user_id(),
+            signed_by_name=consent_data["signed_by_name"],
+            signed_by_type=consent_data["signed_by_type"],
+            signature_bytes=consent_data["signature_bytes"],
+            guardian_name=consent_data.get("guardian_name"),
+            guardian_relation=consent_data.get("guardian_relation"),
+        )
+
+        if result.get("success"):
+            st.session_state.pop("staff_fu_consent_target", None)
+            remember("Follow-Up consent recorded successfully.")
+            st.rerun()
+        else:
+            st.error(result.get("message", "Unable to save consent."))
+
+@st.dialog("Follow-Up Patient Check-In", width="large")
+def show_confirm_arrival_dialog(fu):
     fu_id = fu.get("follow_up_id")
     code = fu.get("follow_up_code") or "—"
+
     patient = fu.get("patients") or {}
     if isinstance(patient, list):
         patient = patient[0] if patient else {}
 
-    source = fu.get("source_examination") or {}
-    if isinstance(source, list):
-        source = source[0] if source else {}
-
-    st.markdown(f"**Follow-Up {code}**")
+    st.markdown(f"### Follow-Up {code}")
 
     show_rows([
         ("Patient", patient_name(patient)),
         ("Patient ID", patient_code(patient)),
         ("Scheduled", format_appointment(fu)),
-        (
-            "Parent",
-            f"{source.get('examination_type') or 'General Consult'} · "
-            f"{format_date_only(source.get('examination_date'))}",
-        ),
     ])
 
-    st.divider()
-    st.caption(
-        "By confirming, you will create a new Follow-Up Examination "
-        "and send the patient to the Physician Queue."
+    consent_data = render_follow_up_consent_form(
+        f"staff_fu_{fu_id}", patient
     )
+
     st.divider()
 
     cancel_col, confirm_col = st.columns(2)
 
     if cancel_col.button(
         "Cancel",
-        key=f"staff_fu_arrive_cancel_{fu_id}",
-        use_container_width=True,
+        key=f"staff_fu_cancel_arrival_{fu_id}",
+        width="stretch",
     ):
+        st.session_state.pop("staff_fu_arrival_target", None)
         st.rerun()
 
     if confirm_col.button(
-        "Confirm Arrival",
-        key=f"staff_fu_arrive_confirm_{fu_id}",
+        "Confirm Consent & Check In",
+        key=f"staff_fu_confirm_arrival_{fu_id}",
         type="primary",
-        use_container_width=True,
+        width="stretch",
     ):
-        result = mark_follow_up_arrived(fu_id, current_user_id())
+        if consent_data["minor_patient_signing"]:
+            st.error("A minor requires an appropriately authorized signer.")
+            return
+        if not consent_data["confirmed"]:
+            st.error("Consent confirmation is required.")
+            return
+
+        if not consent_data["signed_by_name"]:
+            st.error("Please enter the signer's full name.")
+            return
+
+        if not consent_data["signature_bytes"]:
+            st.error("Please provide a signature.")
+            return
+
+        if consent_data["signed_by_type"] == "Guardian":
+            if (
+                not consent_data["guardian_name"]
+                or not consent_data["guardian_relation"]
+            ):
+                st.error("Complete the guardian information.")
+                return
+
+        result = mark_follow_up_arrived(
+            fu_id,
+            current_user_id(),
+            consent_data=consent_data,
+        )
 
         if result.get("success"):
-            remember("Patient checked in. Follow-up examination created.")
+            remember(
+                "Patient checked in. Follow-Up Examination "
+                "and consent recorded successfully."
+            )
             st.session_state.pop("staff_fu_arrival_target", None)
             back_to_landing()
         else:
-            st.error(
-                f"Could not check in patient: "
-                f"{result.get('message', 'Unknown error')}"
-            )
+            st.error(result.get("message", "Check-in failed."))
+
+            if result.get("recovery_required"):
+                st.warning(
+                    "An examination already exists. "
+                    "Refresh the Follow-Up details and use "
+                    "'Record Missing Consent'. Do not check in again."
+                )
+
 
 # ============================================================
 # LANDING — KPI + FILTERS + LIST
@@ -653,8 +878,37 @@ def render_fu_detail():
             st.session_state["staff_fu_arrival_target"] = fu
             st.rerun()
     elif fu.get("follow_up_examination_id"):
+        examination_id = fu["follow_up_examination_id"]
+
+        try:
+            existing_consents = get_examination_consents(
+                examination_id
+            )
+        except Exception as exc:
+            st.error(f"Unable to verify consent: {exc}")
+            existing_consents = None
+
         with col_arrive:
-            st.caption(follow_up_progress_message(fu) or "Patient Checked In")
+            if existing_consents is None:
+                st.warning("Consent verification unavailable.")
+
+            elif not existing_consents:
+                linked_exam = fu.get("follow_up_examination") or {}
+                if isinstance(linked_exam, list):
+                    linked_exam = linked_exam[0] if linked_exam else {}
+                if linked_exam.get("status") in ("Completed", "Admitted", "Discharged", "Cancelled"):
+                    st.caption("Missing consent · finalized examination; authorized correction required")
+                elif st.button(
+                    "Record Missing Consent",
+                    key=f"recover_consent_{examination_id}",
+                    icon=":material/draw:",
+                    width="stretch",
+                ):
+                    st.session_state["staff_fu_consent_target"] = fu
+                    st.rerun()
+
+            else:
+                st.caption("Consent record available")
 
     if col_resched.button(
         "Reschedule",
@@ -777,8 +1031,10 @@ def show():
         else:
             render_landing()
 
-    # Dialog dispatcher
-    if st.session_state.get("staff_fu_arrival_target"):
+    # Exactly one Streamlit dialog can be opened in a single run.
+    if st.session_state.get("staff_fu_consent_target"):
+        show_missing_consent_dialog(st.session_state["staff_fu_consent_target"])
+    elif st.session_state.get("staff_fu_arrival_target"):
         show_confirm_arrival_dialog(st.session_state["staff_fu_arrival_target"])
     elif st.session_state.get("staff_fu_parent_view"):
         show_parent_consult_dialog(st.session_state["staff_fu_parent_view"])

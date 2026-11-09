@@ -19,6 +19,7 @@ which creates the examination and completes the follow-up.
 """
 
 import streamlit as st
+from backend.supabase_client import admin_supabase
 
 from datetime import date, datetime, time as time_cls
 
@@ -249,17 +250,56 @@ def show_follow_up_details_dialog(fu):
     if has_linked_exam:
         linked_label = linked_status or "Pending"
         linked_tone = "green" if linked_status == "Completed" else "amber"
+        # The hospital listing join is intentionally compact; fetch the full
+        # linked examination only when this detail dialog is opened.
+        exam_id = linked.get("examination_id")
+        full_exam = linked
+        if exam_id:
+            try:
+                result = (admin_supabase.table("examinations").select("*")
+                          .eq("examination_id", exam_id).limit(1).execute())
+                if result.data and result.data[0].get("patient_id") == patient.get("patient_id"):
+                    full_exam = result.data[0]
+            except Exception as error:
+                st.warning(f"Could not load extended examination details: {error}")
         _show_rows_with_pill(
             rows=[
-                ("Type", linked.get("examination_type") or "Follow-Up Examination"),
-                ("Date", _format_exam_date(linked)),
-                ("Diagnosis", linked.get("diagnosis") or "—"),
-                ("Status", linked_label),
+                ("Type", full_exam.get("examination_type") or "Follow-Up Examination"),
+                ("Date", _format_exam_date(full_exam)),
+                ("Examination Sequence", full_exam.get("follow_up_sequence") or "—"),
+                ("Chief Complaint", full_exam.get("chief_complaint") or "—"),
+                ("History of Present Illness", full_exam.get("history_of_present_illness") or "—"),
+                ("Physical Examination", full_exam.get("physical_examination") or "—"),
+                ("Diagnosis / Assessment", full_exam.get("diagnosis") or "—"),
+                ("Plans and Orders", full_exam.get("plans_orders") or "—"),
+                ("Disposition", full_exam.get("disposition") or "—"),
+                ("Disposition Notes", full_exam.get("disposition_notes") or "—"),
+                ("Reviewed At", full_exam.get("reviewed_at") or "—"),
+                ("Discharge Notes", full_exam.get("discharge_notes") or "—"),
+                ("Status", full_exam.get("status") or linked_label),
             ],
-            pill_values={
-                3: (linked_label, linked_tone),
-            },
+            pill_values={12: (full_exam.get("status") or linked_label, linked_tone)},
         )
+        if exam_id:
+            with st.expander("Recorded Examination Vitals", expanded=False):
+                try:
+                    vitals = (admin_supabase.table("examination_vitals").select("*")
+                              .eq("examination_id", exam_id).execute()).data or []
+                    if vitals:
+                        for i, record in enumerate(vitals, 1):
+                            st.markdown(f"**Vitals record {i}**")
+                            for field, label in (
+                                ("spo2", "SpO₂"), ("respiratory_rate", "Respiratory Rate"),
+                                ("temperature", "Temperature"), ("oxygen_support", "Oxygen Support"),
+                                ("pulse_rate", "Pulse Rate"), ("heart_rate", "Heart Rate"),
+                                ("blood_pressure", "Blood Pressure"), ("recorded_at", "Recorded At"),
+                            ):
+                                if record.get(field) is not None:
+                                    st.write(f"{label}: {record[field]}")
+                    else:
+                        st.caption("No vitals recorded for this examination.")
+                except Exception as error:
+                    st.warning(f"Could not load examination vitals: {error}")
     else:
         st.info(
             "No follow-up examination has been created yet. "
@@ -281,6 +321,8 @@ def show_follow_up_details_dialog(fu):
             st.rerun()
         return
 
+    if has_linked_exam:
+        st.info("The patient has checked in. Appointment changes are locked; examination and inpatient workflows continue separately.")
     can_mark_missed = not has_linked_exam
 
     col_resched, col_cancel, col_missed = st.columns(3)
@@ -289,6 +331,7 @@ def show_follow_up_details_dialog(fu):
         "Reschedule",
         key=f"pf_fu_resched_open_{fu_id}",
         icon=":material/event_repeat:",
+        disabled=has_linked_exam,
         width="stretch",
     ):
         st.session_state["follow_up_details_id"] = None
@@ -299,6 +342,7 @@ def show_follow_up_details_dialog(fu):
         "Cancel",
         key=f"pf_fu_cancel_open_{fu_id}",
         icon=":material/cancel:",
+        disabled=has_linked_exam,
         width="stretch",
     ):
         st.session_state["follow_up_details_id"] = None

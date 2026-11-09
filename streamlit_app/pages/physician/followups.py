@@ -476,28 +476,93 @@ def render_landing(hospital_id):
 
     render_kpi_strip(hospital_id)
 
-    query, status = render_filter_bar()
-
     try:
         all_follow_ups = get_hospital_follow_ups(hospital_id=hospital_id) or []
     except Exception as error:
         st.error(f"Failed to load follow-ups: {error}")
         all_follow_ups = []
 
-    entries = group_follow_ups_by_patient(all_follow_ups, status)
-    entries = apply_search(entries, query)
+    active_tab, history_tab = st.tabs(["Active Follow-Ups", "Follow-Up History"])
+    with active_tab:
+        st.caption("Scheduled and rescheduled appointments; one row per patient.")
+        query = st.text_input("Search active follow-ups", key="pf_fu_active_query",
+                              placeholder="FU ID, patient name or patient code")
+        active = [fu for fu in all_follow_ups
+                  if fu.get("status") in ACTIVE_STATUSES]
+        entries = group_follow_ups_by_patient(active, "All")
+        entries = apply_search(entries, query)
+        if st.session_state.get("_pf_fu_active_last_query") != query:
+            reset_pagination()
+            st.session_state["_pf_fu_active_last_query"] = query
+        render_table(entries, st.session_state.get("pf_fu_page", 1))
+    with history_tab:
+        render_follow_up_history(all_follow_ups)
 
-    # Reset page when filter/search changes
-    last_query = st.session_state.get("_pf_fu_last_query", "")
-    last_status = st.session_state.get("_pf_fu_last_status", DEFAULT_STATUS_FILTER)
 
-    if last_query != query or last_status != status:
-        reset_pagination()
-        st.session_state["_pf_fu_last_query"] = query
-        st.session_state["_pf_fu_last_status"] = status
+# ============================================================
+# FOLLOW-UP HISTORY (one row per appointment)
+# ============================================================
 
-    page = st.session_state.get("pf_fu_page", 1)
-    render_table(entries, page)
+def _fu_exam_outcome(fu):
+    exam = fu.get("follow_up_examination") or {}
+    if isinstance(exam, list):
+        exam = exam[0] if exam else {}
+    return (exam or {}).get("status") or "Not examined"
+
+
+def render_follow_up_history(follow_ups):
+    st.caption("Filter by scheduled Follow-Up Date, not examination date.")
+    left, right = st.columns(2)
+    with left:
+        start_date = st.date_input("From Follow-Up Date", value=None,
+                                   key="pf_fu_history_from")
+    with right:
+        end_date = st.date_input("To Follow-Up Date", value=None,
+                                 key="pf_fu_history_to")
+    query = st.text_input("Search history", placeholder="FU ID, patient name or patient code",
+                          key="pf_fu_history_query").strip().lower()
+    statuses = st.multiselect("History statuses", ["Completed", "Missed", "Cancelled"],
+                              default=["Completed", "Missed", "Cancelled"],
+                              key="pf_fu_history_statuses")
+    if start_date and end_date and start_date > end_date:
+        st.warning("The From date must be on or before the To date.")
+        return
+    rows = []
+    for fu in follow_ups:
+        if fu.get("status") not in statuses:
+            continue
+        scheduled = str(fu.get("follow_up_date") or "")[:10]
+        if start_date and scheduled < start_date.isoformat():
+            continue
+        if end_date and scheduled > end_date.isoformat():
+            continue
+        patient = patient_of(fu)
+        searchable = " ".join((str(fu.get("follow_up_code") or ""),
+                               patient_name(patient), patient_code(patient))).lower()
+        if query and query not in searchable:
+            continue
+        rows.append(fu)
+    rows.sort(key=sort_key_follow_up, reverse=True)
+    st.caption(f"{len(rows)} appointment(s) in history")
+    if not rows:
+        empty_state("No follow-ups match the history filters.")
+        return
+    for fu in rows:
+        patient = patient_of(fu)
+        code = fu.get("follow_up_code") or "—"
+        outcome = _fu_exam_outcome(fu)
+        with st.container(border=True):
+            a, b, c, d, e = st.columns([2.2, 2, 2, 1.5, 1])
+            a.markdown(f"**{code}**")
+            b.write(patient_name(patient))
+            b.caption(patient_code(patient))
+            c.write(format_appointment(fu))
+            d.write(f"Appointment: {fu.get('status') or '—'}")
+            d.caption(f"Examination: {outcome}")
+            if e.button("View", key=f"pf_fu_history_view_{fu.get('follow_up_id')}",
+                        use_container_width=True):
+                st.session_state["follow_up_details_id"] = fu.get("follow_up_id")
+                st.rerun()
 
 
 # ============================================================

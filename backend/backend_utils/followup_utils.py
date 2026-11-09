@@ -1,5 +1,7 @@
 from datetime import date, datetime, time, timezone
 import json
+import io
+from PIL import Image, UnidentifiedImageError
 
 from backend.supabase_client import admin_supabase
 
@@ -475,10 +477,9 @@ def link_follow_up_examination(
             admin_supabase
             .table("follow_ups")
             .update(follow_up_data)
-            .eq(
-                "follow_up_id",
-                follow_up_id,
-            )
+            .eq("follow_up_id", follow_up_id)
+            .is_("follow_up_examination_id", "null")
+            .in_("status", ["Scheduled", "Rescheduled"])
             .execute()
         )
 
@@ -635,6 +636,16 @@ def update_follow_up_status(
                 ),
             }
 
+        if status in ("Cancelled", "Missed", "Rescheduled"):
+            current = (admin_supabase.table("follow_ups")
+                       .select("status, follow_up_examination_id")
+                       .eq("follow_up_id", follow_up_id).limit(1).execute()).data or []
+            if not current:
+                return {"success": False, "message": "Follow-up not found."}
+            if (current[0].get("status") not in ("Scheduled", "Rescheduled")
+                    or current[0].get("follow_up_examination_id")):
+                return {"success": False, "message": "Cannot change an attended or closed follow-up."}
+
         follow_up_data = {
             "status": status,
             "updated_at": utc_now(),
@@ -698,6 +709,12 @@ def reschedule_follow_up(
     """
 
     try:
+
+        current = (admin_supabase.table("follow_ups")
+                   .select("status, follow_up_examination_id")
+                   .eq("follow_up_id", follow_up_id).limit(1).execute()).data or []
+        if not current or current[0].get("status") not in ("Scheduled", "Rescheduled") or current[0].get("follow_up_examination_id"):
+            return {"success": False, "message": "Cannot reschedule an attended or closed follow-up."}
 
         follow_up_data = {
             "follow_up_date": serialize_date(
@@ -922,6 +939,9 @@ def get_follow_up(
                     date_of_birth,
                     sex,
                     contact_number,
+                    emergency_contact_name,
+                    emergency_contact_no,
+                    emergency_contact_relationship,
                     hospital_id
                 ),
 
@@ -1362,6 +1382,9 @@ def get_hospital_follow_ups(
                     date_of_birth,
                     sex,
                     contact_number,
+                    emergency_contact_name,
+                    emergency_contact_no,
+                    emergency_contact_relationship,
                     hospital_id
                 ),
 
@@ -1904,46 +1927,179 @@ def finalize_follow_up_for_examination(examination_id):
 # MARK FOLLOW-UP ARRIVED (staff check-in)
 # ============================================================
 
-def mark_follow_up_arrived(follow_up_id, staff_user_id):
-    """
-    Called when staff marks a follow-up patient as arrived.
 
-    Creates the Follow-Up Examination and links it.
+def mark_follow_up_arrived(
+    follow_up_id,
+    staff_user_id,
+    consent_data=None,
+):
     """
+    Called when staff checks in a Follow-Up patient.
+
+    Workflow:
+        1. Validate Follow-Up appointment.
+        2. Validate consent information.
+        3. Create Follow-Up Examination.
+        4. Link examination to Follow-Up appointment.
+        5. Save examination-specific consent and signature.
+        6. Record staff check-in timestamp.
+
+    If a partial operation fails, return recovery information
+    without creating another examination automatically.
+    """
+
+    # ========================================================
+    # 1. BASIC VALIDATION
+    # ========================================================
 
     if not follow_up_id:
-        return {"success": False, "message": "Follow-up ID is required."}
+        return {
+            "success": False,
+            "message": "Follow-Up ID is required.",
+        }
+
+    if not staff_user_id:
+        return {
+            "success": False,
+            "message": "Staff user ID is required.",
+        }
+
+    if not consent_data:
+        return {
+            "success": False,
+            "message": "Treatment consent is required before check-in.",
+        }
+
+    if not consent_data.get("confirmed"):
+        return {
+            "success": False,
+            "message": "Consent confirmation is required.",
+        }
+
+    signed_by_name = (
+        consent_data.get("signed_by_name") or ""
+    ).strip()
+
+    signed_by_type = (consent_data.get("signed_by_type") or "").strip().lower()
+
+    signature_bytes = consent_data.get("signature_bytes")
+
+    guardian_name = (
+        consent_data.get("guardian_name") or ""
+    ).strip()
+
+    guardian_relation = (
+        consent_data.get("guardian_relation") or ""
+    ).strip()
+
+    if not signed_by_name:
+        return {
+            "success": False,
+            "message": "Consent signer name is required.",
+        }
+
+    if signed_by_type not in ("patient", "guardian"):
+        return {
+            "success": False,
+            "message": "Invalid consent signer type.",
+        }
+
+    signature_error = _validate_consent_signature(signature_bytes)
+    if signature_error:
+        return {"success": False, "message": signature_error}
+
+    if signed_by_type == "guardian":
+        if not guardian_name or not guardian_relation:
+            return {
+                "success": False,
+                "message": (
+                    "Guardian name and relationship are required."
+                ),
+            }
+
+        if guardian_name.casefold() != signed_by_name.casefold():
+            return {
+                "success": False,
+                "message": (
+                    "The guardian name must match the consent signer."
+                ),
+            }
+
+    # ========================================================
+    # 2. LOAD AND VALIDATE FOLLOW-UP
+    # ========================================================
+
+    exam_id = None
+    exam = None
+    examination_linked = False
+    consent_saved = False
 
     try:
         follow_up = get_follow_up(follow_up_id)
 
         if not follow_up:
-            return {"success": False, "message": "Follow-up not found."}
+            return {
+                "success": False,
+                "message": "Follow-Up appointment not found.",
+            }
 
         status = (follow_up.get("status") or "").strip()
 
         if status not in ("Scheduled", "Rescheduled"):
             return {
                 "success": False,
-                "message": f"Follow-up is not active (status: {status}).",
+                "message": (
+                    f"Follow-Up is not active (status: {status})."
+                ),
             }
 
         if follow_up.get("follow_up_examination_id"):
             return {
                 "success": False,
-                "message": "Patient already checked in for this follow-up.",
+                "recovery_required": True,
+                "examination_id": follow_up["follow_up_examination_id"],
+                "message": (
+                    "This Follow-Up already has a linked examination. "
+                    "Do not create another examination. "
+                    "Check whether consent or check-in recovery is needed."
+                ),
             }
 
         patient = follow_up.get("patients") or {}
+
         if isinstance(patient, list):
             patient = patient[0] if patient else {}
 
         patient_id = patient.get("patient_id")
 
         if not patient_id:
-            return {"success": False, "message": "Patient not found."}
+            patient_id = follow_up.get("patient_id")
 
-        next_sequence = get_next_follow_up_sequence(patient_id)
+        if not patient_id:
+            return {
+                "success": False,
+                "message": "Patient ID could not be determined.",
+            }
+
+        # ====================================================
+        # 3. DETERMINE FOLLOW-UP EXAMINATION SEQUENCE
+        # ====================================================
+
+        next_sequence = get_next_follow_up_sequence(
+            patient_id
+        )
+
+        if next_sequence is None:
+            return {
+                "success": False,
+                "message": (
+                    "Could not determine the next examination sequence."
+                ),
+            }
+
+        # ====================================================
+        # 4. CREATE FOLLOW-UP EXAMINATION
+        # ====================================================
 
         from backend.crud import create_examination
 
@@ -1958,40 +2114,326 @@ def mark_follow_up_arrived(follow_up_id, staff_user_id):
         if not exam_result:
             return {
                 "success": False,
-                "message": "Failed to create follow-up examination.",
+                "message": "Failed to create Follow-Up Examination.",
             }
 
         exam = exam_result[0]
         exam_id = exam.get("examination_id")
 
-        link = link_follow_up_examination(follow_up_id, exam_id)
-        if not link.get("success"):
+        if not exam_id:
             return {
                 "success": False,
+                "recovery_required": True,
                 "message": (
-                    link.get("message", "Failed to link examination.")
-                    + " An examination may have been created; contact an administrator before retrying."
+                    "Examination creation returned no ID. "
+                    "An administrator must verify the database "
+                    "before another check-in attempt."
                 ),
             }
 
-        # The new nullable columns were added by the database migration.
-        # Record the actual arrival event without altering appointment status.
+        # ====================================================
+        # 5. LINK EXAMINATION TO FOLLOW-UP
+        # ====================================================
+
+        link_result = link_follow_up_examination(
+            follow_up_id,
+            exam_id,
+        )
+
+        if not link_result.get("success"):
+            return {
+                "success": False,
+                "recovery_required": True,
+                "examination_id": exam_id,
+                "message": (
+                    "The examination was created but could not "
+                    "be linked to the Follow-Up appointment. "
+                    "Do not retry check-in until the record "
+                    "has been reconciled. "
+                    + link_result.get("message", "")
+                ),
+            }
+
+        examination_linked = True
+
+        # ====================================================
+        # 6. SAVE CONSENT AND SIGNATURE
+        # ====================================================
+
+        consent_result = save_follow_up_consent(
+            examination_id=exam_id,
+            staff_user_id=staff_user_id,
+            signed_by_name=signed_by_name,
+            signed_by_type=signed_by_type,
+            signature_bytes=signature_bytes,
+            guardian_name=(
+                guardian_name
+                if signed_by_type == "guardian"
+                else None
+            ),
+            guardian_relation=(
+                guardian_relation
+                if signed_by_type == "guardian"
+                else None
+            ),
+        )
+
+        if not consent_result.get("success"):
+            return {
+                "success": False,
+                "recovery_required": True,
+                "examination_id": exam_id,
+                "message": (
+                    "Follow-Up Examination created and linked, "
+                    "but consent could not be saved. "
+                    "Use 'Record Missing Consent' for the "
+                    "existing examination. Do not check in again. "
+                    + consent_result.get(
+                        "message",
+                        "Unknown consent error.",
+                    )
+                ),
+            }
+
+        consent_saved = True
+
+        # ====================================================
+        # 7. RECORD ACTUAL CHECK-IN
+        # ====================================================
+
         checkin_result = (
-            admin_supabase.table("follow_ups")
-            .update({"checked_in_at": utc_now(), "checked_in_by": staff_user_id})
+            admin_supabase
+            .table("follow_ups")
+            .update({
+                "checked_in_at": utc_now(),
+                "checked_in_by": staff_user_id,
+                "updated_at": utc_now(),
+            })
             .eq("follow_up_id", follow_up_id)
             .eq("follow_up_examination_id", exam_id)
+            .is_("checked_in_at", "null")
             .execute()
         )
+
         if not checkin_result.data:
-            return {"success": False, "message": "Examination linked, but check-in timestamp could not be saved. Contact an administrator."}
+            return {
+                "success": False,
+                "recovery_required": True,
+                "examination_id": exam_id,
+                "consent_saved": True,
+                "message": (
+                    "Examination and consent were saved, "
+                    "but the check-in timestamp could not "
+                    "be recorded. Contact an administrator "
+                    "to reconcile the existing record."
+                ),
+            }
+
+        # ====================================================
+        # 8. SUCCESS
+        # ====================================================
 
         return {
             "success": True,
-            "message": "Patient checked in. Follow-up examination created.",
+            "message": (
+                "Patient checked in successfully. "
+                "Follow-Up Examination, treatment consent, "
+                "and signature have been recorded."
+            ),
             "examination": exam,
             "follow_up": follow_up,
+            "examination_id": exam_id,
+            "consent_saved": True,
+            "checked_in": True,
+        }
+
+    except Exception as exc:
+        return {
+            "success": False,
+            "recovery_required": bool(exam_id),
+            "examination_id": exam_id,
+            "examination_linked": examination_linked,
+            "consent_saved": consent_saved,
+            "message": (
+                f"Follow-Up check-in failed: {exc}. "
+                "If an examination was created, verify its "
+                "state before attempting another check-in."
+            ),
+        }
+
+
+def _validate_consent_signature(signature_bytes):
+    """Validate that the signature is a reasonably sized, nonblank PNG."""
+    if not isinstance(signature_bytes, bytes) or not signature_bytes:
+        return "A signature image is required."
+    if len(signature_bytes) > 2 * 1024 * 1024:
+        return "Signature image exceeds the 2 MB limit."
+    try:
+        with Image.open(io.BytesIO(signature_bytes)) as image:
+            if image.format != "PNG":
+                return "Signature must be a PNG image."
+            if image.width < 20 or image.height < 20 or image.width * image.height > 2_000_000:
+                return "Signature image dimensions are invalid."
+            rgb = image.convert("RGB")
+            extrema = rgb.getextrema()
+            if all(lo >= 230 for lo, hi in extrema):
+                return "Please draw a signature before submitting."
+    except (UnidentifiedImageError, OSError, ValueError):
+        return "Signature image is invalid or corrupted."
+    return None
+
+
+def save_follow_up_consent(
+    examination_id,
+    staff_user_id,
+    signed_by_name,
+    signed_by_type,
+    signature_bytes,
+    guardian_name=None,
+    guardian_relation=None,
+):
+    """
+    Save a new, examination-specific treatment consent.
+
+    Can be used for:
+    - Newly checked-in Follow-Up Examinations
+    - Existing examinations missing consent
+
+    Does not create or modify an examination.
+    """
+    from backend.crud import upload_consent_signature
+
+    signed_by_type = (signed_by_type or "").strip().lower()
+
+    if not examination_id or not staff_user_id:
+        return {"success": False, "message": "Missing examination or staff ID."}
+
+    if not signed_by_name or not signed_by_name.strip():
+        return {"success": False, "message": "Signer name is required."}
+
+    signed_by_type = (signed_by_type or "").strip().lower()
+
+    if signed_by_type not in ("patient", "guardian"):
+        return {
+            "success": False,
+            "message": "Invalid signer type.",
+        }
+    
+    if signed_by_type == "guardian":
+        if not guardian_name or not guardian_name.strip() or not guardian_relation or not guardian_relation.strip():
+            return {"success": False, "message": "Guardian details are required."}
+        if guardian_name.strip().casefold() != signed_by_name.strip().casefold():
+            return {"success": False, "message": "Guardian name must match signer name."}
+
+    signature_error = _validate_consent_signature(signature_bytes)
+    if signature_error:
+        return {"success": False, "message": signature_error}
+
+    try:
+        # Confirm the examination belongs to a follow-up.
+        follow_up_result = (
+            admin_supabase.table("follow_ups")
+            .select("follow_up_id, patient_id")
+            .eq("follow_up_examination_id", examination_id)
+            .limit(1)
+            .execute()
+        )
+
+        if not follow_up_result.data:
+            return {
+                "success": False,
+                "message": "No linked Follow-Up Examination found.",
+            }
+
+        follow_up = follow_up_result.data[0]
+
+        exam_result = (
+            admin_supabase.table("examinations")
+            .select("examination_id, patient_id, examination_type, status")
+            .eq("examination_id", examination_id)
+            .single()
+            .execute()
+        )
+
+        exam = exam_result.data
+
+        if (
+            not exam
+            or exam["patient_id"] != follow_up["patient_id"]
+            or exam["examination_type"] != "Follow-Up Examination"
+        ):
+            return {"success": False, "message": "Examination validation failed."}
+
+        if exam["status"] in ("Completed", "Admitted", "Discharged", "Cancelled"):
+            return {
+                "success": False,
+                "message": "Historical or finalized examination. Use an authorized records-correction workflow.",
+            }
+
+        existing = (
+            admin_supabase.table("examination_consents")
+            .select("consent_id, given, signature_path")
+            .eq("examination_id", examination_id)
+            .execute()
+        ).data or []
+
+        # Never overwrite existing signed consent.
+        if existing:
+            return {
+                "success": False,
+                "message": "A consent record already exists. Review it before making changes.",
+            }
+
+        signature_path = upload_consent_signature(
+            examination_id,
+            signature_bytes,
+        )
+
+        if not signature_path:
+            return {
+                "success": False,
+                "message": "Signature upload failed. Consent was not recorded.",
+            }
+
+        consent_data = {
+            "examination_id": examination_id,
+            "consent_type": "Treatment",
+            "given": True,
+            "signed_by_name": signed_by_name.strip(),
+            "signed_by_type": signed_by_type,
+            "guardian_name": (
+                guardian_name.strip()
+                if signed_by_type == "guardian"
+                else None
+            ),
+            "guardian_relation": (
+                guardian_relation.strip()
+                if signed_by_type == "guardian"
+                else None
+            ),
+            "signed_at": utc_now(),
+            "witnessed_by": staff_user_id,
+            "signature_path": signature_path,
+        }
+
+        result = (
+            admin_supabase.table("examination_consents")
+            .insert(consent_data)
+            .execute()
+        )
+
+        if not result.data:
+            return {
+                "success": False,
+                "message": "Consent insert failed. Check for an orphaned signature upload.",
+            }
+
+        return {
+            "success": True,
+            "message": "Consent and signature saved.",
+            "consent": result.data[0],
         }
 
     except Exception as exc:
         return {"success": False, "message": str(exc)}
+
