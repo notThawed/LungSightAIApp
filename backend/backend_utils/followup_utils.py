@@ -310,7 +310,7 @@ def create_follow_up(
             follow_up_time
         )
 
-        follow_up_code = generate_follow_up_code()
+        follow_up_code = generate_follow_up_code(patient_id)
         if not follow_up_code:
             return {
                 "success": False,
@@ -1627,51 +1627,29 @@ def get_patients_with_upcoming_follow_ups(
         return []
 
 # ============================================================
-# FOLLOW-UP CODES (FU-YYYY-NNNNN)
+# ============================================================
+# FOLLOW-UP APPOINTMENT CODES (GLOBAL SEQUENCE + PATIENT CODE)
 # ============================================================
 
-def generate_follow_up_code():
+def generate_follow_up_code(patient_id=None):
+    """Reserve the next global appointment number for one patient.
+
+    Example: patient LSP2026-002, global sequence 5 -> FULSP2026-002005.
+
+    Unlike examinations.follow_up_sequence, this counter is global.
+    A patient ID is mandatory; old maintenance scripts must supply it.
+    Requires public.allocate_lungsight_followup_code(uuid) in Supabase.
     """
-    Generate the next human-readable follow-up code.
+    if not patient_id:
+        raise ValueError("Patient ID is required to generate a Follow-Up ID.")
 
-    Format: FU-YYYY-NNNNN  (e.g. FU-2026-00042)
-    Sequence resets on January 1st each year.
-    """
-
-    current_year = datetime.now().year
-    prefix = f"FU-{current_year}-"
-
-    try:
-        response = (
-            admin_supabase
-            .table("follow_ups")
-            .select("follow_up_code")
-            .like("follow_up_code", f"{prefix}%")
-            .order("follow_up_code", desc=True)
-            .limit(1)
-            .execute()
-        )
-
-        rows = response.data or []
-
-        if not rows:
-            return f"{prefix}00001"
-
-        last_code = rows[0].get("follow_up_code") or ""
-
-        if not last_code.startswith(prefix):
-            return f"{prefix}00001"
-
-        try:
-            number = int(last_code.split("-")[-1])
-        except (ValueError, TypeError):
-            number = 0
-
-        return f"{prefix}{number + 1:05d}"
-
-    except Exception as exc:
-        print(f"Failed to generate follow-up code: {exc}")
-        return None
+    response = admin_supabase.rpc(
+        "allocate_lungsight_followup_code", {"p_patient_id": str(patient_id)}
+    ).execute()
+    code = response.data
+    if not isinstance(code, str) or not code.startswith("FU"):
+        raise RuntimeError("Database did not return a valid Follow-Up ID.")
+    return code
 
 
 # ============================================================
@@ -1865,6 +1843,64 @@ def get_scheduled_follow_ups_for_date(target_date, hospital_id=None):
 
 
 # ============================================================
+# COMPLETE LINKED FOLLOW-UP AFTER A PHYSICIAN FINALIZES VISIT
+# ============================================================
+
+def finalize_follow_up_for_examination(examination_id):
+    """Finalize only the appointment explicitly linked to this examination.
+
+    Safe for ordinary examinations (returns skipped). Idempotent for already
+    completed follow-ups. A failed update is reported, not silently ignored.
+    No historical rows are changed by merely loading a page.
+    """
+    if not examination_id:
+        return {"success": False, "message": "Examination ID is required."}
+    try:
+        exam_response = (
+            admin_supabase.table("examinations")
+            .select("examination_id, patient_id, status")
+            .eq("examination_id", examination_id).limit(1).execute()
+        )
+        exams = exam_response.data or []
+        if not exams:
+            return {"success": False, "message": "Examination not found."}
+        exam = exams[0]
+        if exam.get("status") not in ("Completed", "Admitted", "Discharged"):
+            return {"success": False, "message": "Examination is not finalized."}
+        response = (
+            admin_supabase.table("follow_ups")
+            .select("follow_up_id, patient_id, status, follow_up_examination_id")
+            .eq("follow_up_examination_id", examination_id).execute()
+        )
+        matches = response.data or []
+        if not matches:
+            return {"success": True, "skipped": True,
+                    "message": "No linked follow-up appointment."}
+        if len(matches) != 1:
+            return {"success": False, "message": "Ambiguous follow-up links; manual review required."}
+        fu = matches[0]
+        if fu.get("patient_id") != exam.get("patient_id"):
+            return {"success": False, "message": "Follow-up patient mismatch."}
+        if fu.get("status") == "Completed":
+            return {"success": True, "skipped": True, "message": "Already completed."}
+        if fu.get("status") not in ("Scheduled", "Rescheduled"):
+            return {"success": False, "message": "Appointment status is not active."}
+        result = (
+            admin_supabase.table("follow_ups")
+            .update({"status": "Completed", "completed_at": utc_now(),
+                     "updated_at": utc_now()})
+            .eq("follow_up_id", fu["follow_up_id"])
+            .eq("follow_up_examination_id", examination_id)
+            .eq("status", fu["status"]).execute()
+        )
+        if not result.data:
+            return {"success": False, "message": "Appointment update did not match; refresh and retry."}
+        return {"success": True, "message": "Linked follow-up completed."}
+    except Exception as exc:
+        return {"success": False, "message": str(exc)}
+
+
+# ============================================================
 # MARK FOLLOW-UP ARRIVED (staff check-in)
 # ============================================================
 
@@ -1932,8 +1968,23 @@ def mark_follow_up_arrived(follow_up_id, staff_user_id):
         if not link.get("success"):
             return {
                 "success": False,
-                "message": link.get("message", "Failed to link examination."),
+                "message": (
+                    link.get("message", "Failed to link examination.")
+                    + " An examination may have been created; contact an administrator before retrying."
+                ),
             }
+
+        # The new nullable columns were added by the database migration.
+        # Record the actual arrival event without altering appointment status.
+        checkin_result = (
+            admin_supabase.table("follow_ups")
+            .update({"checked_in_at": utc_now(), "checked_in_by": staff_user_id})
+            .eq("follow_up_id", follow_up_id)
+            .eq("follow_up_examination_id", exam_id)
+            .execute()
+        )
+        if not checkin_result.data:
+            return {"success": False, "message": "Examination linked, but check-in timestamp could not be saved. Contact an administrator."}
 
         return {
             "success": True,

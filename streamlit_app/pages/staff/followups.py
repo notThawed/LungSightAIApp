@@ -135,6 +135,24 @@ def is_overdue(fu):
     d = fu_date_obj(fu)
     return d is not None and d < date.today()
 
+def follow_up_progress_message(fu):
+    if not fu.get("follow_up_examination_id"):
+        return None
+    exam = fu.get("follow_up_examination") or {}
+    if isinstance(exam, list):
+        exam = exam[0] if exam else {}
+    return {
+        "Pending": "Checked in · Awaiting Physician",
+        "In Progress": "Follow-Up Examination in Progress",
+        "Awaiting X-Ray": "Awaiting X-Ray",
+        "X-Ray Ready": "Awaiting Physician X-Ray Review",
+        "Completed": "Follow-Up Examination Completed",
+        "Admitted": "Follow-Up Visit Completed · Patient Admitted",
+        "Discharged": "Follow-Up Visit Completed · Patient Discharged",
+        "Cancelled": "Examination Cancelled · Review Required",
+    }.get(exam.get("status"), "Follow-Up Examination Linked")
+
+
 # ============================================================
 # STATUS
 # ============================================================
@@ -352,8 +370,9 @@ def render_fu_card(fu, show_arrived=True):
 
         with cols[4]:
             pill(status, status_tone(status))
-            if fu.get("follow_up_examination_id"):
-                st.caption("Checked in · awaiting physician")
+            progress = follow_up_progress_message(fu)
+            if progress:
+                st.caption(progress)
 
         btn_cols = st.columns([1, 1, 1, 4, 1], vertical_alignment="center")
 
@@ -623,23 +642,26 @@ def render_fu_detail():
 
     col_arrive, col_resched, col_cancel = st.columns(3)
 
-    if col_arrive.button(
-        "Mark as Arrived",
-        key=f"staff_fu_arrive_detail_{fu.get('follow_up_id')}",
-        icon=":material/check_circle:",
-        type="primary",
-        use_container_width=True,
-        disabled=status not in ACTIVE_STATUSES,
-    ):
-        st.session_state["staff_fu_arrival_target"] = fu
-        st.rerun()
+    if status in ACTIVE_STATUSES and not fu.get("follow_up_examination_id"):
+        if col_arrive.button(
+            "Mark as Arrived",
+            key=f"staff_fu_arrive_detail_{fu.get('follow_up_id')}",
+            icon=":material/check_circle:",
+            type="primary",
+            use_container_width=True,
+        ):
+            st.session_state["staff_fu_arrival_target"] = fu
+            st.rerun()
+    elif fu.get("follow_up_examination_id"):
+        with col_arrive:
+            st.caption(follow_up_progress_message(fu) or "Patient Checked In")
 
     if col_resched.button(
         "Reschedule",
         key=f"staff_fu_resched_{fu.get('follow_up_id')}",
         icon=":material/event_repeat:",
         use_container_width=True,
-        disabled=status not in ACTIVE_STATUSES,
+        disabled=(status not in ACTIVE_STATUSES or bool(fu.get("follow_up_examination_id"))),
     ):
         st.session_state["staff_fu_reschedule_target"] = fu
         st.rerun()
@@ -649,7 +671,7 @@ def render_fu_detail():
         key=f"staff_fu_cancel_{fu.get('follow_up_id')}",
         icon=":material/cancel:",
         use_container_width=True,
-        disabled=status not in ACTIVE_STATUSES,
+        disabled=(status not in ACTIVE_STATUSES or bool(fu.get("follow_up_examination_id"))),
     ):
         st.session_state["staff_fu_cancel_target"] = fu
         st.rerun()

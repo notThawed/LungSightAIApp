@@ -273,15 +273,25 @@ def show_discharge_dialog(patient, admission, review):
                     active = [f for f in existing if f.get("status") not in ("Cancelled", "canceled")]
                     
                     if not active:
-                        create_follow_up(
+                        created_fu = create_follow_up(
                             patient_id=patient["patient_id"],
                             examination_id=exam_id,
                             follow_up_date=fu_date,
-                            follow_up_time=fu_time_str, # <-- PASSING THE TIME HERE
-                            notes=f"Post-discharge follow-up. Confirm requirements with the treating physician.",
+                            follow_up_time=fu_time_str,
+                            notes="Post-discharge follow-up. Confirm requirements with the treating physician.",
                             created_by=current_user_id(),
                         )
-                    admin_supabase.table("examinations").update({"post_discharge_followup_status": "Scheduled"}).eq("examination_id", exam_id).execute()
+                        if not created_fu.get("success"):
+                            raise RuntimeError(created_fu.get("message", "Follow-up creation failed."))
+                    else:
+                        # A non-cancelled appointment already exists for this admission.
+                        # Do not create a duplicate.
+                        pass
+                    scheduled = admin_supabase.table("examinations").update(
+                        {"post_discharge_followup_status": "Scheduled"}
+                    ).eq("examination_id", exam_id).execute()
+                    if not scheduled.data:
+                        raise RuntimeError("Follow-up exists, but scheduling status was not saved.")
                 except Exception as e:
                     st.warning(f"Discharge saved, but follow-up failed: {e}")
             

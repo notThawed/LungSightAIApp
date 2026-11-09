@@ -52,6 +52,8 @@ from streamlit_app.components.ui import (
     show_flash_message,
 )
 
+from backend.backend_utils.followup_utils import finalize_follow_up_for_examination
+
 from shared.assets import load_css
 
 
@@ -990,6 +992,12 @@ def show_complete_exam_dialog(patient, examination):
                     disposition_notes.strip() if disposition_notes else None
                 ),
             )
+
+            follow_up_result = finalize_follow_up_for_examination(examination_id)
+            if not follow_up_result.get("success"):
+                st.error("Examination saved, but linked follow-up could not be completed: "
+                         + follow_up_result.get("message", "Unknown error"))
+                return
 
             clear_dialog_state()
             remember("Examination completed successfully.")

@@ -45,7 +45,7 @@ def backfill():
     )
 
     for row in missing_code:
-        code = generate_follow_up_code()
+        code = generate_follow_up_code(row["patient_id"])
         if code:
             admin_supabase.table("follow_ups").update(
                 {"follow_up_code": code}

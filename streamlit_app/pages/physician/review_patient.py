@@ -65,6 +65,8 @@ from streamlit_app.components.xray_comparison import (
     show_xray_comparison,
 )
 
+from backend.backend_utils.followup_utils import finalize_follow_up_for_examination
+
 from shared.assets import load_css
 
 
@@ -1529,6 +1531,12 @@ def render_report_actions(
                     doctor_notes=training_values.get("notes"),
                     confirmed_by=user_id,
                 )
+
+        follow_up_result = finalize_follow_up_for_examination(exam_id)
+        if not follow_up_result.get("success"):
+            st.error("Review saved, but linked follow-up could not be completed: "
+                     + follow_up_result.get("message", "Unknown error"))
+            return
 
         clear_review_state()
         remember("X-Ray reviewed successfully. Examination completed.")
