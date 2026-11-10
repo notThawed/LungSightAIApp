@@ -1,7 +1,10 @@
 
-import streamlit as st
+# streamlit_app/components/xray_comparison.py
+
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
+import streamlit as st
 
 from backend.fetches import (
     get_patient_xray_history,
@@ -13,9 +16,13 @@ from backend.fetches import (
 MANILA_TZ = ZoneInfo("Asia/Manila")
 
 
-def format_xray_date(value):
+# ============================================================
+# FORMATTING HELPERS
+# ============================================================
+
+def format_xray_date(value, include_time=False):
     if not value:
-        return "Unknown date"
+        return "Not recorded"
 
     try:
         dt = datetime.fromisoformat(
@@ -25,21 +32,81 @@ def format_xray_date(value):
         if dt.tzinfo is not None:
             dt = dt.astimezone(MANILA_TZ)
 
-        return dt.strftime("%B %d, %Y")
+        fmt = (
+            "%B %d, %Y at %I:%M %p"
+            if include_time
+            else "%B %d, %Y"
+        )
+
+        return dt.strftime(fmt)
+
     except (ValueError, TypeError):
         return str(value)
 
 
+def display_value(value):
+    if value is None:
+        return "Not recorded"
+
+    text = str(value).strip()
+    return text if text else "Not recorded"
+
+
+def format_exam_type(record):
+    exam_type = display_value(
+        record.get("examination_type")
+    )
+
+    sequence = record.get("follow_up_sequence")
+
+    normalized = exam_type.lower().replace(
+        "-", " "
+    ).replace("_", " ")
+
+    if "follow up" in normalized or "followup" in normalized:
+        if sequence is not None:
+            try:
+                return (
+                    "Follow-Up Examination "
+                    f"{int(sequence):03d}"
+                )
+            except (ValueError, TypeError):
+                pass
+
+        return "Follow-Up Examination"
+
+    return exam_type
+
+
 def get_xray_label(record):
-    date_label = format_xray_date(
+    exam_date = format_xray_date(
         record.get("examination_date")
         or record.get("created_at")
     )
 
-    exam_type = record.get("examination_type") or "Examination"
-    exam_id = str(record.get("examination_id") or "")
+    exam_type = format_exam_type(record)
 
-    return f"{date_label} | {exam_type} | {exam_id[:8]}"
+    exam_id = str(
+        record.get("examination_id") or ""
+    )[:8]
+
+    return f"{exam_date} | {exam_type} | {exam_id}"
+
+
+def confidence_percent(value):
+    if value is None:
+        return "Not recorded"
+
+    try:
+        number = float(value)
+
+        if 0 <= number <= 1:
+            number *= 100
+
+        return f"{number:.1f}%"
+
+    except (ValueError, TypeError):
+        return "Not recorded"
 
 
 def get_prediction_label(ai):
@@ -58,17 +125,94 @@ def get_prediction_label(ai):
             if findings.get(key):
                 return str(findings[key])
 
-    if isinstance(findings, str) and findings.strip():
-        return findings
+    if findings is not None:
+        return display_value(findings).title()
 
-    if ai.get("pneumonia_type"):
-        return str(ai["pneumonia_type"])
+    return "Not recorded"
 
-    return "Result available; see examination report"
 
+def get_pneumonia_label(ai):
+    if not ai:
+        return "No AI result"
+
+    value = ai.get("pneumonia_type")
+
+    if not value:
+        return "None detected / Not classified"
+
+    return str(value).replace("_", " ").title()
+
+
+def get_ai(record):
+    # New history function already supplies the AI result.
+    ai = record.get("ai_result")
+
+    if isinstance(ai, dict) and ai:
+        return ai
+
+    # Compatibility with older history data.
+    return (
+        get_xray_ai_result(record.get("image_id"))
+        or {}
+    )
+
+
+# ============================================================
+# DISPLAY HELPERS
+# ============================================================
+
+def detail_row(label, value):
+    with st.container():
+        col_label, col_value = st.columns(
+            [1, 2],
+            gap="small",
+        )
+
+        with col_label:
+            st.caption(label)
+
+        with col_value:
+            st.write(display_value(value))
+
+
+def comparison_row(label, previous, current):
+    col_label, col_previous, col_current = (
+        st.columns([1.2, 2, 2], gap="medium")
+    )
+
+    with col_label:
+        st.markdown(f"**{label}**")
+
+    with col_previous:
+        st.write(display_value(previous))
+
+    with col_current:
+        st.write(display_value(current))
+
+
+def comparison_heading(previous, current):
+    col_label, col_previous, col_current = (
+        st.columns([1.2, 2, 2], gap="medium")
+    )
+
+    with col_label:
+        st.markdown("**Field**")
+
+    with col_previous:
+        st.markdown("**Previous Examination**")
+        st.caption(get_xray_label(previous))
+
+    with col_current:
+        st.markdown("**Current / Latest Examination**")
+        st.caption(get_xray_label(current))
+
+
+# ============================================================
+# X-RAY PANEL
+# ============================================================
 
 def render_xray_panel(record, title):
-    st.markdown(f"#### {title}")
+    st.markdown(f"### {title}")
 
     st.caption(get_xray_label(record))
 
@@ -81,27 +225,258 @@ def render_xray_panel(record, title):
     else:
         st.warning("Unable to load this X-ray image.")
 
-    ai = get_xray_ai_result(record.get("image_id"))
+    ai = get_ai(record)
 
     st.markdown("**AI Analysis**")
-    st.write(get_prediction_label(ai))
 
-    if ai:
-        confidence = ai.get("ai_confidence")
+    detail_row(
+        "AI Findings",
+        get_prediction_label(ai),
+    )
 
-        if confidence is not None:
-            try:
-                value = float(confidence)
+    detail_row(
+        "Pneumonia Classification",
+        get_pneumonia_label(ai),
+    )
 
-                if 0 <= value <= 1:
-                    value *= 100
+    detail_row(
+        "AI Confidence",
+        confidence_percent(
+            ai.get("ai_confidence")
+        ),
+    )
 
-                st.caption(f"Confidence: {value:.1f}%")
-            except (ValueError, TypeError):
-                pass
+    detail_row(
+        "Classification Confidence",
+        confidence_percent(
+            ai.get("classification_confidence")
+        ),
+    )
+
+    with st.expander("Image and examination identifiers"):
+        st.caption(
+            "Use these identifiers to verify that "
+            "two different X-ray records were loaded."
+        )
+
+        st.code(
+            f"Examination ID: {record.get('examination_id')}\n"
+            f"Image ID: {record.get('image_id')}\n"
+            f"Request ID: {record.get('request_id')}",
+            language="text",
+        )
 
     return ai
 
+
+# ============================================================
+# CLINICAL COMPARISON
+# ============================================================
+
+def render_clinical_comparison(previous, current):
+    st.markdown("### Clinical Comparison")
+
+    comparison_heading(previous, current)
+
+    st.divider()
+
+    comparison_row(
+        "Examination Type",
+        format_exam_type(previous),
+        format_exam_type(current),
+    )
+
+    comparison_row(
+        "Examination Status",
+        previous.get("status"),
+        current.get("status"),
+    )
+
+    comparison_row(
+        "Chief Complaint",
+        previous.get("chief_complaint"),
+        current.get("chief_complaint"),
+    )
+
+    comparison_row(
+        "History of Present Illness",
+        previous.get("history_of_present_illness"),
+        current.get("history_of_present_illness"),
+    )
+
+    comparison_row(
+        "Physical Examination",
+        previous.get("physical_examination"),
+        current.get("physical_examination"),
+    )
+
+    comparison_row(
+        "Clinical Indication",
+        previous.get("clinical_indication"),
+        current.get("clinical_indication"),
+    )
+
+    st.divider()
+
+    st.markdown("#### Physician Assessment")
+
+    comparison_row(
+        "Diagnosis",
+        previous.get("diagnosis"),
+        current.get("diagnosis"),
+    )
+
+    comparison_row(
+        "Plans / Orders",
+        previous.get("plans_orders"),
+        current.get("plans_orders"),
+    )
+
+    comparison_row(
+        "Disposition",
+        previous.get("disposition"),
+        current.get("disposition"),
+    )
+
+    comparison_row(
+        "CURB-65 Score",
+        (
+            f"{previous['curb65_score']}/5"
+            if previous.get("curb65_score") is not None
+            else None
+        ),
+        (
+            f"{current['curb65_score']}/5"
+            if current.get("curb65_score") is not None
+            else None
+        ),
+    )
+
+    comparison_row(
+        "Physician Severity",
+        previous.get("severity_status"),
+        current.get("severity_status"),
+    )
+
+
+# ============================================================
+# RADIOLOGY COMPARISON
+# ============================================================
+
+def render_radiology_comparison(
+    previous,
+    current,
+    previous_ai,
+    current_ai,
+):
+    st.markdown("### Radiology and AI Comparison")
+
+    comparison_heading(previous, current)
+
+    st.divider()
+
+    comparison_row(
+        "AI Findings",
+        get_prediction_label(previous_ai),
+        get_prediction_label(current_ai),
+    )
+
+    comparison_row(
+        "Pneumonia Classification",
+        get_pneumonia_label(previous_ai),
+        get_pneumonia_label(current_ai),
+    )
+
+    comparison_row(
+        "AI Confidence",
+        confidence_percent(
+            previous_ai.get("ai_confidence")
+        ),
+        confidence_percent(
+            current_ai.get("ai_confidence")
+        ),
+    )
+
+    comparison_row(
+        "Classification Confidence",
+        confidence_percent(
+            previous_ai.get("classification_confidence")
+        ),
+        confidence_percent(
+            current_ai.get("classification_confidence")
+        ),
+    )
+
+    comparison_row(
+        "Physician X-Ray Findings",
+        previous.get("xray_findings"),
+        current.get("xray_findings"),
+    )
+
+    comparison_row(
+        "Physician X-Ray Impression",
+        previous.get("xray_impression"),
+        current.get("xray_impression"),
+    )
+
+
+# ============================================================
+# MEDICAL PERSONNEL
+# ============================================================
+
+def render_personnel_comparison(previous, current):
+    st.markdown("### Medical Personnel")
+
+    comparison_heading(previous, current)
+
+    st.divider()
+
+    comparison_row(
+        "Requesting Physician",
+        previous.get("requesting_physician"),
+        current.get("requesting_physician"),
+    )
+
+    comparison_row(
+        "Radiology Technologist",
+        previous.get("radiology_technologist"),
+        current.get("radiology_technologist"),
+    )
+
+    comparison_row(
+        "Reviewing Physician",
+        previous.get("reviewing_physician"),
+        current.get("reviewing_physician"),
+    )
+
+    comparison_row(
+        "X-Ray Uploaded",
+        format_xray_date(
+            previous.get("uploaded_at"),
+            include_time=True,
+        ),
+        format_xray_date(
+            current.get("uploaded_at"),
+            include_time=True,
+        ),
+    )
+
+    comparison_row(
+        "X-Ray Reviewed",
+        format_xray_date(
+            previous.get("reviewed_at"),
+            include_time=True,
+        ) if previous.get("reviewed_at") else None,
+        format_xray_date(
+            current.get("reviewed_at"),
+            include_time=True,
+        ) if current.get("reviewed_at") else None,
+    )
+
+
+# ============================================================
+# MAIN COMPARISON DIALOG
+# ============================================================
 
 @st.dialog("Compare Patient X-Rays", width="large")
 def show_xray_comparison(
@@ -111,12 +486,10 @@ def show_xray_comparison(
 ):
     """
     Review Patient:
-        current_examination_id is supplied.
-        The current examination stays fixed.
+        The current examination remains fixed.
 
     Patient Records:
-        current_examination_id is None.
-        The latest available X-ray stays fixed.
+        The latest available X-ray remains fixed.
     """
 
     if not patient_id:
@@ -124,21 +497,31 @@ def show_xray_comparison(
         return
 
     user = st.session_state.get("user") or {}
-    role_id = user.get("role_id")
 
-    if role_id not in (1, 3, 6):
-        st.error("You do not have permission to view X-rays.")
+    try:
+        role_id = int(user.get("role_id"))
+    except (TypeError, ValueError):
+        st.error("Invalid user role.")
         return
 
-    # The hospital must come from the authenticated session.
+    if role_id not in (1, 3, 6):
+        st.error(
+            "You do not have permission to view X-rays."
+        )
+        return
+
     authorized_hospital = user.get("hospital_id")
 
     if role_id != 1:
         if not authorized_hospital:
-            st.error("Your hospital assignment is missing.")
+            st.error(
+                "Your hospital assignment is missing."
+            )
             return
 
-        if str(hospital_id) != str(authorized_hospital):
+        if str(hospital_id) != str(
+            authorized_hospital
+        ):
             st.error("Access denied.")
             return
 
@@ -148,21 +531,25 @@ def show_xray_comparison(
         history = get_patient_xray_history(
             patient_id,
             hospital_id=hospital_id,
+        ) or []
+
+    except Exception as exc:
+        st.error(
+            "Unable to load the patient's X-ray history."
         )
-    except Exception:
-        st.error("Unable to load the patient's X-ray history.")
+        print(f"X-ray comparison error: {exc}")
         return
 
     if not history:
         st.info("No uploaded X-rays were found.")
         return
 
+    # Determine which examination must remain fixed.
     if current_examination_id is not None:
-        # Review Patient: fix the examination being reviewed.
         fixed = next(
             (
                 record for record in history
-                if str(record["examination_id"])
+                if str(record.get("examination_id"))
                 == str(current_examination_id)
             ),
             None,
@@ -170,88 +557,145 @@ def show_xray_comparison(
 
         if fixed is None:
             st.warning(
-                "The current examination has no available X-ray."
+                "The current examination has no "
+                "available X-ray."
             )
             return
 
         fixed_index = history.index(fixed)
 
-        # Only allow genuinely earlier examinations.
-        previous_records = history[fixed_index + 1:]
+        previous_records = history[
+            fixed_index + 1:
+        ]
 
         fixed_title = "Current X-Ray"
 
     else:
-        # Patient Records: fix the latest uploaded X-ray.
         fixed = history[0]
         previous_records = history[1:]
         fixed_title = "Latest X-Ray"
 
     if not previous_records:
         st.info(
-            "No earlier X-ray examinations are available "
-            "for comparison."
+            "No earlier X-ray examinations are "
+            "available for comparison."
         )
         return
 
-    st.markdown(
-        "Select any previous X-ray to compare with "
-        "the fixed current/latest X-ray."
+    st.write(
+        "Compare the selected previous examination "
+        "with the fixed current/latest examination."
     )
 
-    selected_id = st.selectbox(
+    # Use image IDs rather than examination IDs so
+    # each selection identifies the actual image.
+    options = [
+        str(record["image_id"])
+        for record in previous_records
+    ]
+
+    selected_image_id = st.selectbox(
         "Select Previous X-Ray",
-        options=[
-            record["examination_id"]
-            for record in previous_records
-        ],
-        format_func=lambda exam_id: get_xray_label(
+        options=options,
+        format_func=lambda image_id: get_xray_label(
             next(
                 record for record in previous_records
-                if record["examination_id"] == exam_id
+                if str(record.get("image_id"))
+                == str(image_id)
             )
         ),
         key=(
             "xray_comparison_previous_"
-            f"{patient_id}_{current_examination_id or 'latest'}"
+            f"{patient_id}_"
+            f"{current_examination_id or 'latest'}"
         ),
     )
 
     selected = next(
         record for record in previous_records
-        if record["examination_id"] == selected_id
+        if str(record.get("image_id"))
+        == str(selected_image_id)
     )
+
+    # Detect accidental same-image comparisons.
+    if str(selected.get("image_id")) == str(
+        fixed.get("image_id")
+    ):
+        st.error(
+            "The selected images have the same "
+            "image ID. Choose another record."
+        )
+        return
 
     st.divider()
 
-    previous_col, latest_col = st.columns(
+    # --------------------------------------------------------
+    # ORIGINAL X-RAYS
+    # --------------------------------------------------------
+
+    previous_col, current_col = st.columns(
         2,
         gap="medium",
     )
 
     with previous_col:
-        render_xray_panel(
+        previous_ai = render_xray_panel(
             selected,
             "Previous X-Ray",
         )
 
-    with latest_col:
-        render_xray_panel(
+    with current_col:
+        current_ai = render_xray_panel(
             fixed,
             fixed_title,
         )
 
     st.divider()
 
-    st.caption(
-        "X-rays and AI results are displayed for physician "
-        "review. Differences in predictions or confidence "
-        "do not by themselves establish clinical progression."
+    # --------------------------------------------------------
+    # EXPANDED COMPARISON
+    # --------------------------------------------------------
+
+    tabs = st.tabs([
+        "Clinical Comparison",
+        "Radiology / AI",
+        "Medical Personnel",
+    ])
+
+    with tabs[0]:
+        render_clinical_comparison(
+            selected,
+            fixed,
+        )
+
+    with tabs[1]:
+        render_radiology_comparison(
+            selected,
+            fixed,
+            previous_ai,
+            current_ai,
+        )
+
+    with tabs[2]:
+        render_personnel_comparison(
+            selected,
+            fixed,
+        )
+
+    st.divider()
+
+    st.info(
+        "AI predictions and confidence scores are "
+        "decision-support information, not proof of "
+        "clinical improvement or deterioration. "
+        "The physician should interpret the actual "
+        "radiographs together with the patient's "
+        "clinical history."
     )
 
     if st.button(
         "Close Comparison",
-        width="stretch",
         key="close_xray_comparison",
+        width="stretch",
     ):
         st.rerun()

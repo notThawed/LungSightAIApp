@@ -213,6 +213,43 @@ def admission_status_badge(exam):
         return ("Admission Decision", "amber")
     return None
 
+def get_latest_patient_record_exam(examinations):
+    """
+    Return the newest finalized General Consult or
+    Follow-Up Examination.
+
+    Excludes inpatient rounds and unfinished examinations.
+    Does not require a CURB-65 or manual severity assessment.
+    """
+
+    eligible = [
+        exam
+        for exam in (examinations or [])
+        if str(exam.get("status") or "").strip().lower()
+        in ("completed", "admitted", "discharged")
+        and not is_inpatient_round(exam)
+    ]
+
+    if not eligible:
+        return None
+
+    def exam_sort_key(exam):
+        exam_date = parse_datetime(
+            exam.get("examination_date")
+            or exam.get("created_at")
+        )
+
+        created_at = parse_datetime(
+            exam.get("created_at")
+        )
+
+        return (
+            exam_date.timestamp() if exam_date else 0,
+            created_at.timestamp() if created_at else 0,
+            str(exam.get("examination_id") or ""),
+        )
+
+    return max(eligible, key=exam_sort_key)
 
 # ============================================================
 # NAVIGATION
@@ -260,16 +297,99 @@ def load_patient_rows():
 
     if role_id == ROLE_SUPERADMIN:
         filter_hospital = None
+
     elif role_id in DOCTOR_ROLES or role_id == ROLE_HOSPITAL_ADMIN:
         filter_hospital = hospital_id
+
     else:
         return []
 
     try:
-        rows = get_completed_patients_with_latest_ai(hospital_id=filter_hospital) or []
-        return rows
+        rows = (
+            get_completed_patients_with_latest_ai(
+                hospital_id=filter_hospital
+            )
+            or []
+        )
+
+        updated_rows = []
+
+        for original_row in rows:
+            row = original_row.copy()
+
+            patient = row.get("patient") or {}
+            patient_id = patient.get("patient_id")
+
+            if not patient_id:
+                updated_rows.append(row)
+                continue
+
+            # Fetch this patient's complete examination history.
+            examinations = (
+                get_examinations_by_patient(patient_id)
+                or []
+            )
+
+            # Use the same latest-examination rule
+            # as the Patient Overview.
+            latest_exam = get_latest_patient_record_exam(
+                examinations
+            )
+
+            if latest_exam:
+                row["examination_id"] = (
+                    latest_exam.get("examination_id")
+                )
+
+                row["examination_date"] = (
+                    latest_exam.get("examination_date")
+                    or latest_exam.get("created_at")
+                )
+
+                row["examination_type"] = (
+                    display_exam_type(latest_exam)
+                )
+
+                row["curb65_score"] = (
+                    latest_exam.get("curb65_score")
+                )
+
+                row["severity_status"] = (
+                    latest_exam.get("severity_status")
+                )
+
+            else:
+                # Do not show outdated severity values
+                # from a different examination.
+                row["examination_id"] = None
+                row["examination_date"] = None
+                row["examination_type"] = None
+                row["curb65_score"] = None
+                row["severity_status"] = None
+
+            # Preserve AI findings from the original query.
+            updated_rows.append(row)
+
+        # Sort patients by their actual latest examination.
+        updated_rows.sort(
+            key=lambda row: (
+                parse_datetime(
+                    row.get("examination_date")
+                ).timestamp()
+                if parse_datetime(
+                    row.get("examination_date")
+                )
+                else 0
+            ),
+            reverse=True,
+        )
+
+        return updated_rows
+
     except Exception as error:
-        st.error(f"Failed to load patient records: {error}")
+        st.error(
+            f"Failed to load patient records: {error}"
+        )
         return []
 
 
@@ -413,7 +533,15 @@ def render_category_card(patient, category, title, icon, count):
 
 
 def render_patient_overview(patient):
-    if st.button("Back to Patient Records", key="pr_back_to_list", icon=":material/arrow_back:"):
+    # ============================================================
+    # BACK NAVIGATION
+    # ============================================================
+
+    if st.button(
+        "Back to Patient Records",
+        key="pr_back_to_list",
+        icon=":material/arrow_back:",
+    ):
         back_to_records_list()
 
     st.markdown(
@@ -424,9 +552,10 @@ def render_patient_overview(patient):
         unsafe_allow_html=True,
     )
 
-    # --------------------------------------------
-    # X-RAY COMPARISON
-    # --------------------------------------------
+    # ============================================================
+    # PATIENT AND HOSPITAL INFORMATION
+    # ============================================================
+
     patient_id = patient.get("patient_id")
     hospital_id = current_hospital_id()
 
@@ -436,10 +565,17 @@ def render_patient_overview(patient):
         else hospital_id
     )
 
+    # ============================================================
+    # X-RAY COMPARISON
+    # ============================================================
+
     try:
-        xray_history = get_patient_xray_history(
-            patient_id,
-            hospital_id=scoped_hospital_id,
+        xray_history = (
+            get_patient_xray_history(
+                patient_id,
+                hospital_id=scoped_hospital_id,
+            )
+            or []
         )
     except Exception:
         xray_history = []
@@ -457,84 +593,334 @@ def render_patient_overview(patient):
                 hospital_id=scoped_hospital_id,
             )
 
+    # ============================================================
+    # PATIENT INFORMATION
+    # ============================================================
+
     st.markdown(
         "<div class='pr-hero-card'>"
         "<p class='pr-hero-eyebrow'>Patient Information</p>"
         f"<p class='pr-hero-name'>{patient_name(patient)}</p>"
+
         "<div class='pr-hero-row'>"
-        f"<span>Patient ID</span><b>{patient_code(patient)}</b>"
+        f"<span>Patient ID</span>"
+        f"<b>{patient_code(patient)}</b>"
         "</div>"
+
         "<div class='pr-hero-row'>"
         "<span>Age / Gender</span>"
-        f"<b>{calculate_age(patient.get('date_of_birth'))} / {patient.get('sex') or '—'}</b>"
+        f"<b>{calculate_age(patient.get('date_of_birth'))} / "
+        f"{patient.get('sex') or '—'}</b>"
         "</div>"
+
         "<div class='pr-hero-row'>"
         "<span>Contact</span>"
         f"<b>{patient.get('contact_number') or '—'}</b>"
         "</div>"
+
         "</div>",
         unsafe_allow_html=True,
     )
 
-    exams = get_examinations_by_patient(patient.get("patient_id")) or []
-    latest = get_latest_severity(exams)
-    alert_level, alert_msg = get_severity_alert(exams, latest)
+    # ============================================================
+    # LATEST SEVERITY ASSESSMENT
+    # ============================================================
+    #
+    # IMPORTANT:
+    #
+    # Use the SAME examination-selection helper used by
+    # load_patient_rows().
+    #
+    # This ensures the Patient Records table and Patient
+    # Overview display information from the same examination.
+    #
+    # Eligible examinations:
+    # - Completed General Consultation
+    # - Completed Follow-Up Examination
+    # - Admitted / Discharged examinations
+    #
+    # Excluded:
+    # - Pending examinations
+    # - Inpatient rounds
+    #
+    # Do not fall back to an older examination simply
+    # because the latest examination has no severity score.
+    # ============================================================
 
-    curb_score = latest.get("curb65_score") if latest else None
-    phys_sev = latest.get("severity_status") if latest else None
+    try:
+        exams = (
+            get_examinations_by_patient(patient_id)
+            or []
+        )
+    except Exception as error:
+        st.error(
+            f"Failed to load examination history: {error}"
+        )
+        return
+
+    latest = get_latest_patient_record_exam(exams)
+
+    # ============================================================
+    # SEVERITY ALERT
+    # ============================================================
+
+    if latest:
+        alert_level, alert_msg = get_severity_alert(
+            exams,
+            latest,
+        )
+    else:
+        alert_level, alert_msg = None, None
+
+    # ============================================================
+    # LATEST EXAMINATION TYPE AND DATE
+    # ============================================================
+
+    if latest:
+        latest_exam_type = display_exam_type(latest)
+
+        latest_exam_date = format_date_only(
+            latest.get("examination_date")
+            or latest.get("created_at")
+        )
+
+        latest_exam_label = (
+            f"{latest_exam_type} · {latest_exam_date}"
+        )
+
+    else:
+        latest_exam_label = "No finalized examination"
+
+    # ============================================================
+    # CURB-65 ASSESSMENT
+    # ============================================================
+
+    curb_score = (
+        latest.get("curb65_score")
+        if latest
+        else None
+    )
+
+    try:
+        curb_score = (
+            int(curb_score)
+            if curb_score is not None
+            else None
+        )
+    except (TypeError, ValueError):
+        curb_score = None
 
     if curb_score is not None:
-        if curb_score <= 1: curb_tone, curb_label = "green", "Low Risk"
-        elif curb_score == 2: curb_tone, curb_label = "amber", "Moderate Risk"
-        else: curb_tone, curb_label = "red", "High Risk"
-        curb_pill = pill(f"Score: {curb_score} - {curb_label}", curb_tone)
-    else:
-        curb_pill = pill("Not Assessed", "slate")
 
-    if phys_sev and phys_sev != "Not Assessed":
-        if "Low" in phys_sev: phys_tone = "green"
-        elif "Moderate" in phys_sev: phys_tone = "amber"
-        elif "High" in phys_sev: phys_tone = "red"
-        else: phys_tone = "slate"
-        phys_pill = pill(phys_sev, phys_tone)
+        if curb_score <= 1:
+            curb_tone = "green"
+            curb_label = "Low Risk"
+
+        elif curb_score == 2:
+            curb_tone = "amber"
+            curb_label = "Moderate Risk"
+
+        else:
+            curb_tone = "red"
+            curb_label = "High Risk"
+
+        curb_pill = pill(
+            f"Score: {curb_score} - {curb_label}",
+            curb_tone,
+        )
+
     else:
-        phys_pill = pill("Not Assessed", "slate")
+        curb_pill = pill(
+            "Not Assessed",
+            "slate",
+        )
+
+    # ============================================================
+    # PHYSICIAN MANUAL SEVERITY
+    # ============================================================
+
+    phys_sev = (
+        latest.get("severity_status")
+        if latest
+        else None
+    )
+
+    phys_sev = str(phys_sev or "").strip()
+
+    if (
+        phys_sev
+        and phys_sev.lower() != "not assessed"
+    ):
+
+        normalized_severity = phys_sev.lower()
+
+        if "low" in normalized_severity:
+            phys_tone = "green"
+
+        elif "moderate" in normalized_severity:
+            phys_tone = "amber"
+
+        elif "high" in normalized_severity:
+            phys_tone = "red"
+
+        else:
+            phys_tone = "slate"
+
+        phys_pill = pill(
+            phys_sev,
+            phys_tone,
+        )
+
+    else:
+        phys_pill = pill(
+            "Not Assessed",
+            "slate",
+        )
+
+    # ============================================================
+    # SEVERITY ALERT
+    # ============================================================
 
     alert_html = ""
+
     if alert_level == "warning":
-        alert_html = f"<div style='margin-top: 1rem; padding: 0.75rem; background: #FEE2E2; color: #B91C1C; border-radius: 8px; font-size: 0.8rem; font-weight: 500;'>{alert_msg}</div>"
+        alert_html = (
+            "<div style='"
+            "margin-top:1rem;"
+            "padding:0.75rem;"
+            "background:#FEE2E2;"
+            "color:#B91C1C;"
+            "border-radius:8px;"
+            "font-size:0.8rem;"
+            "font-weight:500;"
+            "'>"
+            f"{alert_msg or ''}"
+            "</div>"
+        )
+
     elif alert_level == "info":
-        alert_html = f"<div style='margin-top: 1rem; padding: 0.75rem; background: #E8F4F6; color: #0F7C88; border-radius: 8px; font-size: 0.8rem; font-weight: 500;'>{alert_msg}</div>"
+        alert_html = (
+            "<div style='"
+            "margin-top:1rem;"
+            "padding:0.75rem;"
+            "background:#E8F4F6;"
+            "color:#0F7C88;"
+            "border-radius:8px;"
+            "font-size:0.8rem;"
+            "font-weight:500;"
+            "'>"
+            f"{alert_msg or ''}"
+            "</div>"
+        )
+
+    # ============================================================
+    # RENDER LATEST SEVERITY ASSESSMENT
+    # ============================================================
 
     st.markdown(
         "<div class='pr-hero-card'>"
-        "<p class='pr-hero-eyebrow'>Latest Severity Assessment</p>"
-        f"<p class='pr-hero-name' style='font-size:0.9rem; color:#5A6F7F; margin-bottom:0.75rem; font-weight:500;'>Based on examination: {format_date_only(latest.get('examination_date')) if latest else 'None'}</p>"
-        "<div style='display: flex; gap: 2rem; margin-top: 0.5rem;'>"
-        "<div style='flex: 1;'>"
-        "<p style='color:#0F7C88; font-weight:700; font-size:0.75rem; text-transform:uppercase; margin-bottom:0.25rem;'>CURB-65 (Calculated)</p>"
+
+        "<p class='pr-hero-eyebrow'>"
+        "Latest Severity Assessment"
+        "</p>"
+
+        "<p class='pr-hero-name' style='"
+        "font-size:0.9rem;"
+        "color:#5A6F7F;"
+        "margin-bottom:0.75rem;"
+        "font-weight:500;"
+        "'>"
+        f"Based on examination: {latest_exam_label}"
+        "</p>"
+
+        "<div style='"
+        "display:flex;"
+        "gap:2rem;"
+        "margin-top:0.5rem;"
+        "'>"
+
+        # CURB-65
+        "<div style='flex:1;'>"
+        "<p style='"
+        "color:#0F7C88;"
+        "font-weight:700;"
+        "font-size:0.75rem;"
+        "text-transform:uppercase;"
+        "margin-bottom:0.25rem;"
+        "'>"
+        "CURB-65 (Calculated)"
+        "</p>"
         f"<div>{curb_pill}</div>"
         "</div>"
-        "<div style='flex: 1;'>"
-        "<p style='color:#B45309; font-weight:700; font-size:0.75rem; text-transform:uppercase; margin-bottom:0.25rem;'>Physician Manual (Clinical)</p>"
+
+        # Physician Manual Severity
+        "<div style='flex:1;'>"
+        "<p style='"
+        "color:#B45309;"
+        "font-weight:700;"
+        "font-size:0.75rem;"
+        "text-transform:uppercase;"
+        "margin-bottom:0.25rem;"
+        "'>"
+        "Physician Manual (Clinical)"
+        "</p>"
         f"<div>{phys_pill}</div>"
         "</div>"
+
         "</div>"
+
         f"{alert_html}"
+
         "</div>",
         unsafe_allow_html=True,
     )
 
-    st.markdown("<p class='pr-section-label'>Select a category to review</p>", unsafe_allow_html=True)
+    # ============================================================
+    # PATIENT RECORD CATEGORIES
+    # ============================================================
+
+    st.markdown(
+        "<p class='pr-section-label'>"
+        "Select a category to review"
+        "</p>",
+        unsafe_allow_html=True,
+    )
 
     counts = count_category_items(patient)
-    col1, col2, col3 = st.columns(3, gap="medium")
+
+    col1, col2, col3 = st.columns(
+        3,
+        gap="medium",
+    )
+
     with col1:
-        render_category_card(patient, CATEGORY_GENERAL, "General Consults", "clinical_notes", counts[CATEGORY_GENERAL])
+        render_category_card(
+            patient,
+            CATEGORY_GENERAL,
+            "General Consults",
+            "clinical_notes",
+            counts[CATEGORY_GENERAL],
+        )
+
     with col2:
-        render_category_card(patient, CATEGORY_FOLLOWUP, "Follow-Up Examinations", "event_repeat", counts[CATEGORY_FOLLOWUP])
+        render_category_card(
+            patient,
+            CATEGORY_FOLLOWUP,
+            "Follow-Up Examinations",
+            "event_repeat",
+            counts[CATEGORY_FOLLOWUP],
+        )
+
     with col3:
-        render_category_card(patient, CATEGORY_EXTERNAL, "External Records", "folder_shared", counts[CATEGORY_EXTERNAL])
+        render_category_card(
+            patient,
+            CATEGORY_EXTERNAL,
+            "External Records",
+            "folder_shared",
+            counts[CATEGORY_EXTERNAL],
+        )
+
+
 
 
 # ============================================================

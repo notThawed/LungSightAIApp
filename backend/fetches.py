@@ -1502,17 +1502,18 @@ def get_xray_ai_result(
 
 def get_patient_xray_history(patient_id, hospital_id=None):
     """
-    Return all examinations with uploaded X-rays for one patient.
+    Return the patient's X-ray history, newest first.
 
-    The returned list is sorted newest to oldest.
+    Includes examination details, request information,
+    latest uploaded image, AI result, physician review,
+    and personnel names.
+
     Only the newest uploaded image per examination is used.
-
-    hospital_id is required for hospital-scoped users.
     """
     if not patient_id:
         return []
 
-    # Verify the patient belongs to the authorized hospital.
+    # Verify the patient is in the permitted hospital.
     patient_query = (
         admin_supabase
         .table("patients")
@@ -1521,53 +1522,185 @@ def get_patient_xray_history(patient_id, hospital_id=None):
     )
 
     if hospital_id is not None:
-        patient_query = patient_query.eq("hospital_id", hospital_id)
+        patient_query = patient_query.eq(
+            "hospital_id", hospital_id
+        )
 
-    patient_rows = patient_query.limit(1).execute().data or []
+    patient_rows = (
+        patient_query.limit(1).execute().data or []
+    )
 
     if not patient_rows:
         return []
 
-    examinations = get_examinations_by_patient(patient_id) or []
+    examinations = (
+        get_examinations_by_patient(patient_id) or []
+    )
+
     history = []
 
     for exam in examinations:
         exam_id = exam.get("examination_id")
-
         if not exam_id:
             continue
 
         request = get_xray_request_by_examination(exam_id)
-
         if not request:
             continue
 
-        images = get_xray_images_by_request(
-            request.get("request_id")
-        ) or []
+        request_id = request.get("request_id")
+        if not request_id:
+            continue
 
-        # Ignore examinations without uploaded X-rays.
+        images = (
+            get_xray_images_by_request(request_id) or []
+        )
+
         images = [
             image for image in images
-            if image.get("image_id") and image.get("image_path")
+            if image.get("image_id")
+            and image.get("image_path")
         ]
 
         if not images:
             continue
 
-        # Existing fetch function orders images by uploaded_at DESC.
         image = images[0]
 
+        ai = get_xray_ai_result(
+            image.get("image_id")
+        ) or {}
+
+        review = get_xray_review(request_id) or {}
+
         history.append({
+            # Examination identifiers
             "examination_id": exam_id,
-            "examination_date": exam.get("examination_date"),
+            "examination_date": exam.get(
+                "examination_date"
+            ),
             "created_at": exam.get("created_at"),
+            "examination_type": exam.get(
+                "examination_type"
+            ),
+            "follow_up_sequence": exam.get(
+                "follow_up_sequence"
+            ),
             "status": exam.get("status"),
-            "examination_type": exam.get("examination_type"),
+
+            # Clinical information
+            "chief_complaint": exam.get(
+                "chief_complaint"
+            ),
+            "history_of_present_illness": exam.get(
+                "history_of_present_illness"
+            ),
+            "physical_examination": exam.get(
+                "physical_examination"
+            ),
+            "diagnosis": exam.get("diagnosis"),
+            "plans_orders": exam.get("plans_orders"),
+            "disposition": exam.get("disposition"),
+            "curb65_score": exam.get("curb65_score"),
+            "severity_status": exam.get(
+                "severity_status"
+            ),
+
+            # X-ray request
+            "request_id": request_id,
+            "requested_by": request.get("requested_by"),
+            "requested_at": request.get("requested_at"),
+            "clinical_indication": request.get(
+                "clinical_indication"
+            ),
+            "body_part": request.get("body_part"),
+            "priority": request.get("priority"),
+
+            # X-ray image
             "image_id": image.get("image_id"),
             "image_path": image.get("image_path"),
             "uploaded_at": image.get("uploaded_at"),
+            "uploaded_by": image.get("uploaded_by"),
+            "quality_status": image.get(
+                "quality_status"
+            ),
+
+            # AI result
+            "ai_result": ai,
+
+            # Physician X-ray review
+            "reviewed_by": review.get("reviewed_by"),
+            "reviewed_at": review.get("reviewed_at"),
+            "xray_findings": review.get("findings"),
+            "xray_impression": review.get("impression"),
         })
+
+    # Resolve personnel names in one query.
+    user_ids = set()
+
+    for record in history:
+        for field in (
+            "requested_by",
+            "uploaded_by",
+            "reviewed_by",
+        ):
+            value = record.get(field)
+            if value:
+                user_ids.add(str(value))
+
+    personnel = {}
+
+    if user_ids:
+        try:
+            profiles = (
+                admin_supabase
+                .table("user_profiles")
+                .select(
+                    "user_id,user_fname,user_mname,user_lname"
+                )
+                .in_("user_id", list(user_ids))
+                .execute()
+                .data or []
+            )
+
+            for profile in profiles:
+                parts = [
+                    profile.get("user_fname"),
+                    profile.get("user_mname"),
+                    profile.get("user_lname"),
+                ]
+
+                name = " ".join(
+                    str(part).strip()
+                    for part in parts
+                    if part and str(part).strip()
+                )
+
+                personnel[str(profile["user_id"])] = (
+                    name or "Name not recorded"
+                )
+
+        except Exception as exc:
+            print(
+                "Unable to load X-ray comparison "
+                f"personnel: {exc}"
+            )
+
+    for record in history:
+        record["requesting_physician"] = personnel.get(
+            str(record.get("requested_by")),
+            "Not recorded",
+        )
+
+        record["radiology_technologist"] = personnel.get(
+            str(record.get("uploaded_by")),
+            "Not recorded",
+        )
+
+        record["reviewing_physician"] = personnel.get(
+            str(record.get("reviewed_by")),
+            "Not recorded",
+        )
 
     history.sort(
         key=lambda item: (

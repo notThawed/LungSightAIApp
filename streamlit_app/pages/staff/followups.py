@@ -623,40 +623,224 @@ def render_landing():
 
     hospital_id = current_hospital_id()
 
-    # Pull all follow-ups for the hospital (single query).
+    # --------------------------------------------------------
+    # LOAD FOLLOW-UPS
+    # --------------------------------------------------------
+
     try:
-        all_fus = get_hospital_follow_ups(hospital_id=hospital_id) or []
-    except Exception as e:
-        st.error(f"Failed to load follow-ups: {e}")
+        all_fus = (
+            get_hospital_follow_ups(
+                hospital_id=hospital_id
+            )
+            or []
+        )
+
+    except Exception as error:
+        st.error(
+            f"Failed to load follow-ups: {error}"
+        )
         all_fus = []
 
     render_kpi_strip(all_fus)
+
     st.divider()
 
     search, status_filter = render_filter_bar()
+
     st.divider()
 
-    filtered = apply_filters(all_fus, search, status_filter)
+    filtered = apply_filters(
+        all_fus,
+        search,
+        status_filter,
+    )
+
+    # --------------------------------------------------------
+    # GROUP BY PATIENT ID
+    # --------------------------------------------------------
+
+    grouped = {}
+
+    for fu in filtered:
+        patient = fu.get("patients") or {}
+
+        if isinstance(patient, list):
+            patient = (
+                patient[0]
+                if patient
+                else {}
+            )
+
+        patient_id = patient.get("patient_id")
+
+        if not patient_id:
+            continue
+
+        if patient_id not in grouped:
+            grouped[patient_id] = {
+                "patient": patient,
+                "appointments": [],
+            }
+
+        grouped[patient_id]["appointments"].append(fu)
+
+    groups = list(grouped.values())
+
+    # --------------------------------------------------------
+    # SORT EACH PATIENT'S APPOINTMENTS
+    # --------------------------------------------------------
+
+    def appointment_sort_key(fu):
+        status = fu.get("status") or ""
+
+        active_priority = (
+            0
+            if status in ACTIVE_STATUSES
+            else 1
+        )
+
+        scheduled_date = (
+            str(fu.get("follow_up_date") or "")
+        )
+
+        scheduled_time = (
+            str(fu.get("follow_up_time") or "")
+        )
+
+        return (
+            active_priority,
+            scheduled_date,
+            scheduled_time,
+        )
+
+    for group in groups:
+        group["appointments"].sort(
+            key=appointment_sort_key
+        )
+
+    groups.sort(
+        key=lambda group: appointment_sort_key(
+            group["appointments"][0]
+        )
+    )
+
+    total_appointments = sum(
+        len(group["appointments"])
+        for group in groups
+    )
 
     section_title(
         "Follow-Ups",
-        f"{len(filtered)} record(s) match your filters",
+        (
+            f"{len(groups)} patient(s) · "
+            f"{total_appointments} appointment(s)"
+        ),
     )
 
-    if not filtered:
-        empty_state("No follow-ups match the current filters.")
+    if not groups:
+        empty_state(
+            "No follow-ups match the current filters."
+        )
         return
 
-    # Sort: scheduled/rescheduled first by date, then by date descending.
-    def sort_key(f):
-        status_priority = 0 if f.get("status") in ACTIVE_STATUSES else 1
-        d = fu_date_obj(f) or date.max
-        return (status_priority, d)
+    # --------------------------------------------------------
+    # RENDER ONE PATIENT GROUP AT A TIME
+    # --------------------------------------------------------
 
-    filtered = sorted(filtered, key=sort_key)
+    for group in groups:
 
-    for fu in filtered:
-        render_fu_card(fu)
+        patient = group["patient"]
+        patient_id = patient.get("patient_id")
+        appointments = group["appointments"]
+
+        active_appointments = [
+            fu
+            for fu in appointments
+            if fu.get("status") in ACTIVE_STATUSES
+        ]
+
+        completed_appointments = [
+            fu
+            for fu in appointments
+            if fu.get("status") == "Completed"
+        ]
+
+        next_fu = (
+            active_appointments[0]
+            if active_appointments
+            else appointments[0]
+        )
+
+        with st.container(border=True):
+
+            col_patient, col_summary, col_action = (
+                st.columns(
+                    [2.5, 2, 1],
+                    vertical_alignment="center",
+                )
+            )
+
+            with col_patient:
+                st.markdown(
+                    f"**{patient_name(patient)}**"
+                )
+
+                st.caption(
+                    f"{patient_code(patient)} · "
+                    f"{len(appointments)} appointment(s)"
+                )
+
+            with col_summary:
+                st.markdown(
+                    f"**{format_appointment(next_fu)}**"
+                )
+
+                st.caption(
+                    f"{len(active_appointments)} active · "
+                    f"{len(completed_appointments)} completed"
+                )
+
+            with col_action:
+                st.markdown(
+                    pill(
+                        next_fu.get("status")
+                        or "Scheduled",
+                        status_tone(
+                            next_fu.get("status")
+                        ),
+                    ),
+                    unsafe_allow_html=True,
+                )
+
+            # ------------------------------------------------
+            # PATIENT'S APPOINTMENT TIMELINE
+            # ------------------------------------------------
+
+            with st.expander(
+                (
+                    f"View {len(appointments)} "
+                    "follow-up appointment(s)"
+                ),
+                expanded=False,
+            ):
+
+                st.caption(
+                    "Each appointment is managed separately. "
+                    "Arrival, consent, and examination actions "
+                    "apply only to the selected follow-up."
+                )
+
+                for index, fu in enumerate(appointments):
+
+                    if index > 0:
+                        st.divider()
+
+                    # Reuse the existing card so its
+                    # View and Arrived actions still work.
+                    render_fu_card(
+                        fu,
+                        show_arrived=True,
+                    )
 
 # ============================================================
 # DETAIL VIEW (unchanged from your current version)

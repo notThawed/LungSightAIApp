@@ -266,6 +266,123 @@ def format_follow_up_examination_name(
         f"{sequence:03d}"
     )
 
+def resolve_follow_up_chain(patient_id, examination_id):
+    """
+    Resolve the parent General Consult and the most recent
+    preceding follow-up within that consultation's chain.
+
+    Returns:
+        (parent_general_consult_id, previous_follow_up_id)
+
+    Raises ValueError when the supplied examination cannot
+    be safely associated with a General Consult.
+    """
+    if not patient_id or not examination_id:
+        raise ValueError("Patient and examination IDs are required.")
+
+    exam_response = (
+        admin_supabase.table("examinations")
+        .select("examination_id, patient_id, examination_type")
+        .eq("examination_id", examination_id)
+        .eq("patient_id", patient_id)
+        .limit(1)
+        .execute()
+    )
+
+    examinations = exam_response.data or []
+
+    if not examinations:
+        raise ValueError("The examination was not found for this patient.")
+
+    examination = examinations[0]
+    exam_type = (examination.get("examination_type") or "").strip().lower()
+
+    if exam_type in ("general consult", "general consultation"):
+        # A newly selected General Consult starts its own chain.
+        parent_id = examination_id
+
+    elif exam_type.startswith("follow-up examination"):
+        # Find the appointment whose completed examination
+        # is the examination currently being reviewed.
+        linked_response = (
+            admin_supabase.table("follow_ups")
+            .select("follow_up_id, source_examination_id")
+            .eq("patient_id", patient_id)
+            .eq("follow_up_examination_id", examination_id)
+            .limit(1)
+            .execute()
+        )
+
+        linked_rows = linked_response.data or []
+
+        if not linked_rows:
+            raise ValueError(
+                "Cannot determine the original General Consult "
+                "for this follow-up examination."
+            )
+
+        parent_id = linked_rows[0]["source_examination_id"]
+
+    else:
+        raise ValueError(
+            "Follow-ups must originate from a General Consult "
+            "or an examination in an existing follow-up chain."
+        )
+
+    # Validate the resolved parent.
+    parent_response = (
+        admin_supabase.table("examinations")
+        .select("examination_id, examination_type, patient_id")
+        .eq("examination_id", parent_id)
+        .eq("patient_id", patient_id)
+        .limit(1)
+        .execute()
+    )
+
+    parents = parent_response.data or []
+
+    if not parents:
+        raise ValueError("Parent consultation could not be verified.")
+
+    parent_type = (
+        parents[0].get("examination_type") or ""
+    ).strip().lower()
+
+    if parent_type not in ("general consult", "general consultation"):
+        raise ValueError(
+            "The resolved parent is not a General Consult. "
+            "Existing records may require chain repair."
+        )
+
+    # Find the most recent appointment in this SAME chain.
+    previous_response = (
+        admin_supabase.table("follow_ups")
+        .select(
+            "follow_up_id, follow_up_date, "
+            "follow_up_time, status, created_at"
+        )
+        .eq("patient_id", patient_id)
+        .eq("source_examination_id", parent_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    candidates = previous_response.data or []
+
+    # Exclude cancelled appointments from the chain predecessor.
+    candidates = [
+        row for row in candidates
+        if row.get("status") != "Cancelled"
+    ]
+
+    previous_id = (
+        candidates[0]["follow_up_id"]
+        if candidates else None
+    )
+
+    return parent_id, previous_id
+
+
 
 # ============================================================
 # CREATE FOLLOW-UP
@@ -280,47 +397,109 @@ def create_follow_up(
     created_by=None,
 ):
     """
-    Create a scheduled follow-up.
+    Create a scheduled follow-up appointment.
 
-    examination_id refers to the ORIGINAL examination
-    that resulted in the physician scheduling a follow-up.
+    Chain relationships:
 
-    The value is stored as:
+    source_examination_id:
+        Always references the ORIGINAL General Consult
+        that started this follow-up episode.
 
-        source_examination_id
+    previous_follow_up_id:
+        References the immediately preceding follow-up
+        appointment belonging to the SAME General Consult.
 
-    follow_up_examination_id remains NULL until the
-    patient actually returns and a new examination
-    is created for the follow-up visit.
+    follow_up_examination_id:
+        Remains NULL until the patient returns and staff
+        creates the actual Follow-Up Examination.
+
+    A new General Consult starts a separate follow-up
+    chain, even for the same patient.
     """
 
     try:
+        # ====================================================
+        # 1. VALIDATE REQUIRED INFORMATION
+        # ====================================================
+
+        if not patient_id:
+            return {
+                "success": False,
+                "message": "Patient ID is required.",
+            }
+
+        if not examination_id:
+            return {
+                "success": False,
+                "message": "Examination ID is required.",
+            }
+
+        if not follow_up_date:
+            return {
+                "success": False,
+                "message": "Follow-up date is required.",
+            }
 
         # ====================================================
-        # NORMALIZE DATE
+        # 2. NORMALIZE DATE AND TIME
         # ====================================================
 
         serialized_date = serialize_date(
             follow_up_date
         )
 
-        # ====================================================
-        # NORMALIZE TIME
-        # ====================================================
-
         serialized_time = serialize_time(
             follow_up_time
         )
 
-        follow_up_code = generate_follow_up_code(patient_id)
-        if not follow_up_code:
+        # ====================================================
+        # 3. RESOLVE FOLLOW-UP CHAIN
+        # ====================================================
+
+        # The helper identifies:
+        #
+        # parent_id:
+        #     The original General Consult.
+        #
+        # previous_id:
+        #     The most recently created follow-up appointment
+        #     under that same General Consult.
+        #
+        # If the examination is a NEW General Consult,
+        # its chain starts independently.
+
+        parent_id, previous_id = resolve_follow_up_chain(
+            patient_id=patient_id,
+            examination_id=examination_id,
+        )
+
+        if not parent_id:
             return {
                 "success": False,
-                "message": "Could not generate a Follow-Up ID.",
+                "message": (
+                    "Could not determine the original "
+                    "General Consultation."
+                ),
             }
 
         # ====================================================
-        # BUILD PAYLOAD
+        # 4. GENERATE FOLLOW-UP CODE
+        # ====================================================
+
+        follow_up_code = generate_follow_up_code(
+            patient_id
+        )
+
+        if not follow_up_code:
+            return {
+                "success": False,
+                "message": (
+                    "Could not generate a Follow-Up ID."
+                ),
+            }
+
+        # ====================================================
+        # 5. BUILD FOLLOW-UP PAYLOAD
         # ====================================================
 
         follow_up_data = {
@@ -328,8 +507,13 @@ def create_follow_up(
 
             "follow_up_code": follow_up_code,
 
-            "source_examination_id": examination_id,
+            # ORIGINAL GENERAL CONSULTATION
+            "source_examination_id": parent_id,
 
+            # PREVIOUS APPOINTMENT IN THE SAME CHAIN
+            "previous_follow_up_id": previous_id,
+
+            # SET ONLY WHEN PATIENT RETURNS
             "follow_up_examination_id": None,
 
             "follow_up_date": serialized_date,
@@ -349,7 +533,7 @@ def create_follow_up(
         }
 
         # ====================================================
-        # JSON SAFETY
+        # 6. JSON SAFETY
         # ====================================================
 
         follow_up_data = validate_json_payload(
@@ -357,13 +541,11 @@ def create_follow_up(
         )
 
         # ====================================================
-        # FINAL DATE/TIME SAFETY CHECK
+        # 7. FINAL DATE/TIME VALIDATION
         # ====================================================
 
         if not isinstance(
-            follow_up_data.get(
-                "follow_up_date"
-            ),
+            follow_up_data.get("follow_up_date"),
             (str, type(None)),
         ):
             raise TypeError(
@@ -372,9 +554,7 @@ def create_follow_up(
             )
 
         if not isinstance(
-            follow_up_data.get(
-                "follow_up_time"
-            ),
+            follow_up_data.get("follow_up_time"),
             (str, type(None)),
         ):
             raise TypeError(
@@ -383,7 +563,7 @@ def create_follow_up(
             )
 
         # ====================================================
-        # INSERT
+        # 8. INSERT FOLLOW-UP
         # ====================================================
 
         response = (
@@ -394,7 +574,6 @@ def create_follow_up(
         )
 
         if not response.data:
-
             return {
                 "success": False,
                 "message": (
@@ -402,19 +581,26 @@ def create_follow_up(
                 ),
             }
 
+        created_follow_up = response.data[0]
+
+        # ====================================================
+        # 9. SUCCESS
+        # ====================================================
+
         return {
             "success": True,
             "message": (
                 "Follow-up scheduled successfully."
             ),
-            "data": response.data[0],
+            "data": created_follow_up,
         }
 
     except Exception as exc:
-
         return {
             "success": False,
-            "message": str(exc),
+            "message": (
+                f"Failed to create follow-up: {exc}"
+            ),
         }
 
 

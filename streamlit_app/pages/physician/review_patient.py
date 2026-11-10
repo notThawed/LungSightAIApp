@@ -356,12 +356,12 @@ def followup_time_selector(label, default_time, key_prefix):
     hour_col, minute_col, period_col = st.columns([1, 1, 1])
     with hour_col:
         hour = st.selectbox(
-            "Hour", list(range(1, 13)),
+            "", list(range(1, 13)),
             index=hour_12 - 1, key=f"{key_prefix}_hour",
         )
     with minute_col:
         minute = st.selectbox(
-            "Minute", list(range(60)),
+            "", list(range(60)),
             index=default_time.minute,
             format_func=lambda n: f"{n:02d}",
             key=f"{key_prefix}_minute",

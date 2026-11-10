@@ -511,58 +511,222 @@ def _fu_exam_outcome(fu):
 
 
 def render_follow_up_history(follow_ups):
-    st.caption("Filter by scheduled Follow-Up Date, not examination date.")
+    st.caption(
+        "Browse completed, missed, and cancelled follow-ups "
+        "grouped by patient. Dates refer to scheduled appointments."
+    )
+
     left, right = st.columns(2)
+
     with left:
-        start_date = st.date_input("From Follow-Up Date", value=None,
-                                   key="pf_fu_history_from")
+        start_date = st.date_input(
+            "From Follow-Up Date",
+            value=None,
+            key="pf_fu_history_from",
+        )
+
     with right:
-        end_date = st.date_input("To Follow-Up Date", value=None,
-                                 key="pf_fu_history_to")
-    query = st.text_input("Search history", placeholder="FU ID, patient name or patient code",
-                          key="pf_fu_history_query").strip().lower()
-    statuses = st.multiselect("History statuses", ["Completed", "Missed", "Cancelled"],
-                              default=["Completed", "Missed", "Cancelled"],
-                              key="pf_fu_history_statuses")
+        end_date = st.date_input(
+            "To Follow-Up Date",
+            value=None,
+            key="pf_fu_history_to",
+        )
+
+    query = st.text_input(
+        "Search history",
+        placeholder="FU ID, patient name or patient code",
+        key="pf_fu_history_query",
+    ).strip().lower()
+
+    statuses = st.multiselect(
+        "History statuses",
+        ["Completed", "Missed", "Cancelled"],
+        default=["Completed", "Missed", "Cancelled"],
+        key="pf_fu_history_statuses",
+    )
+
     if start_date and end_date and start_date > end_date:
-        st.warning("The From date must be on or before the To date.")
+        st.warning(
+            "The From date must be on or before the To date."
+        )
         return
-    rows = []
+
+    # --------------------------------------------------------
+    # FILTER INDIVIDUAL APPOINTMENTS FIRST
+    # --------------------------------------------------------
+
+    filtered = []
+
     for fu in follow_ups:
         if fu.get("status") not in statuses:
             continue
-        scheduled = str(fu.get("follow_up_date") or "")[:10]
+
+        scheduled = str(
+            fu.get("follow_up_date") or ""
+        )[:10]
+
         if start_date and scheduled < start_date.isoformat():
             continue
+
         if end_date and scheduled > end_date.isoformat():
             continue
+
         patient = patient_of(fu)
-        searchable = " ".join((str(fu.get("follow_up_code") or ""),
-                               patient_name(patient), patient_code(patient))).lower()
+
+        searchable = " ".join([
+            str(fu.get("follow_up_code") or ""),
+            patient_name(patient),
+            patient_code(patient),
+        ]).lower()
+
         if query and query not in searchable:
             continue
-        rows.append(fu)
-    rows.sort(key=sort_key_follow_up, reverse=True)
-    st.caption(f"{len(rows)} appointment(s) in history")
-    if not rows:
-        empty_state("No follow-ups match the history filters.")
-        return
-    for fu in rows:
+
+        filtered.append(fu)
+
+    # --------------------------------------------------------
+    # GROUP MATCHING APPOINTMENTS BY PATIENT
+    # --------------------------------------------------------
+
+    grouped = {}
+
+    for fu in filtered:
         patient = patient_of(fu)
-        code = fu.get("follow_up_code") or "—"
-        outcome = _fu_exam_outcome(fu)
+        patient_id = patient.get("patient_id")
+
+        if not patient_id:
+            continue
+
+        if patient_id not in grouped:
+            grouped[patient_id] = {
+                "patient": patient,
+                "appointments": [],
+            }
+
+        grouped[patient_id]["appointments"].append(fu)
+
+    groups = list(grouped.values())
+
+    for group in groups:
+        group["appointments"].sort(
+            key=sort_key_follow_up,
+            reverse=True,
+        )
+
+    groups.sort(
+        key=lambda group: sort_key_follow_up(
+            group["appointments"][0]
+        ),
+        reverse=True,
+    )
+
+    st.caption(
+        f"{len(groups)} patient(s) · "
+        f"{sum(len(g['appointments']) for g in groups)} "
+        "matching appointment(s)"
+    )
+
+    if not groups:
+        empty_state(
+            "No follow-ups match the history filters."
+        )
+        return
+
+    # --------------------------------------------------------
+    # ONE TOP-LEVEL ROW PER PATIENT
+    # --------------------------------------------------------
+
+    for group in groups:
+        patient = group["patient"]
+        patient_id = patient.get("patient_id")
+        appointments = group["appointments"]
+
+        latest_fu = appointments[0]
+
         with st.container(border=True):
-            a, b, c, d, e = st.columns([2.2, 2, 2, 1.5, 1])
-            a.markdown(f"**{code}**")
-            b.write(patient_name(patient))
-            b.caption(patient_code(patient))
-            c.write(format_appointment(fu))
-            d.write(f"Appointment: {fu.get('status') or '—'}")
-            d.caption(f"Examination: {outcome}")
-            if e.button("View", key=f"pf_fu_history_view_{fu.get('follow_up_id')}",
-                        use_container_width=True):
-                st.session_state["follow_up_details_id"] = fu.get("follow_up_id")
-                st.rerun()
+            col_patient, col_latest, col_action = st.columns(
+                [2.5, 2, 1],
+                vertical_alignment="center",
+            )
+
+            with col_patient:
+                st.markdown(
+                    f"**{patient_name(patient)}**"
+                )
+                st.caption(
+                    f"{patient_code(patient)} · "
+                    f"{len(appointments)} matching visit(s)"
+                )
+
+            with col_latest:
+                st.write(
+                    format_appointment(latest_fu)
+                )
+                st.caption(
+                    "Latest matching appointment"
+                )
+
+            with col_action:
+                if st.button(
+                    "View History",
+                    key=f"pf_history_patient_{patient_id}",
+                    icon=":material/history:",
+                    width="stretch",
+                ):
+                    st.session_state.pop(
+                        "follow_up_details_id", None
+                    )
+                    go_to_patient(patient_id)
+
+            # ------------------------------------------------
+            # EXPANDABLE MATCHING APPOINTMENTS
+            # ------------------------------------------------
+
+            with st.expander(
+                f"Show {len(appointments)} appointment(s)",
+                expanded=False,
+            ):
+                for fu in appointments:
+                    fu_id = fu.get("follow_up_id")
+                    code = fu.get("follow_up_code") or "—"
+                    status = fu.get("status") or "—"
+                    outcome = _fu_exam_outcome(fu)
+
+                    with st.container(border=True):
+                        a, b, c = st.columns(
+                            [2, 2, 1],
+                            vertical_alignment="center",
+                        )
+
+                        with a:
+                            st.markdown(f"**{code}**")
+                            st.caption(
+                                format_appointment(fu)
+                            )
+
+                        with b:
+                            st.markdown(
+                                pill(
+                                    status,
+                                    status_tone(status),
+                                ),
+                                unsafe_allow_html=True,
+                            )
+                            st.caption(
+                                f"Examination: {outcome}"
+                            )
+
+                        with c:
+                            if st.button(
+                                "Details",
+                                key=f"pf_history_details_{fu_id}",
+                                icon=":material/visibility:",
+                                width="stretch",
+                            ):
+                                st.session_state[
+                                    "follow_up_details_id"
+                                ] = fu_id
+                                st.rerun()
 
 
 # ============================================================
@@ -737,36 +901,236 @@ def render_patient_followups(patient, hospital_id):
     patient_summary_card(
         patient,
         meta_rows=[
-            ("Date of Birth", format_date(patient.get("date_of_birth"))),
-            ("Sex", patient.get("sex") or "—"),
-            ("Contact", patient.get("contact_number") or "—"),
+            (
+                "Date of Birth",
+                format_date(patient.get("date_of_birth")),
+            ),
+            (
+                "Sex",
+                patient.get("sex") or "—",
+            ),
+            (
+                "Contact",
+                patient.get("contact_number") or "—",
+            ),
         ],
     )
 
-    upcoming = get_upcoming_follow_ups_by_patient(patient_id) or []
+    # --------------------------------------------------------
+    # LOAD PATIENT'S APPOINTMENTS
+    # --------------------------------------------------------
+
+    try:
+        upcoming = (
+            get_upcoming_follow_ups_by_patient(patient_id)
+            or []
+        )
+
+        history = (
+            get_follow_up_history(patient_id)
+            or []
+        )
+
+    except Exception as error:
+        st.error(
+            f"Failed to load patient follow-ups: {error}"
+        )
+        return
+
+    # Prevent duplicate appointments if a backend query
+    # happens to return the same ID in both collections.
+    seen_ids = set()
+
+    def unique_appointments(items):
+        result = []
+
+        for fu in items:
+            fu_id = fu.get("follow_up_id")
+
+            if not fu_id or fu_id in seen_ids:
+                continue
+
+            seen_ids.add(fu_id)
+            result.append(fu)
+
+        return result
+
+    upcoming = unique_appointments(upcoming)
+    history = unique_appointments(history)
+
+    upcoming.sort(key=sort_key_follow_up)
+    history.sort(
+        key=sort_key_follow_up,
+        reverse=True,
+    )
+
+    # --------------------------------------------------------
+    # SUMMARY
+    # --------------------------------------------------------
+
+    total = len(upcoming) + len(history)
+
+    completed = sum(
+        1
+        for fu in history
+        if fu.get("status") == "Completed"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Total Follow-Ups",
+        total,
+    )
+
+    col2.metric(
+        "Active Appointments",
+        len(upcoming),
+    )
+
+    col3.metric(
+        "Completed Appointments",
+        completed,
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # UPCOMING FOLLOW-UPS
+    # --------------------------------------------------------
 
     section_title(
         "Upcoming Follow-Ups",
-        caption=f"{len(upcoming)} active",
+        caption=f"{len(upcoming)} active appointment(s)",
     )
 
     if not upcoming:
-        empty_state("This patient has no upcoming follow-up visits.")
+        st.info(
+            "No upcoming follow-up appointments."
+        )
+
     else:
         for fu in upcoming:
-            render_follow_up_card(fu, patient)
+            fu_id = fu.get("follow_up_id")
+            code = fu.get("follow_up_code") or "—"
 
-    history = get_follow_up_history(patient_id) or []
+            with st.expander(
+                f"{format_appointment(fu)} · {code}",
+                expanded=False,
+            ):
+                render_follow_up_card(fu, patient)
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # COMPLETE FOLLOW-UP HISTORY
+    # --------------------------------------------------------
 
     section_title(
-        "Follow-Up History",
-        caption=f"{len(history)} record(s)",
+        "Previous Follow-Ups",
+        caption=f"{len(history)} historical appointment(s)",
+    )
+
+    st.caption(
+        "Appointments are ordered by scheduled date, "
+        "newest first. Expand any visit to review its "
+        "linked examination and available actions."
     )
 
     if not history:
-        empty_state("No previous follow-up history found for this patient.")
-    else:
-        for fu in history:
+        empty_state(
+            "No previous follow-up history found "
+            "for this patient."
+        )
+        return
+
+    for fu in history:
+        fu_id = fu.get("follow_up_id")
+        code = fu.get("follow_up_code") or "—"
+        status = fu.get("status") or "—"
+
+        linked = fu.get(
+            "follow_up_examination"
+        ) or {}
+
+        if isinstance(linked, list):
+            linked = linked[0] if linked else {}
+
+        diagnosis = (
+            linked.get("diagnosis")
+            if linked
+            else None
+        )
+
+        exam_date = (
+            linked.get("examination_date")
+            if linked
+            else None
+        )
+
+        label = (
+            f"{format_appointment(fu)} · "
+            f"{code} · {status}"
+        )
+
+        with st.expander(
+            label,
+            expanded=False,
+        ):
+            st.markdown("**Appointment Information**")
+
+            show_rows([
+                (
+                    "Follow-Up ID",
+                    code,
+                ),
+                (
+                    "Scheduled Date",
+                    format_appointment(fu),
+                ),
+                (
+                    "Appointment Status",
+                    status,
+                ),
+                (
+                    "Notes",
+                    fu.get("notes") or "—",
+                ),
+            ])
+
+            st.markdown(
+                "**Linked Examination Summary**"
+            )
+
+            if linked and linked.get("examination_id"):
+                show_rows([
+                    (
+                        "Examination Type",
+                        linked.get(
+                            "examination_type"
+                        ) or "—",
+                    ),
+                    (
+                        "Actual Examination Date",
+                        format_date_only(exam_date),
+                    ),
+                    (
+                        "Examination Status",
+                        linked.get("status") or "—",
+                    ),
+                    (
+                        "Diagnosis",
+                        diagnosis or "—",
+                    ),
+                ])
+            else:
+                st.info(
+                    "No examination is linked "
+                    "to this appointment."
+                )
+
+            st.divider()
+
             render_follow_up_card(fu, patient)
 
 

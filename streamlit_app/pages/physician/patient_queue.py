@@ -26,6 +26,11 @@ from backend.fetches import (
     get_examination_consents,
     get_examination_vitals,
     get_consent_signature_url,
+    get_xray_request_by_examination,
+    get_xray_images_by_request,
+    get_xray_image_url,
+    get_xray_ai_result,
+    get_xray_ai_heatmap,
 )
 
 from backend.crud import (
@@ -351,95 +356,660 @@ def show_patient_history_dialog(patient):
 
     patient_id = patient.get("patient_id")
 
+    def display_field(label, value):
+        """Display a clinical field without hiding empty values."""
+        st.markdown(f"**{label}**")
+        st.write(
+            str(value)
+            if value is not None and str(value).strip()
+            else "Not recorded"
+        )
+
+    def display_ai_percent(value):
+        if value is None:
+            return "Not recorded"
+
+        try:
+            number = float(value)
+            if number <= 1:
+                number *= 100
+            return f"{number:.1f}%"
+        except (TypeError, ValueError):
+            return "Not recorded"
+
+    def display_exam_type(examination):
+        exam_type = (
+            examination.get("examination_type")
+            or "Examination"
+        )
+
+        normalized = (
+            str(exam_type)
+            .lower()
+            .replace("-", " ")
+            .replace("_", " ")
+        )
+
+        sequence = examination.get("follow_up_sequence")
+
+        if "follow up" in normalized or "followup" in normalized:
+            if sequence is not None:
+                try:
+                    return (
+                        f"Follow-Up Examination "
+                        f"{int(sequence):03d}"
+                    )
+                except (TypeError, ValueError):
+                    pass
+
+            return "Follow-Up Examination"
+
+        return exam_type
+
     with st.container(key=DIALOG_KEY):
 
+        # ====================================================
+        # PATIENT INFORMATION
+        # ====================================================
+
         section_title("Patient Information")
+
         show_rows([
             ("Patient", patient_name(patient)),
             ("Patient ID", patient_code(patient)),
-            ("Date of Birth", format_date(patient.get("date_of_birth"))),
+            (
+                "Date of Birth",
+                format_date(patient.get("date_of_birth")),
+            ),
             ("Sex", patient.get("sex") or "—"),
         ])
 
         st.divider()
+
+        # ====================================================
+        # EXAMINATION HISTORY
+        # ====================================================
+
         section_title("Examination History")
 
         try:
-            examinations = get_examinations_by_patient(patient_id)
+            examinations = (
+                get_examinations_by_patient(patient_id)
+                or []
+            )
         except Exception as error:
             examinations = []
-            st.error(f"Failed to load examination history: {error}")
+            st.error(
+                f"Failed to load examination history: {error}"
+            )
 
-        completed = [
-            e for e in examinations
-            if e.get("status") in ("Completed", "Cancelled")
+        eligible_statuses = {
+            "Completed",
+            "Admitted",
+            "Discharged",
+        }
+
+        previous_examinations = [
+            examination
+            for examination in examinations
+            if examination.get("status") in eligible_statuses
+            and str(
+                examination.get("examination_type") or ""
+            ).strip().lower() != "inpatient round"
         ]
 
-        if not completed:
-            empty_state("No previous examinations found.")
+        previous_examinations.sort(
+            key=lambda examination: (
+                str(
+                    examination.get("examination_date")
+                    or examination.get("created_at")
+                    or ""
+                ),
+                str(examination.get("created_at") or ""),
+            ),
+            reverse=True,
+        )
+
+        if not previous_examinations:
+            empty_state(
+                "No previous finalized examinations found."
+            )
+
         else:
-            for examination in sorted(
-                completed,
-                key=lambda item: examination_datetime(item) or "",
-                reverse=True,
+            st.caption(
+                f"{len(previous_examinations)} examination(s) "
+                "found. Expand an examination to view its "
+                "complete clinical and X-ray records."
+            )
+
+            for index, examination in enumerate(
+                previous_examinations
             ):
-                status = examination.get("status") or "Unknown"
-                tone = "green" if status == "Completed" else "red"
 
-                st.markdown(
-                    f"**{examination.get('examination_type') or 'Examination'}**"
-                )
-                st.caption(format_datetime(examination_datetime(examination)))
-                st.markdown(
-                    f"Status: {pill(status, tone)}",
-                    unsafe_allow_html=True,
+                exam_id = examination.get("examination_id")
+                exam_type = display_exam_type(examination)
+
+                exam_date = (
+                    examination.get("examination_date")
+                    or examination.get("created_at")
                 )
 
-                if examination.get("diagnosis"):
-                    st.caption(f"Diagnosis: {examination.get('diagnosis')}")
-                if examination.get("chief_complaint"):
-                    st.caption(f"Chief Complaint: {examination.get('chief_complaint')}")
-                if examination.get("disposition"):
-                    st.caption(f"Disposition: {examination.get('disposition')}")
+                status = (
+                    examination.get("status")
+                    or "Unknown"
+                )
 
-                st.divider()
+                date_label = format_datetime(exam_date)
 
-        section_title("Previous Medical / External Records")
+                expander_title = (
+                    f"{exam_type} | {date_label} | {status}"
+                )
+
+                with st.expander(
+                    expander_title,
+                    expanded=(index == 0),
+                ):
+
+                    # ========================================
+                    # EXAMINATION DETAILS
+                    # ========================================
+
+                    st.markdown("#### Examination Details")
+
+                    show_rows([
+                        ("Examination Type", exam_type),
+                        ("Date & Time", date_label),
+                        ("Status", status),
+                        (
+                            "Follow-Up Number",
+                            (
+                                f"{int(examination['follow_up_sequence']):03d}"
+                                if str(
+                                    examination.get(
+                                        "follow_up_sequence"
+                                    ) or ""
+                                ).isdigit()
+                                else "Not applicable"
+                            ),
+                        ),
+                    ])
+
+                    st.divider()
+
+                    # ========================================
+                    # CLINICAL NOTES
+                    # ========================================
+
+                    st.markdown("#### Clinical Notes")
+
+                    display_field(
+                        "Chief Complaint",
+                        examination.get("chief_complaint"),
+                    )
+
+                    display_field(
+                        "History of Present Illness",
+                        examination.get(
+                            "history_of_present_illness"
+                        ),
+                    )
+
+                    display_field(
+                        "Physical Examination",
+                        examination.get(
+                            "physical_examination"
+                        ),
+                    )
+
+                    st.divider()
+
+                    # ========================================
+                    # DIAGNOSIS AND MANAGEMENT
+                    # ========================================
+
+                    st.markdown(
+                        "#### Diagnosis and Management"
+                    )
+
+                    display_field(
+                        "Diagnosis / Assessment",
+                        examination.get("diagnosis"),
+                    )
+
+                    display_field(
+                        "Plans / Orders",
+                        examination.get("plans_orders"),
+                    )
+
+                    display_field(
+                        "Disposition",
+                        examination.get("disposition"),
+                    )
+
+                    st.divider()
+
+                    # ========================================
+                    # SEVERITY ASSESSMENT
+                    # ========================================
+
+                    st.markdown("#### Severity Assessment")
+
+                    curb_score = examination.get(
+                        "curb65_score"
+                    )
+
+                    if curb_score is not None:
+                        try:
+                            score = int(curb_score)
+
+                            if score <= 1:
+                                risk_label = "Low Risk"
+                            elif score == 2:
+                                risk_label = "Moderate Risk"
+                            else:
+                                risk_label = "High Risk"
+
+                            curb_text = (
+                                f"{score}/5 — {risk_label}"
+                            )
+
+                        except (ValueError, TypeError):
+                            curb_text = "Not assessed"
+                    else:
+                        curb_text = "Not assessed"
+
+                    show_rows([
+                        ("CURB-65", curb_text),
+                        (
+                            "Physician Manual Severity",
+                            examination.get(
+                                "severity_status"
+                            ) or "Not assessed",
+                        ),
+                    ])
+
+                    st.divider()
+
+                    # ========================================
+                    # X-RAY HISTORY
+                    # ========================================
+
+                    st.markdown("#### Chest X-Ray")
+
+                    try:
+                        request = (
+                            get_xray_request_by_examination(
+                                exam_id
+                            )
+                        )
+                    except Exception as error:
+                        request = None
+                        st.warning(
+                            f"Unable to retrieve X-ray "
+                            f"request: {error}"
+                        )
+
+                    if not request:
+                        st.info(
+                            "No X-ray request found for "
+                            "this examination."
+                        )
+
+                    else:
+                        show_rows([
+                            (
+                                "Request Status",
+                                request.get("status")
+                                or "Not recorded",
+                            ),
+                            (
+                                "Clinical Indication",
+                                request.get(
+                                    "clinical_indication"
+                                )
+                                or request.get("reason")
+                                or "Not recorded",
+                            ),
+                        ])
+
+                        try:
+                            images = (
+                                get_xray_images_by_request(
+                                    request.get("request_id")
+                                )
+                                or []
+                            )
+                        except Exception as error:
+                            images = []
+                            st.warning(
+                                f"Unable to retrieve X-ray "
+                                f"images: {error}"
+                            )
+
+                        if not images:
+                            st.info(
+                                "X-ray requested, but no "
+                                "uploaded image was found."
+                            )
+
+                        else:
+                            for image_index, xray in enumerate(
+                                images,
+                                start=1,
+                            ):
+
+                                st.markdown(
+                                    f"**X-Ray Image "
+                                    f"{image_index}**"
+                                )
+
+                                image_url = (
+                                    get_xray_image_url(
+                                        xray.get("image_path")
+                                    )
+                                )
+
+                                ai = (
+                                    get_xray_ai_result(
+                                        xray.get("image_id")
+                                    )
+                                    or {}
+                                )
+
+                                original_col, heatmap_col = (
+                                    st.columns(2)
+                                )
+
+                                with original_col:
+                                    st.markdown(
+                                        "**Original X-Ray**"
+                                    )
+
+                                    if image_url:
+                                        st.image(
+                                            image_url,
+                                            width="stretch",
+                                        )
+                                    else:
+                                        st.warning(
+                                            "Original X-ray "
+                                            "image unavailable."
+                                        )
+
+                                with heatmap_col:
+                                    st.markdown(
+                                        "**AI Heatmap Overlay**"
+                                    )
+
+                                    heatmap_bytes = None
+
+                                    if ai.get("ai_result_id"):
+                                        heatmap_bytes = (
+                                            get_xray_ai_heatmap(
+                                                ai.get(
+                                                    "ai_result_id"
+                                                )
+                                            )
+                                        )
+
+                                    if heatmap_bytes:
+                                        st.image(
+                                            heatmap_bytes,
+                                            width="stretch",
+                                        )
+                                        st.caption(
+                                            "Grad-CAM visualization "
+                                            "is an explanatory aid, "
+                                            "not a diagnosis."
+                                        )
+                                    else:
+                                        st.info(
+                                            "No saved AI heatmap "
+                                            "available."
+                                        )
+
+                                # ============================
+                                # AI ANALYSIS
+                                # ============================
+
+                                st.markdown(
+                                    "##### AI Analysis Result"
+                                )
+
+                                if ai:
+                                    ai_findings = (
+                                        ai.get("ai_findings")
+                                        or "Not recorded"
+                                    )
+
+                                    pneumonia_type = (
+                                        ai.get("pneumonia_type")
+                                        or "Not recorded"
+                                    )
+
+                                    pneumonia_type = (
+                                        str(pneumonia_type)
+                                        .replace("_", " ")
+                                        .title()
+                                    )
+
+                                    show_rows([
+                                        (
+                                            "AI Findings",
+                                            ai_findings,
+                                        ),
+                                        (
+                                            "Pneumonia Classification",
+                                            pneumonia_type,
+                                        ),
+                                        (
+                                            "AI Confidence",
+                                            display_ai_percent(
+                                                ai.get(
+                                                    "ai_confidence"
+                                                )
+                                            ),
+                                        ),
+                                        (
+                                            "Classification Confidence",
+                                            display_ai_percent(
+                                                ai.get(
+                                                    "classification_confidence"
+                                                )
+                                            ),
+                                        ),
+                                    ])
+
+                                    st.caption(
+                                        "AI results require "
+                                        "physician interpretation "
+                                        "and clinical correlation."
+                                    )
+
+                                else:
+                                    st.info(
+                                        "No AI analysis result "
+                                        "available for this X-ray."
+                                    )
+
+                                if image_index < len(images):
+                                    st.divider()
+
+                    st.divider()
+
+                    # ========================================
+                    # OTHER SAVED EXAMINATION FIELDS
+                    # ========================================
+                    #
+                    # Show additional populated examination
+                    # fields that were not already rendered.
+                    # This helps preserve visibility when
+                    # more clinical columns are added.
+                    # ========================================
+
+                    excluded_fields = {
+                        "examination_id",
+                        "patient_id",
+                        "hospital_id",
+                        "created_by",
+                        "updated_by",
+                        "patients",
+                        "examination_type",
+                        "examination_date",
+                        "created_at",
+                        "updated_at",
+                        "status",
+                        "follow_up_sequence",
+                        "chief_complaint",
+                        "history_of_present_illness",
+                        "physical_examination",
+                        "diagnosis",
+                        "plans_orders",
+                        "disposition",
+                        "curb65_score",
+                        "severity_status",
+                    }
+
+                    additional_fields = {
+                        key: value
+                        for key, value in examination.items()
+                        if key not in excluded_fields
+                        and value is not None
+                        and not isinstance(
+                            value,
+                            (dict, list, bytes),
+                        )
+                        and str(value).strip()
+                    }
+
+                    if additional_fields:
+                        with st.expander(
+                            "Additional Examination Information"
+                        ):
+                            for key, value in (
+                                additional_fields.items()
+                            ):
+                                label = (
+                                    key.replace("_", " ")
+                                    .title()
+                                )
+
+                                display_field(
+                                    label,
+                                    value,
+                                )
+
+        # ====================================================
+        # PREVIOUS MEDICAL / EXTERNAL RECORDS
+        # ====================================================
+
+        st.divider()
+
+        section_title(
+            "Previous Medical / External Records"
+        )
 
         try:
-            from backend.fetches import get_medical_records_by_patient
-            records = get_medical_records_by_patient(patient_id)
+            from backend.fetches import (
+                get_medical_records_by_patient,
+            )
+
+            records = (
+                get_medical_records_by_patient(
+                    patient_id
+                )
+                or []
+            )
+
         except Exception as error:
             records = []
-            st.error(f"Failed to load medical records: {error}")
+            st.error(
+                f"Failed to load medical records: {error}"
+            )
 
         if not records:
-            empty_state("No previous external medical records found.")
+            empty_state(
+                "No previous external medical records found."
+            )
+
         else:
-            for record in sorted(
-                records,
-                key=lambda item: medical_record_datetime(item) or "",
+            records.sort(
+                key=lambda record: (
+                    str(
+                        record.get("record_date")
+                        or record.get("created_at")
+                        or ""
+                    )
+                ),
                 reverse=True,
-            ):
-                st.markdown(
-                    f"**{record.get('record_type') or 'Medical Record'}**"
+            )
+
+            for index, record in enumerate(records):
+
+                record_type = (
+                    record.get("record_type")
+                    or "Medical Record"
                 )
-                st.caption(format_datetime(medical_record_datetime(record)))
-                st.markdown(f"**Facility:** {record.get('facility_name') or '—'}")
-                if record.get("diagnosis"):
-                    st.markdown(f"**Diagnosis:** {record.get('diagnosis')}")
-                if record.get("treatment"):
-                    st.markdown(f"**Treatment:** {record.get('treatment')}")
-                if record.get("notes"):
-                    st.markdown(f"**Notes:** {record.get('notes')}")
-                st.divider()
+
+                record_date = (
+                    record.get("record_date")
+                    or record.get("created_at")
+                )
+
+                with st.expander(
+                    f"{record_type} | "
+                    f"{format_datetime(record_date)}",
+                    expanded=False,
+                ):
+
+                    fields = [
+                        ("Facility", "facility_name"),
+                        ("Department", "department"),
+                        (
+                            "Attending Physician",
+                            "attending_physician",
+                        ),
+                        (
+                            "Chief Complaint",
+                            "chief_complaint",
+                        ),
+                        (
+                            "Clinical History",
+                            "clinical_history",
+                        ),
+                        ("Diagnosis", "diagnosis"),
+                        (
+                            "Procedure",
+                            "procedure_name",
+                        ),
+                        ("Findings", "findings"),
+                        ("Impression", "impression"),
+                        ("Treatment", "treatment"),
+                        ("Follow-Up", "follow_up"),
+                        ("Notes", "notes"),
+                    ]
+
+                    for label, field in fields:
+                        display_field(
+                            label,
+                            record.get(field),
+                        )
+
+        # ====================================================
+        # CLOSE DIALOG
+        # ====================================================
+
+        st.divider()
 
         if st.button(
             "Close",
             key="pq_history_close",
             width="stretch",
         ):
-            st.session_state.pop("history_patient", None)
+            st.session_state.pop(
+                "history_patient",
+                None,
+            )
             st.rerun()
 
 
