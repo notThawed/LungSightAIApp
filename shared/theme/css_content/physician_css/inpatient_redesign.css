@@ -1,0 +1,8 @@
+/* LungSightAI inpatient workspace: additive styles */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.ip-workspace-marker) {border-radius:18px}
+.ip-workspace-marker{display:none}
+.ip-workspace-banner{padding:18px 22px;border:1px solid #dbe7f3;border-radius:16px;background:linear-gradient(110deg,#eef5ff,#f9fcff);margin:6px 0 20px}
+.ip-workspace-banner h3{margin:0;color:#133b67;font-size:1.22rem;font-weight:750}
+.ip-workspace-banner p{margin:5px 0 0;color:#52718d;font-size:.88rem}
+.ip-review-pending{background:#fff5df;border:1px solid #f3d79c;border-radius:10px;padding:12px 16px;color:#76541b;margin:10px 0}
+.ip-review-resolved{background:#eaf7f1;border:1px solid #bfe2d1;border-radius:10px;padding:12px 16px;color:#21634a;margin:10px 0}

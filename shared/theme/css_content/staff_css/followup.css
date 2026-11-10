@@ -780,6 +780,47 @@ div[data-testid="stMainBlockContainer"],
     transform: translateY(-2px) !important;
     box-shadow: var(--sf-shadow-sm) !important;
 }
+/* ============================================================
+   FOLLOW-UP DETAILS — CLINICAL NOTES
+   ============================================================ */
+
+.sf-clinical-notes-section {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #e2eaf0;
+}
+
+.sf-clinical-notes-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+
+    color: #38576c;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.sf-clinical-notes-label .material-symbols-rounded {
+    font-size: 18px;
+    color: #087e8b;
+}
+
+.sf-clinical-notes-content {
+    padding: 14px 16px;
+    border: 1px solid #e3edf1;
+    border-radius: 10px;
+    background: #f7fafc;
+
+    color: #243b53;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.8;
+
+    text-align: left;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
 
 /* ---------------------------------------------------------
    DIALOG MODALS

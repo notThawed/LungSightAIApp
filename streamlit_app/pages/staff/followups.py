@@ -7,6 +7,7 @@ Landing: search + filter + active follow-ups list + KPIs
 Detail: patient + appointment + parent + previous + actions
 """
 import io
+import re
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 import streamlit as st
@@ -877,6 +878,21 @@ def show_parent_consult_dialog(exam):
         st.session_state.pop("staff_fu_parent_view", None)
         st.rerun()
 
+def clean_followup_notes(notes):
+    """Remove internal admission markers from displayed follow-up notes."""
+    text = str(notes or "")
+
+    text = re.sub(
+        r"\[post_discharge_admission:[0-9a-fA-F-]{36}\]",
+        "",
+        text,
+    )
+
+    # Remove the extra period left after the marker.
+    text = re.sub(r"\s+\.", ".", text)
+
+    return text.strip()
+
 def render_fu_detail():
 
     fu = st.session_state.get(KEY_SELECTED_FU)
@@ -958,27 +974,45 @@ def render_fu_detail():
         )
 
     with right:
+        # Clean internal tracking markers before displaying notes.
+        clinical_notes = clean_followup_notes(fu.get("notes"))
+
         st.markdown(
             "<div class='sf-card'>"
             "<div class='sf-card-header-bar'>"
             "<span class='material-symbols-rounded sf-card-icon'>calendar_month</span>"
             "<span class='sf-card-eyebrow'>Appointment Schedule</span>"
             "</div>"
+
+            # Appointment status
             "<div class='sf-card-row'>"
-            f"<span>Status</span><b>{pill(status, status_tone(status))}</b>"
+            f"<span>Status</span>"
+            f"<b>{pill(status, status_tone(status))}</b>"
             "</div>"
+
+            # Scheduled date
             "<div class='sf-card-row'>"
-            f"<span>Scheduled Date</span>"
+            "<span>Scheduled Date</span>"
             f"<b>{safe(format_date_only(fu.get('follow_up_date')))}</b>"
             "</div>"
+
+            # Scheduled time
             "<div class='sf-card-row'>"
-            f"<span>Scheduled Time</span>"
+            "<span>Scheduled Time</span>"
             f"<b>{safe(format_time(fu.get('follow_up_time')))}</b>"
             "</div>"
-            "<div class='sf-card-row'>"
-            f"<span>Clinical Notes</span>"
-            f"<b>{safe(fu.get('notes') or 'None recorded')}</b>"
+
+            # Clinical notes in their own full-width section
+            "<div class='sf-clinical-notes-section'>"
+            "<div class='sf-clinical-notes-label'>"
+            "<span class='material-symbols-rounded'>description</span>"
+            "<span>Clinical Notes</span>"
             "</div>"
+            "<div class='sf-clinical-notes-content'>"
+            f"{safe(clinical_notes or 'None recorded')}"
+            "</div>"
+            "</div>"
+
             "</div>",
             unsafe_allow_html=True,
         )

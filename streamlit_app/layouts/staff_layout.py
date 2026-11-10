@@ -1,7 +1,7 @@
 from components.sidebar import show_staff_sidebar
 from components.navbar import show_top_navbar
 
-from pages.staff import dashboard, followups
+from pages.staff import dashboard, followups, inpatient_rounds
 from pages.system_administrator import manage_patients, manage_examinations, manage_medical_records
 
 from pages.hospital_administrator import subscription_gate
@@ -29,6 +29,9 @@ def show_staff_layout():
 
     if page == "Patient Records":
         manage_medical_records.show()
+
+    if page == "Inpatient Rounds":
+        inpatient_rounds.show()
 
     if page == "Follow-Ups":
         followups.show()

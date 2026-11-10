@@ -57,7 +57,10 @@ from streamlit_app.components.ui import (
     show_flash_message,
 )
 
-from backend.backend_utils.followup_utils import finalize_follow_up_for_examination
+from backend.backend_utils.followup_utils import (
+    finalize_follow_up_for_examination,
+    create_follow_up,
+)
 
 from shared.assets import load_css
 
@@ -1458,6 +1461,71 @@ def show_complete_exam_dialog(patient, examination):
                 height=100,
                 key=f"pq_exam_{examination_id}_disposition_notes",
             )
+            # Optional appointment for BOTH General Consult and Follow-Up Examination.
+            # A follow-up does not require a Chest X-Ray request.
+            exam_type_normalized = (
+                str(examination.get("examination_type") or "")
+                .strip().lower().replace("_", " ").replace("-", " ")
+            )
+            followup_eligible = (
+                exam_type_normalized in ("general consult", "general consultation")
+                or exam_type_normalized.startswith("follow up examination")
+            )
+            schedule_follow_up = False
+            follow_up_date = None
+            follow_up_time = None
+            follow_up_notes = None
+
+            if followup_eligible:
+                st.divider()
+                section_title("Follow-Up Appointment")
+                if disposition == "Admission":
+                    st.info(
+                        "Follow-up scheduling is available after discharge. "
+                        "Complete the inpatient workflow first."
+                    )
+                else:
+                    schedule_follow_up = st.checkbox(
+                        "Schedule a follow-up appointment",
+                        value=False,
+                        key=f"pq_exam_{examination_id}_schedule_fu",
+                    )
+                    if schedule_follow_up:
+                        local_today = datetime.now(PH_TIMEZONE).date()
+                        follow_up_date = st.date_input(
+                            "Follow-Up Date *",
+                            value=local_today,
+                            min_value=local_today,
+                            key=f"pq_exam_{examination_id}_fu_date",
+                        )
+                        st.markdown("**Follow-Up Time * (Philippine Time)**")
+                        hour_col, minute_col, period_col = st.columns(3)
+                        hour = hour_col.selectbox(
+                            "", list(range(1, 13)), index=8,
+                            key=f"pq_exam_{examination_id}_fu_hour",
+                        )
+                        minute = minute_col.selectbox(
+                            "", list(range(60)), index=0,
+                            format_func=lambda n: f"{n:02d}",
+                            key=f"pq_exam_{examination_id}_fu_minute",
+                        )
+                        am_pm = period_col.selectbox(
+                            "AM / PM", ["AM", "PM"],
+                            key=f"pq_exam_{examination_id}_fu_period",
+                        )
+                        hour_24 = hour % 12 + (12 if am_pm == "PM" else 0)
+                        follow_up_time = time(hour_24, minute)
+                        follow_up_notes = st.text_area(
+                            "Follow-Up Notes",
+                            placeholder="Reason for follow-up and instructions",
+                            key=f"pq_exam_{examination_id}_fu_notes",
+                        )
+                        st.caption(
+                            "Appointment: "
+                            f"{follow_up_date.strftime('%B %d, %Y')} at "
+                            f"{follow_up_time.strftime('%I:%M %p')} (PHT)"
+                        )
+
         else:
             st.info(
                 "A Chest X-Ray request will be created for the "
@@ -1508,6 +1576,15 @@ def show_complete_exam_dialog(patient, examination):
     if order == "No Request" and not diagnosis.strip():
         st.error("Diagnosis is required.")
         return
+
+    if order == "No Request" and schedule_follow_up:
+        local_now = datetime.now(PH_TIMEZONE)
+        appointment_at = datetime.combine(
+            follow_up_date, follow_up_time, tzinfo=PH_TIMEZONE
+        )
+        if appointment_at <= local_now:
+            st.error("Follow-up date and time must be in the future (Philippine Time).")
+            return
 
     if order == "Chest X-Ray" and not clinical_indication.strip():
         st.error(
@@ -1569,8 +1646,29 @@ def show_complete_exam_dialog(patient, examination):
                          + follow_up_result.get("message", "Unknown error"))
                 return
 
+            if schedule_follow_up:
+                follow_up_created = create_follow_up(
+                    patient_id=patient.get("patient_id"),
+                    examination_id=examination_id,
+                    follow_up_date=follow_up_date,
+                    follow_up_time=follow_up_time,
+                    notes=(follow_up_notes or "").strip() or None,
+                    created_by=user_id,
+                )
+                if not follow_up_created.get("success"):
+                    st.error(
+                        "Examination was completed, but follow-up scheduling failed: "
+                        + follow_up_created.get("message", "Unknown error")
+                        + ". Please schedule the appointment from Review Patient "
+                          "or Follow-Ups; do not submit this examination again."
+                    )
+                    return
+
             clear_dialog_state()
-            remember("Examination completed successfully.")
+            remember(
+                "Examination completed and follow-up scheduled successfully."
+                if schedule_follow_up else "Examination completed successfully."
+            )
             st.rerun()
 
         update_examination(

@@ -139,6 +139,7 @@ STAFF_NAV = [
         "section": "Clinical Workflow",
         "items": [
             ("Examinations", "Examinations", "assignment"),
+            ("Inpatient Rounds", "Daily inpatient rounds", "monitor_heart"),
             ("Follow-Ups", "Follow-up appointments", "event_available"),
         ],
     },
