@@ -11,6 +11,8 @@ import re
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 import streamlit as st
+
+from streamlit_app.components.lab_requests_ui import render_follow_up_lab_documents
 from datetime import date, datetime, time as time_cls, timedelta
 from zoneinfo import ZoneInfo
 
@@ -1056,6 +1058,12 @@ def render_fu_detail():
     else:
         st.caption("No parent consultation linked.")
 
+
+    render_follow_up_lab_documents(
+        fu["follow_up_id"], current_user_id(), allow_upload=True,
+        key_prefix="staff_fu_labs",
+    )
+    st.divider()
 
     section_title("Previous Follow-Up")
 

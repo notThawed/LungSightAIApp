@@ -583,6 +583,18 @@ def create_follow_up(
 
         created_follow_up = response.data[0]
 
+        # Attach new physician laboratory requests to this exact appointment.
+        # A failure here must not return a generic creation failure: the
+        # appointment already exists and retrying could duplicate it.
+        lab_link_warning = None
+        try:
+            from backend.backend_utils.lab_request_utils import attach_pending_labs
+            attach_pending_labs(examination_id, created_follow_up["follow_up_id"])
+        except Exception as link_error:
+            lab_link_warning = (
+                f"Follow-up created, but lab requests could not be linked: {link_error}"
+            )
+
         # ====================================================
         # 9. SUCCESS
         # ====================================================
@@ -593,6 +605,7 @@ def create_follow_up(
                 "Follow-up scheduled successfully."
             ),
             "data": created_follow_up,
+            "warning": lab_link_warning,
         }
 
     except Exception as exc:

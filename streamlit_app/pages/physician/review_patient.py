@@ -13,6 +13,9 @@ Session keys:
 
 import streamlit as st
 
+from streamlit_app.components.lab_requests_ui import lab_request_selector
+from backend.backend_utils.lab_request_utils import save_requested_labs
+
 from datetime import datetime, date, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -1186,6 +1189,10 @@ def render_physician_form(examination, ai):
         key=f"review_{exam_id}_plans",
     )
 
+    lab_requests = lab_request_selector(
+        exam_id, current_user_id(), f"review_{exam_id}"
+    )
+
     st.markdown("<p class='rx-form-divider'></p>", unsafe_allow_html=True)
 
     # ==========================================
@@ -1275,6 +1282,7 @@ def render_physician_form(examination, ai):
         "impression": impression,
         "diagnosis": diagnosis,
         "plans": plans,
+        "lab_requests": lab_requests,
         "disposition": disposition,
         "disposition_notes": disposition_notes,
         "curb65_score": curb_score,
@@ -1431,6 +1439,10 @@ def render_report_actions(
         st.error("X-Ray request not found.")
         return
 
+    if form_values.get("lab_requests") is None:
+        st.error("Laboratory requests are unavailable. Please apply the SQL migration and refresh.")
+        return
+
     training_values = form_values.get("training_values")
     if not training_values or not training_values.get("label"):
         st.error("Confirmed diagnosis is required.")
@@ -1473,6 +1485,12 @@ def render_report_actions(
             image_id = imgs[0].get("image_id")
     except Exception:
         image_id = None
+
+    try:
+        save_requested_labs(exam_id, user_id, form_values["lab_requests"])
+    except Exception as lab_error:
+        st.error(f"Could not save laboratory requests: {lab_error}. The review was not finalized.")
+        return
 
     try:
         save_xray_review(

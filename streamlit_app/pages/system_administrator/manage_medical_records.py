@@ -59,6 +59,12 @@ from streamlit_app.components.ui import (
     metric_card,
 )
 
+from backend.backend_utils.lab_request_utils import (
+    get_requests_for_examination,
+    get_requests_for_follow_up,
+    signed_lab_document_url,
+)
+
 from shared.assets import load_css
 
 
@@ -1516,6 +1522,240 @@ def render_ai_summary(ai, ai_findings, pneumonia_type, ai_conf):
     )
 
 
+# ============================================================
+# LABORATORY REQUESTS & RESULTS
+# ============================================================
+
+
+def _laboratory_document_kind(document):
+    """Determine whether the uploaded result supports an inline preview."""
+
+    filename = str(document.get("original_filename") or "").lower()
+    content_type = str(document.get("content_type") or "").lower()
+
+    if content_type.startswith("image/") or filename.endswith(
+        (".png", ".jpg", ".jpeg", ".webp")
+    ):
+        return "image"
+
+    if content_type == "application/pdf" or filename.endswith(".pdf"):
+        return "pdf"
+
+    return "other"
+
+
+def _get_examination_lab_requests(exam, actor_id):
+    """Load orders for an examination and attach their follow-up documents."""
+
+    examination_id = exam.get("examination_id")
+
+    if not examination_id:
+        return []
+
+    requests = get_requests_for_examination(examination_id, actor_id) or []
+
+    # A follow-up identifier may be present on the examination itself or
+    # on individual laboratory orders, depending on the backend response.
+    examination_follow_up_id = exam.get("follow_up_id")
+    follow_up_cache = {}
+
+    for request in requests:
+        follow_up_id = (
+            request.get("follow_up_id")
+            or examination_follow_up_id
+        )
+
+        request["_resolved_follow_up_id"] = follow_up_id
+        request["_result_documents"] = request.get("documents") or []
+
+        if not follow_up_id:
+            continue
+
+        if follow_up_id not in follow_up_cache:
+            follow_up_cache[follow_up_id] = (
+                get_requests_for_follow_up(follow_up_id, actor_id) or []
+            )
+
+        request_id = str(request.get("lab_request_id"))
+
+        matching_request = next(
+            (
+                item
+                for item in follow_up_cache[follow_up_id]
+                if str(item.get("lab_request_id")) == request_id
+            ),
+            None,
+        )
+
+        if matching_request is not None:
+            request["_result_documents"] = (
+                matching_request.get("documents") or []
+            )
+
+    return requests
+
+
+@st.dialog("Laboratory Result", width="large")
+def show_examination_lab_result_dialog(request, actor_id):
+    """Preview an individual laboratory order's uploaded documents."""
+
+    test_type = request.get("test_type") or "Laboratory Test"
+    documents = request.get("_result_documents") or []
+    request_id = str(request.get("lab_request_id") or "unknown")
+
+    st.subheader(test_type)
+    st.caption("Laboratory results and supporting documents · Read only")
+
+    if not documents:
+        st.info("No laboratory result documents have been uploaded yet.")
+        return
+
+    document_options = {
+        str(document.get("document_id")): document
+        for document in documents
+        if document.get("document_id")
+    }
+
+    if not document_options:
+        st.info("No accessible laboratory documents were found.")
+        return
+
+    def _document_label(document_id):
+        document = document_options[document_id]
+        filename = document.get("original_filename") or "Laboratory Result"
+        uploaded_at = str(document.get("uploaded_at") or "")[:16]
+
+        if uploaded_at:
+            return f"{filename} — {uploaded_at.replace('T', ' ')}"
+
+        return filename
+
+    selected_document_id = st.selectbox(
+        "Choose a document",
+        options=list(document_options),
+        format_func=_document_label,
+        key=f"mmr_lab_document_{request_id}",
+    )
+
+    selected_document = document_options[selected_document_id]
+    filename = selected_document.get("original_filename") or "Laboratory Result"
+
+    try:
+        signed_url = signed_lab_document_url(
+            selected_document_id,
+            actor_id,
+        )
+    except Exception as error:
+        st.error(f"Unable to access laboratory document: {error}")
+        return
+
+    if not signed_url:
+        st.warning("The selected document is currently unavailable.")
+        return
+
+    document_kind = _laboratory_document_kind(selected_document)
+
+    st.markdown(f"**{filename}**")
+
+    if document_kind == "image":
+        st.image(
+            signed_url,
+            caption=filename,
+            use_container_width=True,
+        )
+
+    elif document_kind == "pdf":
+        from html import escape
+
+        safe_url = escape(signed_url, quote=True)
+
+        components.html(
+            f'<iframe src="{safe_url}" width="100%" height="540" '
+            'style="border:1px solid #e2e8f0; border-radius:10px;" '
+            'title="Laboratory PDF Result"></iframe>',
+            height=560,
+            scrolling=False,
+        )
+
+    else:
+        st.info("Preview is unavailable for this document type.")
+
+    st.link_button(
+        "Open Original File",
+        signed_url,
+        icon=":material/open_in_new:",
+    )
+
+
+def render_examination_lab_results(exam):
+    """Display laboratory orders associated with the selected examination."""
+
+    st.divider()
+
+    section_title(
+        "Laboratory Requests & Results",
+        "Tests ordered for this examination and their uploaded results.",
+    )
+
+    actor_id = current_user().get("user_id")
+
+    if not actor_id:
+        st.warning("Unable to identify the current user for laboratory access.")
+        return
+
+    try:
+        requests = _get_examination_lab_requests(exam, actor_id)
+    except Exception as error:
+        st.error(f"Unable to load laboratory requests: {error}")
+        return
+
+    if not requests:
+        st.caption("No laboratory requests are associated with this examination.")
+        return
+
+    for request in requests:
+        request_id = str(request.get("lab_request_id") or "unknown")
+        test_type = request.get("test_type") or "Laboratory Test"
+        documents = request.get("_result_documents") or []
+        status = request.get("status") or "Pending"
+
+        with st.container(border=True):
+            info_col, action_col = st.columns(
+                [3, 1],
+                vertical_alignment="center",
+            )
+
+            with info_col:
+                st.markdown(f"**{test_type}**")
+
+                if documents:
+                    st.caption(
+                        f"Result Uploaded · {len(documents)} document(s)"
+                    )
+                else:
+                    st.caption(f"{status} · No uploaded result")
+
+            with action_col:
+                if documents:
+                    if st.button(
+                        "View Result",
+                        icon=":material/visibility:",
+                        key=f"mmr_lab_view_{request_id}",
+                        width="stretch",
+                    ):
+                        show_examination_lab_result_dialog(
+                            request,
+                            actor_id,
+                        )
+                else:
+                    st.button(
+                        "Awaiting Result",
+                        key=f"mmr_lab_pending_{request_id}",
+                        disabled=True,
+                        width="stretch",
+                    )
+
+
 def render_examination_report(patient, exam):
     back_col, print_col, _ = st.columns([2, 2, 6], vertical_alignment="center")
 
@@ -1570,6 +1810,10 @@ def render_examination_report(patient, exam):
     with right_col:
         render_xray_analysis(exam)
         render_ai_summary(ai, ai_findings, pneumonia_type, ai_conf)
+
+    # Laboratory requests belong to this examination, regardless of whether
+    # a chest X-ray was requested or uploaded.
+    render_examination_lab_results(exam)
 
 
 # ============================================================

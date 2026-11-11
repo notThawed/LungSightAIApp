@@ -19,6 +19,8 @@ which creates the examination and completes the follow-up.
 """
 
 import streamlit as st
+
+from streamlit_app.components.lab_requests_ui import render_follow_up_lab_documents
 from backend.supabase_client import admin_supabase
 
 from datetime import date, datetime, time as time_cls
@@ -214,6 +216,12 @@ def show_follow_up_details_dialog(fu):
         )
     else:
         empty_state("No parent consultation linked to this follow-up.")
+
+    render_follow_up_lab_documents(
+        fu_id, (st.session_state.get("user") or {}).get("user_id"),
+        allow_upload=False, key_prefix="physician_fu_labs",
+    )
+    st.divider()
 
     # ---------- Previous follow-up ----------
     st.divider()

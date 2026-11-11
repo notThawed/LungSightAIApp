@@ -16,6 +16,13 @@ via mark_follow_up_arrived() — not by physicians.
 
 import streamlit as st
 
+from streamlit_app.components.lab_requests_ui import (
+    lab_request_selector,
+    render_follow_up_lab_documents,
+    show_lab_result_dialog,
+)
+from backend.backend_utils.lab_request_utils import save_requested_labs, get_follow_up_for_examination
+
 from datetime import datetime, date, time, timezone
 from zoneinfo import ZoneInfo
 
@@ -300,7 +307,75 @@ def get_vitals_value(vitals_list, field_name):
 # DIALOG STATE
 # ============================================================
 
+# ============================================================
+# LAB RESULT DIALOG NAVIGATION / DRAFT PRESERVATION
+# ============================================================
+
+LAB_PREVIEW_KEY = "pq_active_lab_preview"
+LAB_DRAFTS_KEY = "pq_exam_draft_snapshots"
+
+
+def _exam_widget_prefix(examination_id):
+    return f"pq_exam_{examination_id}_"
+
+
+def _exam_draft_key_allowed(key, examination_id):
+    """Only persist editable widget values, never button or action states."""
+    prefix = _exam_widget_prefix(examination_id)
+    if not isinstance(key, str) or not key.startswith(prefix):
+        return False
+
+    suffix = key[len(prefix):]
+    # Buttons cannot be assigned through st.session_state.
+    if suffix in {"cancel", "save"}:
+        return False
+    if suffix.startswith(("view_", "delete_", "confirm_", "yes_", "no_")):
+        return False
+    if suffix.endswith(("_cancel", "_save")):
+        return False
+    return True
+
+
+def _save_exam_draft(examination_id):
+    """Preserve only editable examination fields before switching dialogs."""
+    snapshot = {
+        key: value
+        for key, value in st.session_state.items()
+        if _exam_draft_key_allowed(key, examination_id)
+    }
+    st.session_state.setdefault(LAB_DRAFTS_KEY, {})[str(examination_id)] = snapshot
+
+
+def _restore_exam_draft(examination_id):
+    """Restore editable fields before their widgets are constructed."""
+    snapshots = st.session_state.get(LAB_DRAFTS_KEY) or {}
+    snapshot = snapshots.get(str(examination_id)) or {}
+    for key, value in snapshot.items():
+        # Filter older snapshots too, in case they contain button keys.
+        if not _exam_draft_key_allowed(key, examination_id):
+            continue
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+
+def _open_physician_lab_preview(follow_up_id, request_id, examination_id):
+    _save_exam_draft(examination_id)
+    st.session_state[LAB_PREVIEW_KEY] = {
+        "follow_up_id": str(follow_up_id),
+        "lab_request_id": str(request_id),
+        "examination_id": str(examination_id),
+    }
+    st.rerun(scope="app")
+
+
+def _back_to_examination():
+    st.session_state.pop(LAB_PREVIEW_KEY, None)
+    st.rerun(scope="app")
+
+
 def clear_dialog_state():
+    st.session_state.pop(LAB_PREVIEW_KEY, None)
+    st.session_state.pop(LAB_DRAFTS_KEY, None)
     for key in (
         "selected_examination",
         "edit_patient",
@@ -1289,6 +1364,23 @@ def show_complete_exam_dialog(patient, examination):
             ),
         ])
 
+        exam_type = str(examination.get("examination_type") or "").strip().lower().replace("-", " ")
+        if exam_type.startswith("follow up examination"):
+            try:
+                linked_fu_id = get_follow_up_for_examination(examination_id, user_id)
+                if linked_fu_id:
+                    render_follow_up_lab_documents(
+                        linked_fu_id, user_id, allow_upload=False,
+                        key_prefix=f"pq_labs_{examination_id}",
+                        on_view_result=lambda request_id: _open_physician_lab_preview(
+                            linked_fu_id, request_id, examination_id
+                        ),
+                    )
+                else:
+                    st.caption("No follow-up appointment is linked to this examination.")
+            except Exception as error:
+                st.warning(f"Could not load requested laboratory results: {error}")
+
         st.divider()
         section_title("Clinical Data")
 
@@ -1415,6 +1507,7 @@ def show_complete_exam_dialog(patient, examination):
 
         diagnosis = None
         plans = None
+        lab_requests = []
         disposition = None
         disposition_notes = None
 
@@ -1430,6 +1523,9 @@ def show_complete_exam_dialog(patient, examination):
                 value=examination.get("plans_orders") or "",
                 height=100,
                 key=f"pq_exam_{examination_id}_plans",
+            )
+            lab_requests = lab_request_selector(
+                examination_id, user_id, f"pq_exam_{examination_id}"
             )
 
             st.divider()
@@ -1577,6 +1673,10 @@ def show_complete_exam_dialog(patient, examination):
         st.error("Diagnosis is required.")
         return
 
+    if order == "No Request" and lab_requests is None:
+        st.error("Laboratory requests are unavailable. Please apply the SQL migration and refresh.")
+        return
+
     if order == "No Request" and schedule_follow_up:
         local_now = datetime.now(PH_TIMEZONE)
         appointment_at = datetime.combine(
@@ -1625,6 +1725,12 @@ def show_complete_exam_dialog(patient, examination):
             )
 
         if order == "No Request":
+            try:
+                save_requested_labs(examination_id, user_id, lab_requests)
+            except Exception as lab_error:
+                st.error(f"Could not save laboratory requests: {lab_error}. The examination was not finalized.")
+                return
+
             update_examination(
                 examination_id=examination_id,
                 status="Completed",
@@ -1931,7 +2037,20 @@ def show():
         render_xray_request_table(xray_requests, key_prefix="xray")
 
     # ----- Dialogs -----
-    if st.session_state.get("selected_examination"):
+    # Preview takes precedence: never call two @st.dialog functions in one run.
+    preview = st.session_state.get(LAB_PREVIEW_KEY)
+    if preview:
+        show_lab_result_dialog(
+            follow_up_id=preview["follow_up_id"],
+            lab_request_id=preview["lab_request_id"],
+            actor_id=current_user_id(),
+            allow_upload=False,
+            key_prefix=f"pq_labs_{preview['examination_id']}",
+            on_back=_back_to_examination,
+        )
+
+    elif st.session_state.get("selected_examination"):
+        _restore_exam_draft(st.session_state["selected_examination"]["examination_id"])
         examination = st.session_state["selected_examination"]
         patient = st.session_state.get("edit_patient")
         if patient:
