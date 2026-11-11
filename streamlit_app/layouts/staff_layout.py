@@ -1,3 +1,4 @@
+from pages import geospatial_mapping
 from components.sidebar import show_staff_sidebar
 from components.navbar import show_top_navbar
 
@@ -35,6 +36,9 @@ def show_staff_layout():
 
     if page == "Follow-Ups":
         followups.show()
+
+    elif page == "Geospatial Map":
+        geospatial_mapping.show()
 
     if page == "Profile":
         profile.show()

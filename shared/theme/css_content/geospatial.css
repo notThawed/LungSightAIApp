@@ -1,0 +1,11 @@
+/* Dedicated geospatial UI. All HTML is emitted as single-line strings. */
+.geo-hero{padding:20px 23px;border:1px solid #d7e7ed;border-radius:16px;background:linear-gradient(120deg,#f4fbfc,#fff);margin-bottom:16px}
+.geo-eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#087f91}
+.geo-title{font-size:27px;font-weight:800;letter-spacing:-.035em;color:#102a43;margin:5px 0}
+.geo-sub{color:#61758a;font-size:13px}
+.geo-kpi{border:1px solid #dae8ee;background:#fff;border-radius:14px;padding:16px 18px;min-height:110px;box-shadow:0 2px 9px rgba(15,50,70,.035)}
+.geo-kpi-label{font-size:12px;color:#64748b;font-weight:600}.geo-kpi-value{font-size:27px;font-weight:800;color:#0b3047;margin-top:8px}
+.geo-section{font-size:16px;font-weight:800;color:#13354b;margin:14px 0 10px;border-left:4px solid #0795a7;padding-left:10px}
+.geo-note{background:#eff9fb;border:1px solid #c5eaf0;border-radius:11px;padding:12px 15px;color:#28546b;font-size:12px;margin:10px 0}
+.geo-chip{font-size:12px;color:#087b8c;font-weight:800;background:#e1f7f9;border-radius:30px;padding:5px 10px;display:inline-block}
+.geo-muted{color:#738499;font-size:12px}

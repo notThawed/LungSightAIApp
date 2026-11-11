@@ -1,3 +1,4 @@
+from pages import geospatial_mapping
 from components.sidebar import show_hospital_admin_sidebar
 from components.navbar import show_top_navbar
 
@@ -50,6 +51,9 @@ def show_hospital_admin_layout():
 
     if page == "Email Notifications":
         notification_history.show()
+
+    elif page == "Geospatial Map":
+        geospatial_mapping.show()
 
     if page == "Profile":
         profile.show()

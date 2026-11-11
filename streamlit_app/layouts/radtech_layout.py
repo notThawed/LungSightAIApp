@@ -1,8 +1,9 @@
+from pages import geospatial_mapping
 import streamlit as st
 from components.sidebar import show_radtech_sidebar
 from components.navbar import show_top_navbar
 
-from pages.radtech import dashboard, analyze, geospatial, xray_queue
+from pages.radtech import dashboard, analyze, xray_queue
 from pages.system_administrator import manage_examinations, manage_patients
 
 from pages.hospital_administrator import subscription_gate
@@ -83,7 +84,7 @@ def show_radtech_layout():
         manage_examinations.show()
 
     elif page == "Geospatial Map":
-        geospatial.show()
+        geospatial_mapping.show()
 
     elif page == "X-ray Queus":
         xray_queue.show()

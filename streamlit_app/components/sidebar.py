@@ -55,6 +55,7 @@ RADTECH_NAV = [
 
 
 PHYSICIAN_NAV = [
+    {"section": "Analytics & Monitoring", "items": [("Geospatial Map", "Geospatial mapping", "public")]},
     {
         "section": "Overview",
         "items": [
@@ -75,6 +76,7 @@ PHYSICIAN_NAV = [
 
 
 ADMIN_NAV = [
+    {"section": "Analytics & Monitoring", "items": [("Geospatial Map", "Geospatial mapping", "public")]},
     {
         "section": "Overview",
         "items": [
@@ -122,6 +124,7 @@ ADMIN_NAV = [
 
 
 STAFF_NAV = [
+    {"section": "Analytics & Monitoring", "items": [("Geospatial Map", "Geospatial mapping", "public")]},
     {
         "section": "Overview",
         "items": [
@@ -147,6 +150,7 @@ STAFF_NAV = [
 
 
 HOSPITAL_ADMIN_NAV = [
+    {"section": "Analytics & Monitoring", "items": [("Geospatial Map", "Geospatial mapping", "public")]},
     {
         "section": "Overview",
         "items": [

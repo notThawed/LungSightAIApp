@@ -1,3 +1,4 @@
+from pages import geospatial_mapping
 from components.sidebar import show_admin_sidebar
 from components.navbar import show_top_navbar
 
@@ -61,6 +62,9 @@ def show_system_admin_layout():
 
     elif page == "Manage Hospitals":
         manage_hospital.show()
+
+    elif page == "Geospatial Map":
+        geospatial_mapping.show()
 
     elif page == "Profile":
         profile.show()

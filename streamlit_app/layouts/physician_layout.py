@@ -1,3 +1,4 @@
+from pages import geospatial_mapping
 import streamlit as st
 
 from components.sidebar import show_physician_sidebar
@@ -71,6 +72,9 @@ def show_physician_layout():
     elif page == "Follow-Ups":
 
         followups.show()
+
+    elif page == "Geospatial Map":
+        geospatial_mapping.show()
 
     elif page == "Profile":
 
