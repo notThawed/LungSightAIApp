@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <title>LungSight - Completing Setup</title>
+</head>
+
+<body>
+
+    <p>Completing your LungSight account setup...</p>
+
+    <script>
+        (function () {
+
+            const hash = window.location.hash;
+
+            if (!hash) {
+                window.location.replace("/");
+                return;
+            }
+
+            const params = new URLSearchParams(
+                hash.substring(1)
+            );
+
+            const accessToken =
+                params.get("access_token");
+
+            const refreshToken =
+                params.get("refresh_token");
+
+            const type =
+                params.get("type");
+
+            if (!accessToken || !refreshToken) {
+                window.location.replace("/");
+                return;
+            }
+
+            const query = new URLSearchParams();
+
+            query.set(
+                "access_token",
+                accessToken
+            );
+
+            query.set(
+                "refresh_token",
+                refreshToken
+            );
+
+            if (type) {
+                query.set(
+                    "type",
+                    type
+                );
+            }
+
+            window.location.replace(
+                "/?" + query.toString()
+            );
+
+        })();
+    </script>
+
+</body>
+</html>

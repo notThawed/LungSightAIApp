@@ -1,0 +1,578 @@
+/* ==========================================================
+   SYSTEM ADMIN - MANAGE HOSPITALS
+   shared/theme/css_content/system_admin_css/manage_hospital.css
+   Hospital directory list, interactive map pane, detail card,
+   resource progress bars, badges, contact chips, and dialogs.
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   Wide Layout & Shell
+   ---------------------------------------------------------- */
+
+.st-key-sa_page {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+div[data-testid="stMainBlockContainer"],
+.main .block-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
+}
+
+/* ----------------------------------------------------------
+   Metric Cards Spacing & Typography
+   ---------------------------------------------------------- */
+
+/* Metric card styling inherited directly from base.css */
+
+
+
+/* ----------------------------------------------------------
+   Filter Bar Container
+   ---------------------------------------------------------- */
+
+.st-key-sa_hospital_filters {
+  background: var(--sa-white);
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 1px 3px rgba(18, 40, 58, 0.03);
+}
+
+.st-key-sa_hospital_filters [data-testid="stHorizontalBlock"] {
+  align-items: center !important;
+  gap: 0.75rem !important;
+}
+
+/* ----------------------------------------------------------
+   Split View & Directory Pane
+   ---------------------------------------------------------- */
+
+.st-key-mh_hospital_list {
+  max-height: 560px;
+  overflow-y: auto;
+  padding-right: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.st-key-mh_hospital_list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.st-key-mh_hospital_list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.st-key-mh_hospital_list::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+.st-key-mh_hospital_list::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* ----------------------------------------------------------
+   Hospital List Cards
+   ---------------------------------------------------------- */
+
+[class*="st-key-mh_list_item_"] {
+  padding: 0.85rem 0.95rem 0.75rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(18, 40, 58, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+[class*="st-key-mh_list_item_"]:hover {
+  border-color: #99F6E4;
+  box-shadow: 0 4px 12px rgba(15, 124, 136, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Selected hospital list card */
+[class*="st-key-mh_list_item_"]:has([data-testid^="stBaseButton-primary"]) {
+  border-color: var(--sa-teal) !important;
+  background: linear-gradient(135deg, #F0FDF4 0%, #FFFFFF 100%) !important;
+  box-shadow: 0 4px 14px rgba(15, 124, 136, 0.12) !important;
+  border-left: 4px solid var(--sa-teal) !important;
+}
+
+.mh-list-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.55rem;
+}
+
+.mh-list-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mh-list-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sa-teal-soft);
+  color: var(--sa-teal);
+  flex-shrink: 0;
+}
+
+.mh-list-icon svg {
+  width: 17px;
+  height: 17px;
+  stroke: var(--sa-teal);
+}
+
+.mh-list-name {
+  font-family: var(--sa-font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mh-list-meta {
+  font-size: 0.77rem;
+  color: var(--sa-slate);
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+
+.mh-list-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.mh-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mh-badge-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: var(--sa-teal-soft);
+  color: var(--sa-teal-dark);
+  border: 1px solid rgba(15, 124, 136, 0.2);
+}
+
+.mh-badge-active {
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid rgba(6, 95, 70, 0.2);
+}
+
+.mh-badge-inactive {
+  background: #F1F5F9;
+  color: #64748B;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.mh-badge-verified {
+  background: #EFF6FF;
+  color: #1E40AF;
+  border: 1px solid rgba(30, 64, 175, 0.2);
+}
+
+.mh-badge-pending {
+  background: #FFFBEB;
+  color: #92400E;
+  border: 1px solid rgba(146, 64, 14, 0.2);
+}
+
+/* ----------------------------------------------------------
+   Map Pane Styling
+   ---------------------------------------------------------- */
+
+[data-testid="column"]:has([data-testid="stIFrame"]) {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 16px -2px rgba(18, 40, 58, 0.05);
+}
+
+/* ----------------------------------------------------------
+   Detail Card
+   ---------------------------------------------------------- */
+
+.st-key-mh_detail_card {
+  margin-top: 1.35rem;
+  margin-bottom: 1.5rem;
+  padding: 1.35rem 1.45rem 1.25rem;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  background: #FFFFFF;
+  box-shadow: 0 4px 20px -2px rgba(18, 40, 58, 0.05), 0 2px 6px -1px rgba(18, 40, 58, 0.02);
+}
+
+.mh-detail-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #F1F5F9;
+  margin-bottom: 1.1rem;
+}
+
+.mh-detail-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0F7C88 0%, #0B626C 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(15, 124, 136, 0.25);
+  flex-shrink: 0;
+}
+
+.mh-detail-avatar svg {
+  width: 28px;
+  height: 28px;
+  stroke: #FFFFFF;
+}
+
+.mh-detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-grow: 1;
+}
+
+.mh-detail-title {
+  font-family: var(--sa-font-display);
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  line-height: 1.2;
+}
+
+.mh-detail-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+}
+
+/* ----------------------------------------------------------
+   Contact Chips Bar
+   ---------------------------------------------------------- */
+
+.mh-contact-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 1.15rem;
+}
+
+.mh-contact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #334155;
+  transition: all 0.15s ease;
+}
+
+.mh-contact-chip:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.mh-contact-chip svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--sa-teal);
+  flex-shrink: 0;
+}
+
+/* ----------------------------------------------------------
+   Detail Panels & Progress Bars
+   ---------------------------------------------------------- */
+
+.mh-card-panel {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.mh-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--sa-ink);
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.mh-panel-head svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--sa-teal);
+}
+
+.mh-plan-name {
+  font-family: var(--sa-font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--sa-teal-dark);
+}
+
+.mh-plan-price {
+  font-size: 0.86rem;
+  color: var(--sa-slate);
+  font-weight: 500;
+}
+
+.mh-usage-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mh-usage-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.mh-usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+}
+
+.mh-usage-label {
+  color: var(--sa-slate);
+  font-weight: 500;
+}
+
+.mh-usage-val {
+  color: var(--sa-ink);
+  font-weight: 700;
+}
+
+.mh-progress-track {
+  width: 100%;
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.mh-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--sa-teal) 0%, #0B626C 100%);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.mh-progress-fill-warning {
+  background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%);
+}
+
+.mh-progress-fill-danger {
+  background: linear-gradient(90deg, #EF4444 0%, #DC2626 100%);
+}
+
+.mh-timeline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  padding: 0.2rem 0;
+}
+
+.mh-timeline-row span {
+  color: var(--sa-slate);
+}
+
+.mh-timeline-row b {
+  color: var(--sa-ink);
+}
+
+/* ----------------------------------------------------------
+   Empty Selection Callout
+   ---------------------------------------------------------- */
+
+.mh-empty-selection {
+  margin-top: 1.35rem;
+  padding: 2.25rem 1.5rem;
+  background: #FFFFFF;
+  border: 1.5px dashed #CBD5E1;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.mh-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--sa-teal-soft);
+  color: var(--sa-teal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.35rem;
+}
+
+.mh-empty-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: var(--sa-teal);
+}
+
+.mh-empty-title {
+  font-family: var(--sa-font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+}
+
+.mh-empty-desc {
+  font-size: 0.85rem;
+  color: var(--sa-slate);
+  max-width: 480px;
+  line-height: 1.4;
+}
+
+/* ----------------------------------------------------------
+   Dialog & Profile Headers
+   ---------------------------------------------------------- */
+
+.mh-dialog-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0.1rem 0 0.9rem;
+}
+
+.mh-dialog-heading h3 {
+  margin: 0;
+  font-family: var(--sa-font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+}
+
+.mh-dialog-heading p {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+}
+
+.mh-dialog-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: var(--sa-teal-soft);
+  color: var(--sa-teal);
+}
+
+.mh-dialog-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--sa-teal);
+}
+
+.mh-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--sa-mist);
+}
+
+.mh-profile-avatar {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--sa-teal-soft);
+  color: var(--sa-teal-dark);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.mh-profile-header h3 {
+  margin: 0;
+  font-family: var(--sa-font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--sa-ink);
+}
+
+.mh-profile-header p {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--sa-slate);
+}
+
+/* ----------------------------------------------------------
+   Responsive
+   ---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .st-key-mh_hospital_list {
+    max-height: 320px;
+  }
+}

@@ -1,0 +1,661 @@
+/* ============================================================
+   LUNGSIGHT HEALTHCARE - ENTERPRISE CLINICAL PORTAL
+   shared/theme/css_content/login.css
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   GOOGLE FONTS & MATERIAL SYMBOLS
+   ------------------------------------------------------------ */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,-50..200&display=swap');
+
+/* ------------------------------------------------------------
+   DESIGN TOKENS - HIGH-END MEDICAL SAAS
+   ------------------------------------------------------------ */
+:root {
+    /* Brand Clinical Teals */
+    --teal-base:          #0F7C88;
+    --teal-hover:         #1492A0;
+    --teal-dark:          #095861;
+    --teal-deep:          #05363D;
+    --teal-bright:        #23D2E5;
+    --teal-ice:           #EAF7F9;
+    --teal-glow:          rgba(15, 124, 136, 0.16);
+    --teal-glow-strong:   rgba(35, 210, 229, 0.32);
+
+    /* Radiography & Deep Slates */
+    --slate-black:        #061824;
+    --navy-ink:           #081E2C;
+    --navy-surface:       #0D283C;
+    --navy-card:          #12354E;
+    --navy-border:        #1B4769;
+    --navy-border-hover:  #2C6D9E;
+
+    /* Medical Canvas & Surfaces */
+    --film-bg:            #F5F8FA;
+    --card-surface:       #FFFFFF;
+    --card-subtle:        #F9FBFC;
+    --border-light:       #D8E4E9;
+    --border-subtle:      #EAF1F4;
+
+    /* High-Contrast Typography */
+    --text-primary:       #0A2234;
+    --text-secondary:     #4B677A;
+    --text-muted:         #7E98A8;
+    --text-white:         #FFFFFF;
+    --text-cyan:          #A8EEF9;
+    --text-on-dark-dim:   #CFE2ED;
+
+    /* Live Status Indicators */
+    --status-online:      #10B981;
+    --status-glow:        rgba(16, 185, 129, 0.35);
+
+    /* Typography */
+    --font-heading:       'Fraunces', Georgia, serif;
+    --font-sans:          'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Corner Geometry */
+    --radius-sm:          9px;
+    --radius-md:          15px;
+    --radius-lg:          22px;
+    --radius-xl:          28px;
+
+    /* Multi-Layered Realistic Shadows */
+    --shadow-soft:        0 2px 8px rgba(8, 28, 42, 0.04);
+    --shadow-card:        0 1px 0 0 rgba(255, 255, 255, 1) inset, 0 16px 44px -8px rgba(8, 30, 44, 0.09), 0 2px 6px rgba(8, 30, 44, 0.03);
+    --shadow-elevated:    0 1px 0 0 rgba(255, 255, 255, 1) inset, 0 24px 60px -10px rgba(8, 30, 44, 0.15), 0 6px 16px rgba(8, 30, 44, 0.05);
+    --shadow-showcase:    0 24px 64px -12px rgba(6, 24, 36, 0.55), 0 1px 0 0 rgba(255, 255, 255, 0.16) inset;
+    --shadow-dark-card:   0 18px 44px -10px rgba(0, 0, 0, 0.5), 0 1px 0 0 rgba(255, 255, 255, 0.08) inset;
+}
+
+/* ============================================================
+   PAGE RESET & ATMOSPHERIC CANVAS
+   ============================================================ */
+
+.stApp {
+    background-color: var(--film-bg);
+    background-image:
+        radial-gradient(circle at 1px 1px, rgba(15, 124, 136, 0.07) 1px, transparent 0),
+        radial-gradient(circle at 20% 0%, rgba(15, 124, 136, 0.06) 0%, transparent 45%),
+        radial-gradient(circle at 85% 90%, rgba(35, 210, 229, 0.06) 0%, transparent 50%),
+        radial-gradient(circle at 50% 100%, rgba(8, 30, 44, 0.03) 0%, transparent 60%);
+    background-size: 28px 28px, 100% 100%, 100% 100%, 100% 100%;
+    background-attachment: fixed;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide default Streamlit chrome header */
+#MainMenu,
+footer,
+[data-testid="stHeader"] {
+    display: none !important;
+}
+
+/* Full-width container with generous breathing room */
+.block-container {
+    max-width: 1420px !important;
+    padding-top: 1.8rem !important;
+    padding-bottom: 4.5rem !important;
+    padding-left: 2.4rem !important;
+    padding-right: 2.4rem !important;
+}
+
+/* ============================================================
+   MATERIAL SYMBOLS ROUNDED INTEGRATION
+   ============================================================ */
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded', sans-serif !important;
+    font-weight: 500;
+    font-style: normal;
+    font-size: 20px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga' 1;
+    font-feature-settings: 'liga' 1;
+    -webkit-font-smoothing: antialiased;
+    vertical-align: middle;
+}
+
+.ls-kicker-icon {
+    font-size: 15px !important;
+    color: var(--teal-bright) !important;
+    margin-right: 3px;
+    vertical-align: -2px !important;
+}
+
+.ls-status-icon {
+    font-size: 15px !important;
+    color: var(--teal-dark) !important;
+    vertical-align: -2px !important;
+}
+
+.ls-footer-icon {
+    font-size: 16px !important;
+    color: var(--status-online) !important;
+    vertical-align: -2px !important;
+}
+
+/* Back to Homepage Button */
+.st-key-back_to_home_btn button {
+    background: transparent !important;
+    border: none !important;
+    color: var(--teal-base) !important;
+    font-family: var(--font-sans) !important;
+    font-size: 0.92rem !important;
+    font-weight: 750 !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    margin-bottom: 0.8rem !important;
+    box-shadow: none !important;
+    transition: color 0.2s ease, transform 0.2s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+.st-key-back_to_home_btn button:hover {
+    color: var(--teal-hover) !important;
+    transform: translateX(-3px) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.st-key-back_to_home_btn button p {
+    color: var(--teal-base) !important;
+    font-weight: 750 !important;
+}
+
+.st-key-back_to_home_btn button:hover p {
+    color: var(--teal-hover) !important;
+}
+
+
+
+/* ============================================================
+   SPLIT SCREEN DUAL-CARD CONTAINER
+   ============================================================ */
+.st-key-split_layout_shell {
+    width: 100%;
+    margin-bottom: 2.2rem;
+}
+
+/* Ensure columns stretch evenly */
+.st-key-split_layout_shell [data-testid="column"] {
+    display: flex;
+    flex-direction: column;
+}
+
+.st-key-split_layout_shell [data-testid="column"] > div {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ============================================================
+   LEFT COLUMN: RADIOGRAPHIC SHOWCASE PANEL
+   ============================================================ */
+.ls-showcase-panel {
+    position: relative;
+    height: 100%;
+    min-height: 640px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-radius: var(--radius-xl);
+    background-color: var(--slate-black);
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: var(--shadow-showcase);
+    padding: 3.4rem 3.2rem;
+    color: var(--text-white);
+    overflow: hidden;
+    box-sizing: border-box;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.ls-showcase-panel:hover {
+    border-color: rgba(35, 210, 229, 0.32);
+    box-shadow: 0 28px 72px -10px rgba(6, 24, 36, 0.65), 0 1px 0 0 rgba(255, 255, 255, 0.22) inset;
+}
+
+/* Brand Header */
+.ls-showcase-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.6rem;
+}
+
+.ls-showcase-logo-img {
+    max-height: 50px;
+    width: auto;
+    object-fit: contain;
+    filter: brightness(0) invert(1) drop-shadow(0 2px 10px rgba(0, 0, 0, 0.4));
+}
+
+.ls-showcase-logo-fallback {
+    font-family: var(--font-heading);
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    letter-spacing: -0.01em;
+}
+
+.ls-showcase-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(35, 210, 229, 0.12);
+    border: 1px solid rgba(35, 210, 229, 0.3);
+    padding: 6px 14px;
+    border-radius: 20px;
+    color: var(--teal-bright);
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    backdrop-filter: blur(8px);
+}
+
+/* Title & Description */
+.ls-showcase-title {
+    margin: 0.2rem 0 0.65rem 0;
+    color: #FFFFFF;
+    font-family: var(--font-heading);
+    font-size: 2.9rem;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    text-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.ls-showcase-desc {
+    margin: 0 0 2.2rem 0;
+    max-width: 530px;
+    color: var(--text-on-dark-dim);
+    font-size: 1.02rem;
+    line-height: 1.6;
+    font-weight: 450;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Feature Cards (Frosted Clinical Glass) */
+.ls-showcase-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.95rem;
+    margin-bottom: 2.4rem;
+}
+
+.ls-showcase-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.2rem;
+    padding: 1rem 1.3rem;
+    border-radius: 17px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ls-showcase-item:hover {
+    background: rgba(255, 255, 255, 0.11);
+    border-color: rgba(35, 210, 229, 0.45);
+    transform: translateY(-2px) translateX(4px);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25), 0 0 20px rgba(35, 210, 229, 0.15);
+}
+
+.ls-showcase-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, rgba(15, 124, 136, 0.55) 0%, rgba(9, 88, 97, 0.7) 100%);
+    border: 1px solid rgba(35, 210, 229, 0.4);
+    color: var(--teal-bright);
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.ls-showcase-item:hover .ls-showcase-icon {
+    transform: scale(1.06);
+    background: linear-gradient(135deg, rgba(20, 150, 165, 0.75) 0%, rgba(15, 124, 136, 0.85) 100%);
+}
+
+.ls-showcase-icon .material-symbols-rounded {
+    font-size: 23px !important;
+}
+
+.ls-showcase-item-text b {
+    display: block;
+    font-size: 0.98rem;
+    font-weight: 750;
+    color: #FFFFFF;
+    margin-bottom: 3px;
+    letter-spacing: -0.01em;
+}
+
+.ls-showcase-item-text p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(225, 238, 246, 0.85);
+    line-height: 1.48;
+}
+
+/* Institutional Security Badge Footer */
+.ls-showcase-footer {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0.75rem 1.45rem;
+    border-radius: 24px;
+    background: rgba(0, 0, 0, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 0.79rem;
+    font-weight: 650;
+    color: var(--text-on-dark-dim);
+    width: fit-content;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+/* ============================================================
+   RIGHT COLUMN: CLINICAL SIGN IN CARD
+   ============================================================ */
+.st-key-login_card {
+    position: relative;
+    height: 100%;
+    min-height: 640px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: var(--card-surface) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: 3.6rem 3.4rem !important;
+    box-shadow: var(--shadow-card) !important;
+    overflow: hidden;
+    box-sizing: border-box;
+    transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+}
+
+.st-key-login_card:hover {
+    border-color: rgba(15, 124, 136, 0.38) !important;
+    box-shadow: var(--shadow-elevated) !important;
+}
+
+/* Top Accent Gradient Bar */
+.st-key-login_card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--teal-base) 0%, var(--teal-hover) 40%, var(--teal-bright) 100%);
+    border-top-left-radius: var(--radius-xl);
+    border-top-right-radius: var(--radius-xl);
+}
+
+/* Status Pill with Pulsing Live Beacon */
+.ls-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--teal-ice);
+    border: 1px solid rgba(15, 124, 136, 0.22);
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 750;
+    color: var(--teal-dark);
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.02em;
+    width: fit-content;
+}
+
+.ls-status-pill::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--status-online);
+    box-shadow: 0 0 0 3px var(--status-glow);
+    animation: ls-pulse-beacon 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes ls-pulse-beacon {
+    0%, 100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.45);
+    }
+    50% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+}
+
+/* Login Heading */
+.ls-login-heading {
+    margin-bottom: 1.6rem;
+}
+
+.ls-login-title {
+    margin: 0 0 0.45rem 0 !important;
+    color: var(--navy-ink) !important;
+    font-family: var(--font-heading) !important;
+    font-size: 2.45rem !important;
+    font-weight: 600 !important;
+    line-height: 1.15 !important;
+    letter-spacing: -0.025em !important;
+}
+
+.ls-login-subtitle {
+    margin: 0 !important;
+    color: var(--text-secondary) !important;
+    font-size: 0.98rem !important;
+    line-height: 1.55 !important;
+    font-weight: 500 !important;
+}
+
+/* ------------------------------------------------------------
+   INPUT CONTROLS (Sleek SaaS Inputs)
+   ------------------------------------------------------------ */
+.st-key-login_card [data-testid="stForm"] {
+    border: none !important;
+    padding: 0 !important;
+}
+
+.st-key-login_card label p {
+    color: var(--navy-ink) !important;
+    font-size: 0.88rem !important;
+    font-weight: 750 !important;
+    letter-spacing: 0.01em !important;
+    margin-bottom: 7px !important;
+}
+
+.st-key-login_card [data-testid="stTextInputRootElement"],
+.st-key-login_card div[data-baseweb="input"] {
+    background: var(--card-subtle) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: inset 0 1px 3px rgba(8, 30, 44, 0.025) !important;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.st-key-login_card div[data-baseweb="base-input"] {
+    background: transparent !important;
+    padding: 5px 8px !important;
+}
+
+.st-key-login_card input {
+    background: transparent !important;
+    color: var(--navy-ink) !important;
+    font-family: var(--font-sans) !important;
+    font-size: 0.96rem !important;
+    font-weight: 500 !important;
+}
+
+.st-key-login_card input::placeholder {
+    color: var(--text-muted) !important;
+    font-weight: 400 !important;
+}
+
+.st-key-login_card [data-testid="stTextInputRootElement"]:focus-within,
+.st-key-login_card div[data-baseweb="input"]:focus-within {
+    background: #FFFFFF !important;
+    border-color: var(--teal-base) !important;
+    box-shadow: 0 0 0 3.5px var(--teal-glow), 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ------------------------------------------------------------
+   SIGN IN PRIMARY ACTION BUTTON
+   ------------------------------------------------------------ */
+.st-key-login_card [data-testid="stFormSubmitButton"] button {
+    width: 100% !important;
+    margin-top: 1.1rem !important;
+    padding: 0.9rem 1.5rem !important;
+    background: linear-gradient(180deg, var(--teal-hover) 0%, var(--teal-dark) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: 0 6px 20px rgba(15, 124, 136, 0.34), 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+    cursor: pointer !important;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.st-key-login_card [data-testid="stFormSubmitButton"] button p {
+    color: #FFFFFF !important;
+    font-family: var(--font-sans) !important;
+    font-weight: 800 !important;
+    font-size: 0.96rem !important;
+    letter-spacing: 0.02em !important;
+}
+
+.st-key-login_card [data-testid="stFormSubmitButton"] button:hover {
+    background: linear-gradient(180deg, var(--teal-bright) 0%, var(--teal-base) 100%) !important;
+    box-shadow: 0 10px 28px rgba(15, 124, 136, 0.45), 0 2px 4px rgba(0, 0, 0, 0.12) !important;
+    transform: translateY(-2px) !important;
+}
+
+.st-key-login_card [data-testid="stFormSubmitButton"] button:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 3px 10px rgba(15, 124, 136, 0.3) !important;
+}
+
+.st-key-login_card [data-testid="stFormSubmitButton"] button:focus-visible {
+    outline: 3px solid rgba(35, 210, 229, 0.5) !important;
+    outline-offset: 2px !important;
+}
+
+/* Help & Security Trust Badges */
+.ls-login-help {
+    margin: 1.2rem 0 0 0 !important;
+    color: var(--text-muted) !important;
+    font-size: 0.83rem !important;
+    line-height: 1.5 !important;
+    text-align: center !important;
+}
+
+.ls-trust-badges {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 1.5rem;
+    padding-top: 1.3rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.ls-trust-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.77rem;
+    color: var(--text-secondary);
+    font-weight: 650;
+    background: rgba(234, 247, 249, 0.6);
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 124, 136, 0.12);
+}
+
+.ls-trust-badge .material-symbols-rounded {
+    font-size: 15px !important;
+    color: var(--teal-base) !important;
+}
+
+
+
+/* ============================================================
+   RESPONSIVE DESIGN (Flawless on Mobile, Tablet & Widescreen)
+   ============================================================ */
+@media (max-width: 1120px) {
+    .block-container {
+        padding-left: 1.6rem !important;
+        padding-right: 1.6rem !important;
+    }
+
+    .ls-showcase-title {
+        font-size: 2.4rem;
+    }
+
+    .st-key-login_card {
+        padding: 2.6rem 2.2rem !important;
+    }
+}
+
+@media (max-width: 820px) {
+    .block-container {
+        padding-top: 1.2rem !important;
+        padding-bottom: 3rem !important;
+        padding-left: 1.2rem !important;
+        padding-right: 1.2rem !important;
+    }
+
+
+
+    .ls-showcase-panel,
+    .st-key-login_card {
+        min-height: auto !important;
+        padding: 2.2rem 1.6rem !important;
+        border-radius: var(--radius-lg) !important;
+    }
+
+    .ls-showcase-title {
+        font-size: 2.1rem;
+    }
+
+    .ls-login-title {
+        font-size: 1.9rem !important;
+    }
+
+    .ls-trust-badges {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* ============================================================
+   ACCESSIBILITY & REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

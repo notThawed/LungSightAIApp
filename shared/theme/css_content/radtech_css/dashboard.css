@@ -1,0 +1,309 @@
+
+/* ============================================================
+   LUNGSIGHT AI — RADIOLOGY TECHNOLOGIST DASHBOARD
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0");
+
+.rd-header {
+    margin: 0 0 0.8rem;
+}
+
+.rd-header h1 {
+    margin: 0 !important;
+    color: #10223c;
+    font-size: 1.85rem;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.3;
+}
+
+.rd-header p {
+    margin: 0.3rem 0 0 !important;
+    color: #60758d;
+    font-size: 0.85rem;
+}
+
+
+/* ============================================================
+   MATERIAL ICONS
+   ============================================================ */
+
+.rd-metric-icon .material-symbols-rounded,
+.rd-section-heading .material-symbols-rounded {
+    font-family: "Material Symbols Rounded" !important;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+    font-feature-settings: "liga";
+    -webkit-font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+}
+
+
+/* ============================================================
+   METRIC CARDS
+   ============================================================ */
+
+.rd-metric {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+
+    min-height: 105px;
+    padding: 1rem;
+
+    border: 1px solid;
+    border-left-width: 4px;
+    border-radius: 12px;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.rd-metric:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 16px rgba(15, 23, 42, 0.07);
+}
+
+.rd-metric-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    width: 46px;
+    height: 46px;
+
+    color: #ffffff;
+    border-radius: 11px;
+
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.rd-metric-content {
+    min-width: 0;
+}
+
+.rd-metric-label {
+    color: #15324b;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.rd-metric-value {
+    margin-top: 0.25rem;
+    color: #0b2038;
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.rd-metric-subtitle {
+    margin-top: 0.3rem;
+    color: #60758d;
+    font-size: 0.65rem;
+    line-height: 1.35;
+}
+
+
+/* ============================================================
+   METRIC COLORS
+   ============================================================ */
+
+.rd-teal {
+    background: #e7f7f8;
+    border-color: #a7e3e7;
+    border-left-color: #078b96;
+}
+
+.rd-teal .rd-metric-icon {
+    background: #078b96;
+}
+
+.rd-green {
+    background: #e2fbea;
+    border-color: #a2eeb5;
+    border-left-color: #0baa4a;
+}
+
+.rd-green .rd-metric-icon {
+    background: #0baa4a;
+}
+
+.rd-blue {
+    background: #e5efff;
+    border-color: #a5c5ff;
+    border-left-color: #2563eb;
+}
+
+.rd-blue .rd-metric-icon {
+    background: #2563eb;
+}
+
+.rd-amber {
+    background: #fff6d9;
+    border-color: #f5d98b;
+    border-left-color: #e17b00;
+}
+
+.rd-amber .rd-metric-icon {
+    background: #e17b00;
+}
+
+
+/* ============================================================
+   SECTION HEADINGS
+   ============================================================ */
+
+.rd-section-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+
+    margin-bottom: 0.4rem;
+
+    color: #10223c;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.rd-section-heading .material-symbols-rounded {
+    color: #078b96;
+}
+
+
+/* ============================================================
+   X-RAY REQUEST TABLE
+   ============================================================ */
+
+.rd-table-header,
+.rd-table-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 0.8fr 0.8fr;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.rd-table-header {
+    padding: 0.85rem 0.75rem;
+
+    background: #f1f5f9;
+    border: 1px solid #e3eaf0;
+    border-radius: 8px 8px 0 0;
+
+    color: #334155;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.035em;
+}
+
+.rd-table-row {
+    padding: 0.85rem 0.75rem;
+
+    border: 1px solid #e3eaf0;
+    border-top: 0;
+
+    color: #10223c;
+    font-size: 0.78rem;
+}
+
+.rd-table-row:last-of-type {
+    border-radius: 0 0 8px 8px;
+}
+
+.rd-patient {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.rd-patient strong {
+    overflow-wrap: anywhere;
+}
+
+.rd-patient small {
+    color: #64748b;
+    font-size: 0.68rem;
+}
+
+.rd-priority {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0.3rem 0.65rem;
+
+    background: #fff3df;
+    border: 1px solid #f5d18d;
+    border-radius: 999px;
+
+    color: #a75a00;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   READY BADGE
+   ============================================================ */
+
+.rd-ready-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0.3rem 0.65rem;
+
+    background: #e2fbea;
+    border: 1px solid #a2eeb5;
+    border-radius: 999px;
+
+    color: #087a35;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 900px) {
+    .rd-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .rd-metric {
+        min-height: 90px;
+        padding: 0.75rem;
+    }
+
+    .rd-metric-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .rd-metric-value {
+        font-size: 1.4rem;
+    }
+
+    .rd-metric-label {
+        font-size: 0.58rem;
+    }
+
+    .rd-table-header,
+    .rd-table-row {
+        grid-template-columns: 1.5fr 1fr 0.8fr 0.8fr;
+        gap: 0.35rem;
+        font-size: 0.65rem;
+    }
+}

@@ -1,0 +1,565 @@
+/* =========================================================
+   LUNGSIGHT — PHYSICIAN
+   Review Patient & X-Ray Diagnostic Review Workstation
+   shared/theme/css_content/physician_css/review_patient.css
+   Modern, medical-grade diagnostic interpretation workstation:
+   widescreen canvas, dark radiographic viewport, Grad-CAM overlays,
+   AI confidence metrics, clinical context panels, and report actions.
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+/* ----------------------------------------------------------
+   MATERIAL SYMBOLS
+   ---------------------------------------------------------- */
+
+.material-symbols-rounded,
+.material-symbols-outlined {
+    font-family: 'Material Symbols Rounded' !important;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 19px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    vertical-align: middle;
+}
+
+/* ----------------------------------------------------------
+   DESIGN TOKENS
+   ---------------------------------------------------------- */
+
+:root {
+    --rx-teal:          #0F7C88;
+    --rx-teal-dark:     #0B626C;
+    --rx-teal-soft:     #E6F7F8;
+    --rx-teal-glow:     rgba(15, 124, 136, 0.22);
+
+    --rx-blue:          #2563EB;
+    --rx-blue-soft:     #EFF6FF;
+
+    --rx-cyan:          #38BDF8;
+
+    --rx-green:         #16A34A;
+    --rx-green-soft:    #F0FDF4;
+
+    --rx-amber:         #D97706;
+    --rx-amber-soft:    #FFFDF5;
+
+    --rx-red:           #DC2626;
+    --rx-red-soft:      #FEF2F2;
+
+    --rx-ink:           #0F172A;
+    --rx-slate:         #475569;
+    --rx-muted:         #64748B;
+
+    --rx-border:        #CBD5E1;
+    --rx-border-light:  #E2E8F0;
+
+    --rx-white:         #FFFFFF;
+    --rx-film:          #F8FAFC;
+    --rx-surface:       #F1F5F9;
+
+    --rx-dark-viewport: #0A141D;
+    --rx-dark-frame:    #11202D;
+
+    --rx-radius-sm:     8px;
+    --rx-radius-md:     14px;
+    --rx-radius-lg:     18px;
+
+    --rx-font-display:  'Space Grotesk', 'Fraunces', Georgia, serif;
+    --rx-font-body:     'Manrope', system-ui, -apple-system, sans-serif;
+
+    --rx-shadow-xs:     0 1px 3px rgba(18, 40, 58, 0.04);
+    --rx-shadow-sm:     0 4px 16px -2px rgba(18, 40, 58, 0.06);
+    --rx-shadow-md:     0 10px 28px -4px rgba(18, 40, 58, 0.10);
+    --rx-shadow-lg:     0 18px 38px -8px rgba(18, 40, 58, 0.16);
+}
+
+/* ----------------------------------------------------------
+   WIDESCREEN CANVAS
+   ---------------------------------------------------------- */
+
+div[data-testid="stMainBlockContainer"],
+.main .block-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    padding-top: 1.25rem !important;
+    padding-bottom: 3.5rem !important;
+}
+
+.st-key-physician_review_patient_root,
+.st-key-physician_review_patient_page {
+    font-family: var(--rx-font-body);
+    color: var(--rx-ink);
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 0 2.5rem 0;
+    animation: rxFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes rxFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ----------------------------------------------------------
+   REPORT HEADER
+   ---------------------------------------------------------- */
+
+.rx-report-header {
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+    border: 1px solid var(--rx-border-light);
+    border-radius: var(--rx-radius-md);
+    padding: 1.4rem 1.6rem;
+    margin: 0.5rem 0 1.5rem;
+    box-shadow: var(--rx-shadow-xs);
+    position: relative;
+    overflow: hidden;
+}
+
+.rx-report-header::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--rx-teal) 0%, #20A3B2 45%, #2563EB 100%);
+}
+
+.rx-report-title {
+    margin: 0;
+    font-family: var(--rx-font-display);
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: var(--rx-ink);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.rx-report-sub {
+    margin: 0.35rem 0 0;
+    font-size: 0.88rem;
+    color: var(--rx-slate);
+    font-weight: 600;
+}
+
+/* ----------------------------------------------------------
+   DARK RADIOGRAPHIC VIEWPORT (rx_xray_frame)
+   High-contrast framing for raw X-Rays and Grad-CAM heatmaps
+   ---------------------------------------------------------- */
+
+.st-key-rx_xray_frame {
+    position: relative;
+    background: var(--rx-dark-viewport);
+    border: 2px solid var(--rx-dark-frame);
+    border-radius: var(--rx-radius-md);
+    padding: 18px;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 10px 32px rgba(10, 20, 29, 0.45);
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.st-key-rx_xray_frame:hover {
+    border-color: #244158;
+    box-shadow: 0 14px 40px rgba(10, 20, 29, 0.6);
+}
+
+.st-key-rx_xray_frame [data-testid="stImage"] {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.st-key-rx_xray_frame img {
+    border-radius: 8px;
+    max-width: 100%;
+    max-height: 520px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.rx-img-label {
+    margin: 0 0 0.5rem;
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--rx-slate);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rx-heatmap-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 1.5rem;
+    background: var(--rx-dark-frame);
+    border-radius: var(--rx-radius-md);
+    border: 1px dashed #243B4E;
+    text-align: center;
+    min-height: 380px;
+}
+
+.rx-heatmap-icon {
+    font-size: 42px !important;
+    color: #4A677B;
+    margin-bottom: 0.65rem;
+}
+
+.rx-heatmap-title {
+    color: #E2E8F0;
+    font-family: var(--rx-font-display);
+    font-size: 1.15rem;
+    font-weight: 750;
+    margin: 0 0 0.35rem;
+}
+
+.rx-heatmap-text {
+    color: #94A3B8;
+    font-size: 0.86rem;
+    max-width: 320px;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* No X-Ray Placeholder */
+.rx-no-xray {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3.5rem 1.5rem;
+    background: #FFFFFF;
+    border: 1px dashed var(--rx-border);
+    border-radius: var(--rx-radius-md);
+    text-align: center;
+    margin: 1rem 0;
+    box-shadow: var(--rx-shadow-xs);
+}
+
+.rx-no-xray-icon {
+    font-size: 44px !important;
+    color: var(--rx-muted);
+    margin-bottom: 0.5rem;
+}
+
+.rx-no-xray-title {
+    font-family: var(--rx-font-display);
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--rx-ink);
+    margin: 0 0 0.3rem;
+}
+
+.rx-no-xray-text {
+    color: var(--rx-slate);
+    font-size: 0.88rem;
+    max-width: 380px;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ----------------------------------------------------------
+   CLINICAL CONTEXT & AI RESULT PANELS
+   ---------------------------------------------------------- */
+
+.rx-context-card,
+.rx-ai-card {
+    background: #FFFFFF;
+    border: 1px solid var(--rx-border-light);
+    border-radius: var(--rx-radius-md);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--rx-shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+.rx-context-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--rx-blue) 0%, #38BDF8 100%);
+}
+
+.rx-ai-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--rx-teal) 0%, #20A3B2 100%);
+}
+
+.rx-panel-title-row {
+    margin-bottom: 0.85rem;
+}
+
+.rx-panel-title {
+    font-family: var(--rx-font-display);
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--rx-ink);
+    letter-spacing: -0.01em;
+    margin: 0;
+}
+
+.rx-context-row,
+.rx-ai-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--rx-border-light);
+    font-size: 0.88rem;
+}
+
+.rx-context-row:last-child,
+.rx-ai-row:last-child {
+    border-bottom: none;
+}
+
+.rx-context-row span,
+.rx-ai-row span {
+    color: var(--rx-muted);
+    font-weight: 600;
+}
+
+.rx-context-row b,
+.rx-ai-row b {
+    color: var(--rx-ink);
+    font-weight: 750;
+}
+
+/* Confidence Fill Bar */
+.rx-conf-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--rx-surface);
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-top: 6px;
+    border: 1px solid var(--rx-border-light);
+}
+
+.rx-conf-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--rx-teal) 0%, #20A3B2 60%, #38BDF8 100%);
+    border-radius: 9999px;
+    transition: width 0.5s ease;
+}
+
+.rx-ai-findings {
+    background: var(--rx-film);
+    border: 1px solid var(--rx-border-light);
+    border-left: 4px solid var(--rx-teal);
+    border-radius: var(--rx-radius-sm);
+    padding: 0.85rem 1.15rem;
+    margin-top: 0.85rem;
+}
+
+.rx-ai-findings-label {
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--rx-teal);
+    margin: 0 0 0.3rem;
+}
+
+.rx-ai-findings-text {
+    font-size: 0.88rem;
+    color: var(--rx-ink);
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* ----------------------------------------------------------
+   CONFIRMED DIAGNOSIS & TRAINING PREVIEW
+   ---------------------------------------------------------- */
+
+.rx-training-ai-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.6rem 1rem;
+    background: var(--rx-teal-soft);
+    border: 1px solid rgba(15, 124, 136, 0.25);
+    border-radius: var(--rx-radius-sm);
+    margin-bottom: 0.85rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--rx-teal-dark);
+}
+
+.rx-training-ai-preview--empty {
+    background: var(--rx-film);
+    border-color: var(--rx-border);
+    color: var(--rx-muted);
+}
+
+.rx-training-ai-label {
+    font-weight: 750;
+    text-transform: uppercase;
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+}
+
+/* ----------------------------------------------------------
+   FOLLOW-UP ACCENT CARD
+   ---------------------------------------------------------- */
+
+.rx-fu-card {
+    background: #FFFFFF;
+    border: 1px solid var(--rx-border-light);
+    border-radius: var(--rx-radius-md);
+    padding: 1.15rem 1.4rem;
+    margin: 1rem 0;
+    box-shadow: var(--rx-shadow-xs);
+}
+
+.rx-fu-card--scheduled {
+    border-left: 4px solid var(--rx-green);
+    background: linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);
+}
+
+.rx-fu-card--empty {
+    border-left: 4px solid var(--rx-border);
+    background: var(--rx-film);
+}
+
+.rx-fu-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0.35rem;
+}
+
+.rx-fu-icon {
+    font-size: 20px;
+    color: var(--rx-green);
+}
+
+.rx-fu-card--empty .rx-fu-icon {
+    color: var(--rx-muted);
+}
+
+.rx-fu-title {
+    font-family: var(--rx-font-display);
+    font-size: 1.05rem;
+    font-weight: 750;
+    color: var(--rx-ink);
+    margin: 0;
+}
+
+.rx-fu-when {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--rx-green);
+    margin: 0;
+}
+
+.rx-fu-text,
+.rx-fu-notes {
+    font-size: 0.84rem;
+    color: var(--rx-slate);
+    line-height: 1.5;
+    margin: 0.35rem 0 0;
+}
+
+/* Form Divider */
+.rx-form-divider {
+    height: 1px;
+    background: var(--rx-border-light);
+    margin: 1.5rem 0;
+}
+
+/* ----------------------------------------------------------
+   REPORT ACTION BUTTONS
+   ---------------------------------------------------------- */
+
+.st-key-physician_review_patient_root button[kind="primary"] {
+    background: linear-gradient(135deg, var(--rx-teal) 0%, #20A3B2 100%) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    color: #FFFFFF !important;
+    font-weight: 750 !important;
+    padding: 0.65rem 1.4rem !important;
+    box-shadow: 0 4px 14px rgba(15, 124, 136, 0.28) !important;
+    transition: all 0.2s ease !important;
+}
+
+.st-key-physician_review_patient_root button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #0B626C 0%, var(--rx-teal) 100%) !important;
+    box-shadow: 0 6px 18px rgba(15, 124, 136, 0.42) !important;
+    transform: translateY(-2px) !important;
+}
+
+.st-key-physician_review_patient_root button:not([kind="primary"]) {
+    border-radius: 10px !important;
+    border: 1px solid var(--rx-border) !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+
+.st-key-physician_review_patient_root button:not([kind="primary"]):hover {
+    background: var(--rx-surface) !important;
+    border-color: var(--rx-teal) !important;
+    color: var(--rx-teal) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* ----------------------------------------------------------
+   RESPONSIVE
+   ---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    div[data-testid="stMainBlockContainer"],
+    .main .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    .st-key-rx_xray_frame {
+        min-height: 280px;
+    }
+
+    .rx-report-title {
+        font-size: 1.4rem;
+    }
+}
