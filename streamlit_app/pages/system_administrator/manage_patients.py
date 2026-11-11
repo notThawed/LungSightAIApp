@@ -146,7 +146,7 @@ def patient_sex_cell(column, sex):
         return
 
     sex_lower = str(sex).strip().lower()
-    tone = "blue" if sex_lower == "male" else ("teal" if sex_lower == "female" else "grey")
+    tone = "blue" if sex_lower == "male" else ("pink" if sex_lower == "female" else "grey")
     html = f"<div class='sa-sex-cell'>{pill(sex, tone)}</div>"
     column.markdown(html, unsafe_allow_html=True)
 
@@ -395,7 +395,7 @@ def show_view_patient(patient):
         sex = patient.get("sex") or "—"
         status = (patient.get("status") or "Active").strip()
         status_tone = "green" if status.lower() == "active" else "grey"
-        sex_tone = "blue" if sex.lower() == "male" else ("teal" if sex.lower() == "female" else "grey")
+        sex_tone = "blue" if sex.lower() == "male" else ("pink" if sex.lower() == "female" else "grey")
 
         hospital = patient.get("hospitals") or {}
         if isinstance(hospital, list):

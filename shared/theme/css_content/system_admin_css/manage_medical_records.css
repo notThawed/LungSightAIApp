@@ -145,6 +145,12 @@ div[data-testid="stMainBlockContainer"],
   border-color: rgba(157, 23, 77, 0.25);
 }
 
+.sa-pill-pink {
+  background-color: #FDF2F8; /* Light pink background */
+  color: #9D174D;            /* Dark pink text */
+  border: 1px solid rgba(157, 23, 77, 0.2); /* Subtle pink border */
+}
+
 .sa-patient-info {
   display: flex;
   flex-direction: column;

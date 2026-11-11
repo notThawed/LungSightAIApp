@@ -98,9 +98,10 @@ DIALOG_KEY = "sa_dialog"
 # TABLE CONFIGURATION
 # ============================================================
 
-QUEUE_WIDTHS = [1.7, 1.7, 1.8, 1.5, 0.9, 1.1]
-QUEUE_HEADERS = ["Patient", "Examination Type", "Examination Date", "Waiting", "History", "Actions"]
+QUEUE_WIDTHS = [2.0, 2.0, 2.0, 1, 1]
+# QUEUE_HEADERS = ["Patient", "Examination Type", "Examination Date", "Waiting", "History", "Actions"]
 
+QUEUE_HEADERS = ["Patient", "Examination Type", "Examination Date", "History", "Actions"]
 XRAY_QUEUE_WIDTHS = [2.4, 1.4, 1.6, 1.3, 1.2]
 XRAY_QUEUE_HEADERS = ["Patient", "Requested", "Requested At", "Status", "View"]
 
@@ -1874,13 +1875,10 @@ def render_queue_table(grouped, key_prefix="queue"):
                 ]
                 text_cell(columns[1], " · ".join(types))
                 text_cell(columns[2], " · ".join(dates))
-                pill_cell(
-                    columns[3],
-                    format_queue_waiting(waiting),
-                    waiting_tone(waiting),
-                )
 
-                if columns[4].button(
+                # The waiting logic is completely skipped visually.
+
+                if columns[3].button( # Changed from 4 to 3
                     "History",
                     key=f"{key_prefix}_history_{patient_id}",
                     icon=":material/folder_open:",
@@ -1891,7 +1889,7 @@ def render_queue_table(grouped, key_prefix="queue"):
                     st.rerun()
 
                 if len(examinations) == 1:
-                    if columns[5].button(
+                    if columns[4].button( # Changed from 5 to 4
                         "Examine",
                         key=f"{key_prefix}_examine_{patient_id}",
                         icon=":material/clinical_notes:",
@@ -1903,7 +1901,7 @@ def render_queue_table(grouped, key_prefix="queue"):
                         st.session_state["edit_patient"] = patient
                         st.rerun()
                 else:
-                    if columns[5].button(
+                    if columns[4].button( # Changed from 5 to 4
                         "View Exams",
                         key=f"{key_prefix}_view_{patient_id}",
                         icon=":material/list:",

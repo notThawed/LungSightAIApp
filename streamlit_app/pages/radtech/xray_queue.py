@@ -38,12 +38,11 @@ ROLE_STAFF = 7
 
 RADTECH_ROLES = [ROLE_RADTECH]
 
-QUEUE_WIDTHS = [2.5, 1.2, 1.2, 1.2, 1.5]
+QUEUE_WIDTHS = [2.5, 1.2, 1.2, 1.5] # Removed the 1.2 for waiting
 QUEUE_HEADERS = [
     "Patient",
     "Body part",
     "Priority",
-    "Waiting",
     "",
 ]
 
@@ -450,30 +449,12 @@ def render_xray_queue(grouped):
                     priority_tone,
                 )
 
-                # --------------------------------
-                # Waiting
-                # --------------------------------
-
-                if waiting is not None:
-
-                    pill_cell(
-                        cols[3],
-                        format_waiting(waiting),
-                        waiting_tone(waiting),
-                    )
-
-                else:
-
-                    text_cell(
-                        cols[3],
-                        "—",
-                    )
 
                 # --------------------------------
                 # Analyze action
                 # --------------------------------
 
-                if cols[4].button(
+                if cols[3].button(
                     "Analyze",
                     key=f"analyze_{exam_id}",
                     icon=":material/radiology:",

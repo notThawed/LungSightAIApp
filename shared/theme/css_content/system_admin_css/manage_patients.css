@@ -615,3 +615,10 @@ div[data-testid="stMainBlockContainer"],
   color: var(--sa-slate);
   margin-left: auto;
 }
+
+/* The Pink Pill */
+.sa-pill-pink {
+  background-color: #FDF2F8 !important; 
+  color: #9D174D !important;            
+  border: 1px solid rgba(157, 23, 77, 0.2) !important; 
+}
