@@ -981,283 +981,290 @@ def show_examination_form(patient, examination=None):
         existing_consent = consents[0] if consents else None
         existing_vitals = get_examination_vitals(examination_id) or []
 
+    # LUNGSIGHT_COMPACT_EXAM_V3
     with st.container(key="sa_dialog"):
-        render_patient_hero(patient)
-
-        tab_form, tab_history = st.tabs([
-            "Examination Entry",
-            "Patient Medical Background",
-        ])
-
-        with tab_form:
-            # 1. Vital Signs
+        with st.container(key="ls_compact_exam"):
             st.markdown(
-                "<div class='sa-form-section-title'>1. Initial Vital Signs</div>",
-                unsafe_allow_html=True,
+                """<div class="ls-compact-title">
+                <span class="ls-compact-title-icon"><span class="material-symbols-rounded">clinical_notes</span></span>
+                <span><strong>Initial Examination</strong><small>Complete the examination form for this patient</small></span>
+                </div>""", unsafe_allow_html=True,
             )
+            render_patient_hero(patient)
+            tab_form, tab_history = st.tabs(["Examination Entry", "Patient Medical Background"])
+            with tab_form:
+                left_top, right_top = st.columns(2, gap="medium")
+                with left_top:
+                    with st.container(border=True):
+                        st.markdown("<div class='ls-card-title'>"+ "<span class='ls-card-number'>1</span>"+ "<span>Patient Information</span>"+ "<span class='material-symbols-rounded'>person</span>"+ "</div>", unsafe_allow_html=True)
+                        st.text_input("Patient Code", value=patient_code(patient), disabled=True, key=f"{form_prefix}_display_code")
+                        st.text_input("Full Name", value=patient_name(patient), disabled=True, key=f"{form_prefix}_display_name")
+                        st.caption(f"Date of Birth: {format_date(patient.get('date_of_birth'))} | Sex: {patient.get('sex') or '—'}")
+                with right_top:
+                    with st.container(border=True):
+                        st.markdown("<div class='ls-card-title'>"+ "<span class='ls-card-number'>2</span>"+ "<span>Vital Signs</span>"+ "<span class='material-symbols-rounded'>monitor_heart</span>"+ "</div>", unsafe_allow_html=True)
+                        v1, v2, v3 = st.columns(3)
 
-            v1, v2, v3 = st.columns(3)
+                        bp_sys = v1.number_input(
+                            "Systolic BP (mmHg)",
+                            min_value=0,
+                            max_value=300,
+                            step=1,
+                            value=(
+                                int(_get_vitals_value(existing_vitals, "bp_systolic"))
+                                if _get_vitals_value(existing_vitals, "bp_systolic") is not None
+                                else None
+                            ),
+                            placeholder="Enter systolic BP",
+                            key=f"{form_prefix}_exam_bp_sys",
+                        )
 
-            bp_sys = v1.number_input(
-                "Systolic BP (mmHg)",
-                min_value=0,
-                max_value=300,
-                step=1,
-                value=(
-                    int(_get_vitals_value(existing_vitals, "bp_systolic"))
-                    if _get_vitals_value(existing_vitals, "bp_systolic") is not None
-                    else None
-                ),
-                placeholder="Enter systolic BP",
-                key=f"{form_prefix}_exam_bp_sys",
-            )
+                        bp_dia = v2.number_input(
+                            "Diastolic BP (mmHg)",
+                            min_value=0,
+                            max_value=200,
+                            step=1,
+                            value=(
+                                int(_get_vitals_value(existing_vitals, "bp_diastolic"))
+                                if _get_vitals_value(existing_vitals, "bp_diastolic") is not None
+                                else None
+                            ),
+                            placeholder="Enter diastolic BP",
+                            key=f"{form_prefix}_exam_bp_dia",
+                        )
 
-            bp_dia = v2.number_input(
-                "Diastolic BP (mmHg)",
-                min_value=0,
-                max_value=200,
-                step=1,
-                value=(
-                    int(_get_vitals_value(existing_vitals, "bp_diastolic"))
-                    if _get_vitals_value(existing_vitals, "bp_diastolic") is not None
-                    else None
-                ),
-                placeholder="Enter diastolic BP",
-                key=f"{form_prefix}_exam_bp_dia",
-            )
+                        temperature = v3.number_input(
+                            "Temperature (°C)",
+                            min_value=30.0,
+                            max_value=45.0,
+                            step=0.1,
+                            format="%.1f",
+                            value=(
+                                float(_get_vitals_value(existing_vitals, "temperature"))
+                                if _get_vitals_value(existing_vitals, "temperature") is not None
+                                else None
+                            ),
+                            placeholder="Enter temperature",
+                            key=f"{form_prefix}_exam_temperature",
+                        )
+                left_middle, right_middle = st.columns(2, gap="medium")
+                with left_middle:
+                    with st.container(border=True):
+                        st.markdown("<div class='ls-card-title'>"+ "<span class='ls-card-number'>3</span>"+ "<span>Medical History</span>"+ "<span class='material-symbols-rounded'>medical_information</span>"+ "</div>", unsafe_allow_html=True)
+                        st.markdown("<div class='ls-medical-note'>Review prior examinations and external medical records using the <b>Patient Medical Background</b> tab above. No additional medical-history data is created here.</div>", unsafe_allow_html=True)
+                with right_middle:
+                    with st.container(border=True):
+                        st.markdown("<div class='ls-card-title'>"+ "<span class='ls-card-number'>4</span>"+ "<span>Informed Consent</span>"+ "<span class='material-symbols-rounded'>verified_user</span>"+ "</div>", unsafe_allow_html=True)
+                        # ============================================================
+                        # INFORMED CONSENT - SIGNER INFORMATION
+                        # ============================================================
 
-            temperature = v3.number_input(
-                "Temperature (°C)",
-                min_value=30.0,
-                max_value=45.0,
-                step=0.1,
-                format="%.1f",
-                value=(
-                    float(_get_vitals_value(existing_vitals, "temperature"))
-                    if _get_vitals_value(existing_vitals, "temperature") is not None
-                    else None
-                ),
-                placeholder="Enter temperature",
-                key=f"{form_prefix}_exam_temperature",
-            )
+                        emergency_contact_name = (
+                            patient.get("emergency_contact_name") or ""
+                        ).strip()
 
-            st.write("")
-            # 2. Informed Consent
-            st.markdown(
-                "<div class='sa-form-section-title'>2. Informed Consent & Signature</div>",
-                unsafe_allow_html=True,
-            )
+                        emergency_contact_number = (
+                            patient.get("emergency_contact_no") or ""
+                        ).strip()
 
-            # ============================================================
-            # INFORMED CONSENT - SIGNER INFORMATION
-            # ============================================================
+                        registered_relationship = (
+                            patient.get("emergency_contact_relationship") or ""
+                        ).strip()
 
-            emergency_contact_name = (
-                patient.get("emergency_contact_name") or ""
-            ).strip()
+                        existing_consent = existing_consent or {}
 
-            emergency_contact_number = (
-                patient.get("emergency_contact_no") or ""
-            ).strip()
+                        patient_is_minor = is_minor(patient.get("date_of_birth"))
 
-            registered_relationship = (
-                patient.get("emergency_contact_relationship") or ""
-            ).strip()
+                        default_signer_type = (
+                            existing_consent.get("signed_by_type")
+                            or ("guardian" if patient_is_minor else "patient")
+                        )
 
-            existing_consent = existing_consent or {}
+                        signer_options = ["patient", "guardian"]
 
-            patient_is_minor = is_minor(patient.get("date_of_birth"))
+                        signed_by_type = st.radio(
+                            "Who is signing the consent?",
+                            options=signer_options,
+                            index=signer_options.index(default_signer_type)
+                            if default_signer_type in signer_options
+                            else 0,
+                            format_func=lambda value: (
+                                "Patient" if value == "patient"
+                                else "Guardian / Authorized Representative"
+                            ),
+                            horizontal=True,
+                            key=f"{form_prefix}_exam_signer_type",
+                        )
 
-            default_signer_type = (
-                existing_consent.get("signed_by_type")
-                or ("guardian" if patient_is_minor else "patient")
-            )
+                        guardian_name = None
+                        guardian_relation = None
 
-            signer_options = ["patient", "guardian"]
+                        if signed_by_type == "guardian":
 
-            signed_by_type = st.radio(
-                "Who is signing the consent?",
-                options=signer_options,
-                index=signer_options.index(default_signer_type)
-                if default_signer_type in signer_options
-                else 0,
-                format_func=lambda value: (
-                    "Patient" if value == "patient"
-                    else "Guardian / Authorized Representative"
-                ),
-                horizontal=True,
-                key=f"{form_prefix}_exam_signer_type",
-            )
+                            default_guardian_name = (
+                                existing_consent.get("guardian_name")
+                                or emergency_contact_name
+                                or ""
+                            )
 
-            guardian_name = None
-            guardian_relation = None
+                            default_relation = (
+                                existing_consent.get("guardian_relation")
+                                or registered_relationship
+                                or ""
+                            )
 
-            if signed_by_type == "guardian":
+                            guardian_col, relation_col = st.columns(2)
 
-                default_guardian_name = (
-                    existing_consent.get("guardian_name")
-                    or emergency_contact_name
-                    or ""
+                            guardian_name = guardian_col.text_input(
+                                "Guardian / Representative Name",
+                                value=default_guardian_name,
+                                placeholder="Enter full name",
+                                key=f"{form_prefix}_exam_guardian_name",
+                            )
+
+                            relationship_options = [
+                                "Not specified",
+                                "Mother",
+                                "Father",
+                                "Spouse",
+                                "Son",
+                                "Daughter",
+                                "Brother",
+                                "Sister",
+                                "Grandparent",
+                                "Legal Guardian",
+                                "Other",
+                            ]
+
+                            if default_relation and default_relation not in relationship_options:
+                                relationship_options.append(default_relation)
+
+                            guardian_relation = relation_col.selectbox(
+                                "Relationship to Patient",
+                                options=relationship_options,
+                                index=(
+                                    relationship_options.index(default_relation)
+                                    if default_relation in relationship_options
+                                    else 0
+                                ),
+                                key=f"{form_prefix}_exam_guardian_relation",
+                            )
+
+                            if guardian_relation == "Not specified":
+                                guardian_relation = None
+
+                            signed_by_name = guardian_name
+
+                        else:
+
+                            signed_by_name = (
+                                existing_consent.get("signed_by_name")
+                                if existing_consent.get("signed_by_type") == "patient"
+                                else None
+                            ) or patient_name(patient)
+
+                            st.text_input(
+                                "Patient Full Name",
+                                value=patient_name(patient) if not is_edit else signed_by_name,
+                                disabled=True,
+                                key=f"{form_prefix}_exam_patient_signer_name",
+                            )
+
+                        st.text_input(
+                            "Registered Emergency Contact Number",
+                            value=emergency_contact_number,
+                            disabled=True,
+                            key=f"{form_prefix}_exam_emergency_contact_number",
+                        )
+                        consent_confirmed = st.checkbox(
+                            "I confirm that the patient/guardian has willingly given informed consent for this examination.",
+                            key=f"{form_prefix}_exam_consent_confirm",
+                            value=True if is_edit else False,
+                        )
+                left_bottom, right_bottom = st.columns(2, gap="medium")
+                with left_bottom:
+                    with st.container(border=True):
+                        st.markdown("<div class='ls-card-title'>"+ "<span class='ls-card-number'>5</span>"+ "<span>Digital Signature</span>"+ "<span class='material-symbols-rounded'>draw</span>"+ "</div>", unsafe_allow_html=True)
+                        if existing_consent and existing_consent.get("signature_path"):
+                            existing_sig_url = get_consent_signature_url(existing_consent["signature_path"])
+                            if existing_sig_url:
+                                st.caption("Existing signature on file:")
+                                st.image(existing_sig_url, width=180)
+                                st.markdown("<span style='font-size:0.84rem; font-weight:600; color:var(--sa-ink);'>Update Signature (Draw below to replace):</span>", unsafe_allow_html=True)
+                            else:
+                                st.markdown("<span style='font-size:0.84rem; font-weight:600; color:var(--sa-ink);'>Digital Signature (Draw below):</span>", unsafe_allow_html=True)
+                        else:
+                            st.markdown("<span style='font-size:0.84rem; font-weight:600; color:var(--sa-ink);'>Digital Signature (Draw below):</span>", unsafe_allow_html=True)
+
+                        canvas_result = st_canvas(
+                            stroke_width=2,
+                            stroke_color="#0F172A",
+                            background_color="#FFFFFF",
+                            height=140,
+                            width=420,
+                            drawing_mode="freedraw",
+                            return_image_data=True,
+                            key=f"signature_canvas_{form_prefix}",
+                        )
+                with right_bottom:
+                    with st.container(border=True):
+                        st.markdown("<div class='ls-card-title'>"+ "<span class='ls-card-number'>6</span>"+ "<span>AI Research Consent</span>"+ "<span class='material-symbols-rounded'>neurology</span>"+ "</div>", unsafe_allow_html=True)
+                        st.info("Under the Data Privacy Act, the patient must explicitly consent to their de-identified data being used for AI diagnostic research.")
+
+                        ai_consent = st.checkbox(
+                            "The patient has been informed and consents to their de-identified X-ray and clinical data being used to train the LungSight AI model.",
+                            key=f"{form_prefix}_exam_ai_consent_checkbox",
+                            value=False,
+                        )
+                st.markdown("<div class='ls-privacy-note'>Patient information is confidential. AI research consent is optional and separate from examination consent.</div>", unsafe_allow_html=True)
+                errors = st.container()
+
+                # Actions
+                st.divider()
+                cancel_col, save_col = st.columns(2)
+
+                cancel = cancel_col.button(
+                    "Cancel",
+                    key="exam_cancel",
+                    width="stretch",
                 )
 
-                default_relation = (
-                    existing_consent.get("guardian_relation")
-                    or registered_relationship
-                    or ""
+                save = save_col.button(
+                    "Save Examination",
+                    key="exam_save",
+                    type="primary",
+                    icon=":material/check_circle:",
+                    width="stretch",
                 )
+            with tab_history:
+                prev_exams = get_examinations_by_patient(patient["patient_id"]) or []
+                prev_records = get_medical_records_by_patient(patient["patient_id"]) or []
 
-                guardian_col, relation_col = st.columns(2)
-
-                guardian_name = guardian_col.text_input(
-                    "Guardian / Representative Name",
-                    value=default_guardian_name,
-                    placeholder="Enter full name",
-                    key=f"{form_prefix}_exam_guardian_name",
-                )
-
-                relationship_options = [
-                    "Not specified",
-                    "Mother",
-                    "Father",
-                    "Spouse",
-                    "Son",
-                    "Daughter",
-                    "Brother",
-                    "Sister",
-                    "Grandparent",
-                    "Legal Guardian",
-                    "Other",
-                ]
-
-                if default_relation and default_relation not in relationship_options:
-                    relationship_options.append(default_relation)
-
-                guardian_relation = relation_col.selectbox(
-                    "Relationship to Patient",
-                    options=relationship_options,
-                    index=(
-                        relationship_options.index(default_relation)
-                        if default_relation in relationship_options
-                        else 0
-                    ),
-                    key=f"{form_prefix}_exam_guardian_relation",
-                )
-
-                if guardian_relation == "Not specified":
-                    guardian_relation = None
-
-                signed_by_name = guardian_name
-
-            else:
-
-                signed_by_name = (
-                    existing_consent.get("signed_by_name")
-                    if existing_consent.get("signed_by_type") == "patient"
-                    else None
-                ) or patient_name(patient)
-
-                st.text_input(
-                    "Patient Full Name",
-                    value=patient_name(patient) if not is_edit else signed_by_name,
-                    disabled=True,
-                    key=f"{form_prefix}_exam_patient_signer_name",
-                )
-
-            st.text_input(
-                "Registered Emergency Contact Number",
-                value=emergency_contact_number,
-                disabled=True,
-                key=f"{form_prefix}_exam_emergency_contact_number",
-            )
-
-
-            if existing_consent and existing_consent.get("signature_path"):
-                existing_sig_url = get_consent_signature_url(existing_consent["signature_path"])
-                if existing_sig_url:
-                    st.caption("Existing signature on file:")
-                    st.image(existing_sig_url, width=180)
-                    st.markdown("<span style='font-size:0.84rem; font-weight:600; color:var(--sa-ink);'>Update Signature (Draw below to replace):</span>", unsafe_allow_html=True)
+                st.markdown("<div class='sa-form-section-title'>Prior Examinations</div>", unsafe_allow_html=True)
+                if prev_exams:
+                    for old_exam in prev_exams:
+                        old_id = old_exam["examination_id"]
+                        c1, c2, c3, c4 = st.columns([1.4, 2, 1.4, 1])
+                        text_cell(c1, format_date(old_exam.get("examination_date")))
+                        text_cell(c2, old_exam.get("examination_type"))
+                        pill_cell(c3, old_exam.get("status"), STATUS_TONES.get(old_exam.get("status"), "grey"))
+                        if c4.button("View", key=f"form_view_exam_{old_id}", width="stretch"):
+                            open_dialog("view_exam", selected_examination=old_exam, selected_patient=patient)
                 else:
-                    st.markdown("<span style='font-size:0.84rem; font-weight:600; color:var(--sa-ink);'>Digital Signature (Draw below):</span>", unsafe_allow_html=True)
-            else:
-                st.markdown("<span style='font-size:0.84rem; font-weight:600; color:var(--sa-ink);'>Digital Signature (Draw below):</span>", unsafe_allow_html=True)
+                    st.caption("No previous examination records.")
 
-            canvas_result = st_canvas(
-                stroke_width=2,
-                stroke_color="#0F172A",
-                background_color="#FFFFFF",
-                height=140,
-                width=540,
-                drawing_mode="freedraw",
-                return_image_data=True,
-                key=f"signature_canvas_{form_prefix}",
-            )
-
-            consent_confirmed = st.checkbox(
-                "I confirm that the patient/guardian has willingly given informed consent for this examination.",
-                key=f"{form_prefix}_exam_consent_confirm",
-                value=True if is_edit else False,
-            )
-
-            # 3. AI Training Consent
-            st.markdown("<div class='sa-form-section-title' style='margin-top:1.25rem;'>3. Research & AI Training Consent</div>", unsafe_allow_html=True)
-            st.info("Under the Data Privacy Act, the patient must explicitly consent to their de-identified data being used for AI diagnostic research.")
-
-            ai_consent = st.checkbox(
-                "The patient has been informed and consents to their de-identified X-ray and clinical data being used to train the LungSight AI model.",
-                key=f"{form_prefix}_exam_ai_consent_checkbox",
-                value=False,
-            )
-
-            errors = st.container()
-
-            # Actions
-            st.divider()
-            cancel_col, save_col = st.columns(2)
-
-            cancel = cancel_col.button(
-                "Cancel",
-                key="exam_cancel",
-                width="stretch",
-            )
-
-            save = save_col.button(
-                "Save Examination",
-                key="exam_save",
-                type="primary",
-                icon=":material/check_circle:",
-                width="stretch",
-            )
-
-        with tab_history:
-            prev_exams = get_examinations_by_patient(patient["patient_id"]) or []
-            prev_records = get_medical_records_by_patient(patient["patient_id"]) or []
-
-            st.markdown("<div class='sa-form-section-title'>Prior Examinations</div>", unsafe_allow_html=True)
-            if prev_exams:
-                for old_exam in prev_exams:
-                    old_id = old_exam["examination_id"]
-                    c1, c2, c3, c4 = st.columns([1.4, 2, 1.4, 1])
-                    text_cell(c1, format_date(old_exam.get("examination_date")))
-                    text_cell(c2, old_exam.get("examination_type"))
-                    pill_cell(c3, old_exam.get("status"), STATUS_TONES.get(old_exam.get("status"), "grey"))
-                    if c4.button("View", key=f"form_view_exam_{old_id}", width="stretch"):
-                        open_dialog("view_exam", selected_examination=old_exam, selected_patient=patient)
-            else:
-                st.caption("No previous examination records.")
-
-            st.markdown("<div class='sa-form-section-title' style='margin-top:1.2rem;'>External Medical Records</div>", unsafe_allow_html=True)
-            if prev_records:
-                for rec in prev_records:
-                    rec_id = rec["medical_record_id"]
-                    c1, c2, c3, c4 = st.columns([1.4, 1.8, 2.2, 1])
-                    text_cell(c1, format_date(rec.get("record_date")))
-                    text_cell(c2, rec.get("record_type") or "—")
-                    text_cell(c3, rec.get("facility_name") or "—")
-                    if c4.button("View", key=f"form_view_medical_{rec_id}", width="stretch"):
-                        open_dialog("view_medical_record", selected_medical_record=rec, selected_patient=patient)
-            else:
-                st.caption("No previous external medical records.")
+                st.markdown("<div class='sa-form-section-title' style='margin-top:1.2rem;'>External Medical Records</div>", unsafe_allow_html=True)
+                if prev_records:
+                    for rec in prev_records:
+                        rec_id = rec["medical_record_id"]
+                        c1, c2, c3, c4 = st.columns([1.4, 1.8, 2.2, 1])
+                        text_cell(c1, format_date(rec.get("record_date")))
+                        text_cell(c2, rec.get("record_type") or "—")
+                        text_cell(c3, rec.get("facility_name") or "—")
+                        if c4.button("View", key=f"form_view_medical_{rec_id}", width="stretch"):
+                            open_dialog("view_medical_record", selected_medical_record=rec, selected_patient=patient)
+                else:
+                    st.caption("No previous external medical records.")
 
     if cancel:
         close_dialog()

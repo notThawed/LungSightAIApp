@@ -321,3 +321,80 @@ div[data-testid="stMainBlockContainer"],
         padding-right: 1rem !important;
     }
 }
+
+/* LUNGSIGHT_RADIOLOGIST_EXAM_UI_V1 */
+div[data-testid="stDialog"]:has(.st-key-ls_rad_exam) > div,
+div[data-testid="stDialog"]:has(.st-key-ls_rad_exam) [role="dialog"] {
+    width: min(94vw, 1100px) !important;
+    max-width: min(94vw, 1100px) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 22px 65px rgba(12, 38, 65, .25) !important;
+}
+div[data-testid="stDialog"]:has(.st-key-ls_rad_exam) [data-testid="stDialogContent"] {
+    padding: 1rem 1.3rem 1.5rem !important;
+}
+.st-key-ls_rad_exam .ls-exam-heading {
+    display: flex; align-items: center; gap: .8rem;
+    padding: .35rem 0 .9rem; margin-bottom: .85rem;
+    border-bottom: 1px solid #d8e8f1;
+}
+.st-key-ls_rad_exam .ls-exam-heading-icon {
+    width: 52px; height: 52px; display: grid; place-items: center;
+    background: #def3f7; color: #087b88; border-radius: 13px;
+}
+.st-key-ls_rad_exam .ls-exam-heading-icon .material-symbols-rounded {font-size: 29px;}
+.st-key-ls_rad_exam .ls-exam-title {font-size: 1.42rem; font-weight: 800; color: #102e50;}
+.st-key-ls_rad_exam .ls-exam-subtitle {font-size: .8rem; color: #627e92;}
+.st-key-ls_rad_exam .ls-patient-banner {
+    display: flex; gap: 1rem; align-items: center; padding: 1rem;
+    border: 1px solid #cbe5ef; border-radius: 12px;
+    background: linear-gradient(100deg, #e6f6fa, #f4fbfd 70%, #c7eaf2);
+    margin-bottom: 1rem;
+}
+.st-key-ls_rad_exam .ls-patient-avatar {
+    display: grid; place-items: center; flex: none; width: 52px; height: 52px;
+    border-radius: 50%; background: #087989; color: white;
+}
+.st-key-ls_rad_exam .ls-patient-avatar .material-symbols-rounded {font-size: 30px;}
+.st-key-ls_rad_exam .ls-patient-name {font-size: 1.1rem; font-weight: 800; color: #102e50;}
+.st-key-ls_rad_exam .ls-patient-code {font-size: .8rem; color: #3e6883;}
+.st-key-ls_rad_exam .ls-section {
+    display: flex; gap: .55rem; align-items: center;
+    font-size: 1.02rem; font-weight: 800; color: #102e50;
+    border-bottom: 1px solid #e0ebf3; padding: .3rem 0 .65rem;
+    margin: .25rem 0 .8rem;
+}
+.st-key-ls_rad_exam .ls-section-num {
+    display: grid; place-items: center; width: 27px; height: 27px;
+    background: #0c516a; color: white; border-radius: 50%; font-size: .8rem;
+}
+.st-key-ls_rad_exam .ls-section .material-symbols-rounded {
+    margin-left: auto; font-size: 21px; color: #087c89;
+}
+.st-key-ls_rad_exam [data-testid="stVerticalBlockBorderWrapper"] {
+    border-color: #d3e3ef !important; border-radius: 12px !important;
+}
+.st-key-ls_rad_exam [data-testid="stWidgetLabel"] p {
+    color: #173b5a; font-size: .78rem; font-weight: 700;
+}
+.st-key-ls_rad_exam [data-testid="stTextArea"] textarea,
+.st-key-ls_rad_exam [data-testid="stNumberInput"] input,
+.st-key-ls_rad_exam [data-testid="stTextInput"] input {
+    background: #f7fafc !important; border-radius: 8px !important;
+}
+.st-key-ls_rad_exam [data-testid="stAlert"] {border-radius: 9px;}
+.st-key-ls_rad_exam button[kind="primary"] {
+    background: linear-gradient(100deg, #056c7a, #12a1ae) !important;
+    border-color: #087b88 !important; color: white !important;
+    border-radius: 9px !important;
+}
+.st-key-ls_rad_exam .ls-privacy {
+    margin-top: 1rem; padding: .75rem .9rem; border-radius: 9px;
+    background: #eaf5fd; border: 1px solid #d1e6f6;
+    color: #315e79; font-size: .76rem;
+}
+@media(max-width:800px) {
+    div[data-testid="stDialog"]:has(.st-key-ls_rad_exam) > div {
+        width: 98vw !important; max-width: 98vw !important;
+    }
+}

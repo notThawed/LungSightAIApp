@@ -695,4 +695,63 @@ div[data-testid="stMainBlockContainer"],
   background-color: #FDF2F8 !important; 
   color: #9D174D !important;            
   border: 1px solid rgba(157, 23, 77, 0.2) !important; 
-} 
+}
+
+/* LUNGSIGHT_COMPACT_EXAM_V3: scoped to Initial Examination only */
+div[data-testid="stDialog"]:has(.st-key-ls_compact_exam) [role="dialog"],
+div[data-testid="stDialog"]:has(.st-key-ls_compact_exam) > div {
+    width: min(92vw, 1100px) !important;
+    max-width: min(92vw, 1100px) !important;
+    border-radius: 18px !important;
+}
+div[data-testid="stDialog"]:has(.st-key-ls_compact_exam) [data-testid="stDialogContent"] {
+    padding: 1rem 1.35rem 1.35rem !important;
+}
+.st-key-ls_compact_exam .ls-compact-title {
+    display:flex; align-items:center; gap:12px; padding:4px 0 15px;
+    border-bottom:1px solid #e2ebf1; margin-bottom:13px;
+}
+.st-key-ls_compact_exam .ls-compact-title-icon {
+    display:grid; place-items:center; width:52px; height:52px;
+    border-radius:12px; background:#e3f5f7; color:#087889;
+}
+.st-key-ls_compact_exam .ls-compact-title-icon .material-symbols-rounded {font-size:29px}
+.st-key-ls_compact_exam .ls-compact-title strong {display:block;font-size:1.35rem;color:#112e4d}
+.st-key-ls_compact_exam .ls-compact-title small {color:#5a7085;font-size:.82rem}
+.st-key-ls_compact_exam .sa-dialog-hero {
+    background:linear-gradient(105deg,#e9f7fb,#f0f9fc 72%,#d0eff4) !important;
+    border:1px solid #d3e6ee !important; border-radius:12px !important;
+    padding:1rem !important; margin-bottom:13px !important;
+}
+.st-key-ls_compact_exam .sa-dialog-name {font-size:1.16rem !important;color:#112e4d !important}
+.st-key-ls_compact_exam .ls-card-title {
+    display:flex;align-items:center;gap:9px;font-weight:800;font-size:.96rem;
+    color:#112e4d;border-bottom:1px solid #e2edf3;padding-bottom:9px;margin-bottom:11px;
+}
+.st-key-ls_compact_exam .ls-card-number {
+    display:grid;place-items:center;width:26px;height:26px;border-radius:50%;
+    background:#0a4d65;color:white;font-size:.8rem;flex-shrink:0;
+}
+.st-key-ls_compact_exam .ls-card-title .material-symbols-rounded {
+    margin-left:auto;color:#087889;font-size:22px;
+}
+.st-key-ls_compact_exam [data-testid="stVerticalBlockBorderWrapper"] {
+    border-color:#cbdfee !important;border-radius:12px !important;
+}
+.st-key-ls_compact_exam [data-testid="stWidgetLabel"] p {font-size:.78rem;font-weight:650;color:#1b3852}
+.st-key-ls_compact_exam [data-testid="stNumberInput"] input,
+.st-key-ls_compact_exam [data-testid="stTextInput"] input {border-radius:8px !important}
+.st-key-ls_compact_exam button[kind="primary"] {
+    background:#087889 !important;border-color:#087889 !important;border-radius:9px !important;
+}
+.st-key-ls_compact_exam .ls-medical-note {font-size:.82rem;color:#536d82;line-height:1.6}
+.st-key-ls_compact_exam .ls-privacy-note {
+    border-radius:9px;background:#e8f5ff;border:1px solid #cfe5f4;
+    color:#31546c;font-size:.76rem;padding:10px 13px;margin:10px 0;
+}
+@media(max-width:850px){
+    div[data-testid="stDialog"]:has(.st-key-ls_compact_exam) > div {
+        width:96vw !important;max-width:96vw !important;
+    }
+    div[data-testid="stDialog"]:has(.st-key-ls_compact_exam) [data-testid="stDialogContent"] {padding:.75rem !important}
+}

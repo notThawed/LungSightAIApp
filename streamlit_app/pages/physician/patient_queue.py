@@ -1351,313 +1351,362 @@ def show_complete_exam_dialog(patient, examination):
     user_id = current_user_id()
     examination_id = examination["examination_id"]
 
+    # LUNGSIGHT_RADIOLOGIST_EXAM_UI_V1
     with st.container(key=DIALOG_KEY):
-
-        section_title("Patient Information")
-        show_rows([
-            ("Patient", patient_name(patient)),
-            ("Patient ID", patient_code(patient)),
-            ("Date of Birth", format_date(patient.get("date_of_birth"))),
-            ("Sex", patient.get("sex") or "—"),
-            (
-                "Examination Type",
-                examination.get("examination_type") or "Examination",
-            ),
-        ])
-
-        exam_type = str(examination.get("examination_type") or "").strip().lower().replace("-", " ")
-        if exam_type.startswith("follow up examination"):
-            try:
-                linked_fu_id = get_follow_up_for_examination(examination_id, user_id)
-                if linked_fu_id:
-                    render_follow_up_lab_documents(
-                        linked_fu_id, user_id, allow_upload=False,
-                        key_prefix=f"pq_labs_{examination_id}",
-                        on_view_result=lambda request_id: _open_physician_lab_preview(
-                            linked_fu_id, request_id, examination_id
-                        ),
-                    )
-                else:
-                    st.caption("No follow-up appointment is linked to this examination.")
-            except Exception as error:
-                st.warning(f"Could not load requested laboratory results: {error}")
-
-        st.divider()
-        section_title("Clinical Data")
-
-        consents = get_examination_consents(examination_id)
-        consent = consents[0] if consents else None
-        vitals = get_examination_vitals(examination_id)
-
-        if consent and consent.get("given"):
+        with st.container(key="ls_rad_exam"):
             st.markdown(
-                f"**Consent signed by:** {consent.get('signed_by_name') or '—'}"
+                '''<div class="ls-exam-heading">
+                <div class="ls-exam-heading-icon"><span class="material-symbols-rounded">clinical_notes</span></div>
+                <div><div class="ls-exam-title">Examine Patient</div>
+                <div class="ls-exam-subtitle">Review and record the patient's examination details</div></div>
+                </div>''',
+                unsafe_allow_html=True,
             )
-            signature_path = consent.get("signature_path")
-            if signature_path:
-                signature_url = get_consent_signature_url(signature_path)
-                if signature_url:
-                    st.image(signature_url, width=200, caption="Patient signature")
-        else:
-            st.warning("No consent on file for this examination.")
-
-        section_title("Vitals")
-
-        v1, v2, v3 = st.columns(3)
-
-        bp_sys = v1.number_input(
-            "BP systolic (mmHg)",
-            min_value=0, max_value=300, step=1,
-            value=int(get_vitals_value(vitals, "bp_systolic") or 0),
-            key=f"pq_exam_{examination_id}_bp_sys",
-        )
-        bp_dia = v2.number_input(
-            "BP diastolic (mmHg)",
-            min_value=0, max_value=200, step=1,
-            value=int(get_vitals_value(vitals, "bp_diastolic") or 0),
-            key=f"pq_exam_{examination_id}_bp_dia",
-        )
-        temperature = v3.number_input(
-            "Temperature (°C)",
-            min_value=0.0, max_value=50.0, step=0.1,
-            value=float(get_vitals_value(vitals, "temperature") or 0.0),
-            key=f"pq_exam_{examination_id}_temp",
-        )
-
-        v4, v5, v6 = st.columns(3)
-
-        pulse_rate = v4.number_input(
-            "Pulse rate (bpm)",
-            min_value=0, max_value=300, step=1,
-            value=int(get_vitals_value(vitals, "pulse_rate") or 0),
-            key=f"pq_exam_{examination_id}_pulse",
-        )
-        respiratory_rate = v5.number_input(
-            "Respiratory rate (/min)",
-            min_value=0, max_value=100, step=1,
-            value=int(get_vitals_value(vitals, "respiratory_rate") or 0),
-            key=f"pq_exam_{examination_id}_rr",
-        )
-        weight = v6.number_input(
-            "Weight (kg)",
-            min_value=0.0, max_value=500.0, step=0.1,
-            value=float(get_vitals_value(vitals, "weight_kg") or 0.0),
-            key=f"pq_exam_{examination_id}_weight",
-        )
-
-        v7, v8, v9 = st.columns(3)
-
-        height = v7.number_input(
-            "Height (cm)",
-            min_value=0.0, max_value=300.0, step=0.1,
-            value=float(get_vitals_value(vitals, "height_cm") or 0.0),
-            key=f"pq_exam_{examination_id}_height",
-        )
-        spo2 = v8.number_input(
-            "SpO2 (%)",
-            min_value=0, max_value=100, step=1,
-            value=int(get_vitals_value(vitals, "spo2") or 0),
-            key=f"pq_exam_{examination_id}_spo2",
-        )
-        heart_rate = v9.number_input(
-            "Heart rate (bpm)",
-            min_value=0, max_value=300, step=1,
-            value=int(get_vitals_value(vitals, "heart_rate") or 0),
-            key=f"pq_exam_{examination_id}_heart_rate",
-        )
-
-        bmi = calculate_bmi(weight, height)
-        if bmi:
-            label, tone = bmi_tone(bmi)
+            import html as _ls_html
             st.markdown(
-                f"**BMI:** {bmi} {pill(label, tone)}",
+                '<div class="ls-patient-banner"><div class="ls-patient-avatar">'
+                '<span class="material-symbols-rounded">person</span></div><div>'
+                '<div class="ls-patient-name">'
+                + _ls_html.escape(str(patient_name(patient)))
+                + '</div><div class="ls-patient-code">Patient ID: '
+                + _ls_html.escape(str(patient_code(patient)))
+                + '</div></div></div>',
                 unsafe_allow_html=True,
             )
 
-        st.divider()
-        section_title("Clinical Notes")
-
-        chief_complaint = st.text_area(
-            "Chief complaint",
-            value=examination.get("chief_complaint") or "",
-            height=80,
-            key=f"pq_exam_{examination_id}_chief",
-        )
-        hpi = st.text_area(
-            "History of present illness",
-            value=examination.get("history_of_present_illness") or "",
-            height=120,
-            key=f"pq_exam_{examination_id}_hpi",
-        )
-        physical_exam = st.text_area(
-            "Physical examination",
-            value=examination.get("physical_examination") or "",
-            height=120,
-            key=f"pq_exam_{examination_id}_physical",
-        )
-
-        st.divider()
-        section_title("Doctor Orders")
-
-        order = st.radio(
-            "Select next step",
-            ["No Request", "Chest X-Ray"],
-            key=f"pq_exam_{examination_id}_order",
-            horizontal=True,
-        )
-
-        diagnosis = None
-        plans = None
-        lab_requests = []
-        disposition = None
-        disposition_notes = None
-
-        if order == "No Request":
-            diagnosis = st.text_area(
-                "Diagnosis / Assessment",
-                value=examination.get("diagnosis") or "",
-                height=100,
-                key=f"pq_exam_{examination_id}_diagnosis",
+            st.markdown(
+                '<div class="ls-section"><span class="ls-section-num">1</span><span>Patient Information</span><span class="material-symbols-rounded">person</span></div>',
+                unsafe_allow_html=True,
             )
-            plans = st.text_area(
-                "Plans / Orders",
-                value=examination.get("plans_orders") or "",
-                height=100,
-                key=f"pq_exam_{examination_id}_plans",
-            )
-            lab_requests = lab_request_selector(
-                examination_id, user_id, f"pq_exam_{examination_id}"
-            )
+            show_rows([
+                ("Patient", patient_name(patient)),
+                ("Patient ID", patient_code(patient)),
+                ("Date of Birth", format_date(patient.get("date_of_birth"))),
+                ("Sex", patient.get("sex") or "—"),
+                (
+                    "Examination Type",
+                    examination.get("examination_type") or "Examination",
+                ),
+            ])
+
+            exam_type = str(examination.get("examination_type") or "").strip().lower().replace("-", " ")
+            if exam_type.startswith("follow up examination"):
+                try:
+                    linked_fu_id = get_follow_up_for_examination(examination_id, user_id)
+                    if linked_fu_id:
+                        render_follow_up_lab_documents(
+                            linked_fu_id, user_id, allow_upload=False,
+                            key_prefix=f"pq_labs_{examination_id}",
+                            on_view_result=lambda request_id: _open_physician_lab_preview(
+                                linked_fu_id, request_id, examination_id
+                            ),
+                        )
+                    else:
+                        st.caption("No follow-up appointment is linked to this examination.")
+                except Exception as error:
+                    st.warning(f"Could not load requested laboratory results: {error}")
+
+            left_col, right_col = st.columns(2, gap="medium")
+            with left_col:
+                with st.container(border=True):
+                    st.markdown(
+                        '<div class="ls-section"><span class="ls-section-num">2</span><span>Clinical Data</span><span class="material-symbols-rounded">monitor_heart</span></div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    consents = get_examination_consents(examination_id)
+                    consent = consents[0] if consents else None
+                    vitals = get_examination_vitals(examination_id)
+
+                    if consent and consent.get("given"):
+                        st.markdown(
+                            f"**Consent signed by:** {consent.get('signed_by_name') or '—'}"
+                        )
+                        signature_path = consent.get("signature_path")
+                        if signature_path:
+                            signature_url = get_consent_signature_url(signature_path)
+                            if signature_url:
+                                st.image(signature_url, width=200, caption="Patient signature")
+                    else:
+                        st.warning("No consent on file for this examination.")
+
+                    st.markdown(
+                        '<div class="ls-section"><span class="ls-section-num">3</span><span>Vitals</span><span class="material-symbols-rounded">favorite</span></div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    v1, v2, v3 = st.columns(3)
+
+                    bp_sys = v1.number_input(
+                        "BP systolic (mmHg)",
+                        min_value=0, max_value=300, step=1,
+                        value=int(get_vitals_value(vitals, "bp_systolic") or 0),
+                        key=f"pq_exam_{examination_id}_bp_sys",
+                    )
+                    bp_dia = v2.number_input(
+                        "BP diastolic (mmHg)",
+                        min_value=0, max_value=200, step=1,
+                        value=int(get_vitals_value(vitals, "bp_diastolic") or 0),
+                        key=f"pq_exam_{examination_id}_bp_dia",
+                    )
+                    temperature = v3.number_input(
+                        "Temperature (°C)",
+                        min_value=0.0, max_value=50.0, step=0.1,
+                        value=float(get_vitals_value(vitals, "temperature") or 0.0),
+                        key=f"pq_exam_{examination_id}_temp",
+                    )
+
+                    v4, v5, v6 = st.columns(3)
+
+                    pulse_rate = v4.number_input(
+                        "Pulse rate (bpm)",
+                        min_value=0, max_value=300, step=1,
+                        value=int(get_vitals_value(vitals, "pulse_rate") or 0),
+                        key=f"pq_exam_{examination_id}_pulse",
+                    )
+                    respiratory_rate = v5.number_input(
+                        "Respiratory rate (/min)",
+                        min_value=0, max_value=100, step=1,
+                        value=int(get_vitals_value(vitals, "respiratory_rate") or 0),
+                        key=f"pq_exam_{examination_id}_rr",
+                    )
+                    weight = v6.number_input(
+                        "Weight (kg)",
+                        min_value=0.0, max_value=500.0, step=0.1,
+                        value=float(get_vitals_value(vitals, "weight_kg") or 0.0),
+                        key=f"pq_exam_{examination_id}_weight",
+                    )
+
+                    v7, v8, v9 = st.columns(3)
+
+                    height = v7.number_input(
+                        "Height (cm)",
+                        min_value=0.0, max_value=300.0, step=0.1,
+                        value=float(get_vitals_value(vitals, "height_cm") or 0.0),
+                        key=f"pq_exam_{examination_id}_height",
+                    )
+                    spo2 = v8.number_input(
+                        "SpO2 (%)",
+                        min_value=0, max_value=100, step=1,
+                        value=int(get_vitals_value(vitals, "spo2") or 0),
+                        key=f"pq_exam_{examination_id}_spo2",
+                    )
+                    heart_rate = v9.number_input(
+                        "Heart rate (bpm)",
+                        min_value=0, max_value=300, step=1,
+                        value=int(get_vitals_value(vitals, "heart_rate") or 0),
+                        key=f"pq_exam_{examination_id}_heart_rate",
+                    )
+
+                    bmi = calculate_bmi(weight, height)
+                    if bmi:
+                        label, tone = bmi_tone(bmi)
+                        st.markdown(
+                            f"**BMI:** {bmi} {pill(label, tone)}",
+                            unsafe_allow_html=True,
+                        )
+
+            with right_col:
+                with st.container(border=True):
+                    st.markdown(
+                        '<div class="ls-section"><span class="ls-section-num">4</span><span>Clinical Notes</span><span class="material-symbols-rounded">clinical_notes</span></div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    chief_complaint = st.text_area(
+                        "Chief complaint",
+                        value=examination.get("chief_complaint") or "",
+                        height=80,
+                        key=f"pq_exam_{examination_id}_chief",
+                    )
+                    hpi = st.text_area(
+                        "History of present illness",
+                        value=examination.get("history_of_present_illness") or "",
+                        height=120,
+                        key=f"pq_exam_{examination_id}_hpi",
+                    )
+                    physical_exam = st.text_area(
+                        "Physical examination",
+                        value=examination.get("physical_examination") or "",
+                        height=120,
+                        key=f"pq_exam_{examination_id}_physical",
+                    )
 
             st.divider()
-            section_title("Disposition")
-
-            disposition_options = [
-                "Admission",
-                "Treated and Sent Home",
-                "Referred",
-                "Refused Admission",
-                "Nowhere When Called",
-            ]
-            current_disposition = examination.get("disposition")
-            disposition_index = (
-                disposition_options.index(current_disposition)
-                if current_disposition in disposition_options
-                else 0
+            st.markdown(
+                '<div class="ls-section"><span class="ls-section-num">5</span><span>Doctor Orders</span><span class="material-symbols-rounded">assignment</span></div>',
+                unsafe_allow_html=True,
             )
 
-            disposition = st.selectbox(
-                "Disposition",
-                disposition_options,
-                index=disposition_index,
-                key=f"pq_exam_{examination_id}_disposition",
+            order = st.radio(
+                "Select next step",
+                ["No Request", "Chest X-Ray"],
+                key=f"pq_exam_{examination_id}_order",
+                horizontal=True,
             )
-            disposition_notes = st.text_area(
-                "Disposition notes",
-                value=examination.get("disposition_notes") or "",
-                height=100,
-                key=f"pq_exam_{examination_id}_disposition_notes",
-            )
-            # Optional appointment for BOTH General Consult and Follow-Up Examination.
-            # A follow-up does not require a Chest X-Ray request.
-            exam_type_normalized = (
-                str(examination.get("examination_type") or "")
-                .strip().lower().replace("_", " ").replace("-", " ")
-            )
-            followup_eligible = (
-                exam_type_normalized in ("general consult", "general consultation")
-                or exam_type_normalized.startswith("follow up examination")
-            )
-            schedule_follow_up = False
-            follow_up_date = None
-            follow_up_time = None
-            follow_up_notes = None
 
-            if followup_eligible:
+            diagnosis = None
+            plans = None
+            lab_requests = []
+            disposition = None
+            disposition_notes = None
+
+            if order == "No Request":
+                diagnosis = st.text_area(
+                    "Diagnosis / Assessment",
+                    value=examination.get("diagnosis") or "",
+                    height=100,
+                    key=f"pq_exam_{examination_id}_diagnosis",
+                )
+                plans = st.text_area(
+                    "Plans / Orders",
+                    value=examination.get("plans_orders") or "",
+                    height=100,
+                    key=f"pq_exam_{examination_id}_plans",
+                )
+                st.markdown(
+                    '<div class="ls-section"><span class="ls-section-num">6</span><span>Laboratory Requests</span><span class="material-symbols-rounded">biotech</span></div>',
+                    unsafe_allow_html=True,
+                )
+                lab_requests = lab_request_selector(
+                    examination_id, user_id, f"pq_exam_{examination_id}"
+                )
+
                 st.divider()
-                section_title("Follow-Up Appointment")
-                if disposition == "Admission":
-                    st.info(
-                        "Follow-up scheduling is available after discharge. "
-                        "Complete the inpatient workflow first."
+                st.markdown(
+                    '<div class="ls-section"><span class="ls-section-num">7</span><span>Disposition</span><span class="material-symbols-rounded">home_health</span></div>',
+                    unsafe_allow_html=True,
+                )
+
+                disposition_options = [
+                    "Admission",
+                    "Treated and Sent Home",
+                    "Referred",
+                    "Refused Admission",
+                    "Nowhere When Called",
+                ]
+                current_disposition = examination.get("disposition")
+                disposition_index = (
+                    disposition_options.index(current_disposition)
+                    if current_disposition in disposition_options
+                    else 0
+                )
+
+                disposition = st.selectbox(
+                    "Disposition",
+                    disposition_options,
+                    index=disposition_index,
+                    key=f"pq_exam_{examination_id}_disposition",
+                )
+                disposition_notes = st.text_area(
+                    "Disposition notes",
+                    value=examination.get("disposition_notes") or "",
+                    height=100,
+                    key=f"pq_exam_{examination_id}_disposition_notes",
+                )
+                # Optional appointment for BOTH General Consult and Follow-Up Examination.
+                # A follow-up does not require a Chest X-Ray request.
+                exam_type_normalized = (
+                    str(examination.get("examination_type") or "")
+                    .strip().lower().replace("_", " ").replace("-", " ")
+                )
+                followup_eligible = (
+                    exam_type_normalized in ("general consult", "general consultation")
+                    or exam_type_normalized.startswith("follow up examination")
+                )
+                schedule_follow_up = False
+                follow_up_date = None
+                follow_up_time = None
+                follow_up_notes = None
+
+                if followup_eligible:
+                    st.divider()
+                    st.markdown(
+                        '<div class="ls-section"><span class="ls-section-num">8</span><span>Follow-Up Appointment</span><span class="material-symbols-rounded">event</span></div>',
+                        unsafe_allow_html=True,
                     )
-                else:
-                    schedule_follow_up = st.checkbox(
-                        "Schedule a follow-up appointment",
-                        value=False,
-                        key=f"pq_exam_{examination_id}_schedule_fu",
-                    )
-                    if schedule_follow_up:
-                        local_today = datetime.now(PH_TIMEZONE).date()
-                        follow_up_date = st.date_input(
-                            "Follow-Up Date *",
-                            value=local_today,
-                            min_value=local_today,
-                            key=f"pq_exam_{examination_id}_fu_date",
+                    if disposition == "Admission":
+                        st.info(
+                            "Follow-up scheduling is available after discharge. "
+                            "Complete the inpatient workflow first."
                         )
-                        st.markdown("**Follow-Up Time * (Philippine Time)**")
-                        hour_col, minute_col, period_col = st.columns(3)
-                        hour = hour_col.selectbox(
-                            "", list(range(1, 13)), index=8,
-                            key=f"pq_exam_{examination_id}_fu_hour",
+                    else:
+                        schedule_follow_up = st.checkbox(
+                            "Schedule a follow-up appointment",
+                            value=False,
+                            key=f"pq_exam_{examination_id}_schedule_fu",
                         )
-                        minute = minute_col.selectbox(
-                            "", list(range(60)), index=0,
-                            format_func=lambda n: f"{n:02d}",
-                            key=f"pq_exam_{examination_id}_fu_minute",
-                        )
-                        am_pm = period_col.selectbox(
-                            "AM / PM", ["AM", "PM"],
-                            key=f"pq_exam_{examination_id}_fu_period",
-                        )
-                        hour_24 = hour % 12 + (12 if am_pm == "PM" else 0)
-                        follow_up_time = time(hour_24, minute)
-                        follow_up_notes = st.text_area(
-                            "Follow-Up Notes",
-                            placeholder="Reason for follow-up and instructions",
-                            key=f"pq_exam_{examination_id}_fu_notes",
-                        )
-                        st.caption(
-                            "Appointment: "
-                            f"{follow_up_date.strftime('%B %d, %Y')} at "
-                            f"{follow_up_time.strftime('%I:%M %p')} (PHT)"
-                        )
+                        if schedule_follow_up:
+                            local_today = datetime.now(PH_TIMEZONE).date()
+                            follow_up_date = st.date_input(
+                                "Follow-Up Date *",
+                                value=local_today,
+                                min_value=local_today,
+                                key=f"pq_exam_{examination_id}_fu_date",
+                            )
+                            st.markdown("**Follow-Up Time * (Philippine Time)**")
+                            hour_col, minute_col, period_col = st.columns(3)
+                            hour = hour_col.selectbox(
+                                "", list(range(1, 13)), index=8,
+                                key=f"pq_exam_{examination_id}_fu_hour",
+                            )
+                            minute = minute_col.selectbox(
+                                "", list(range(60)), index=0,
+                                format_func=lambda n: f"{n:02d}",
+                                key=f"pq_exam_{examination_id}_fu_minute",
+                            )
+                            am_pm = period_col.selectbox(
+                                "AM / PM", ["AM", "PM"],
+                                key=f"pq_exam_{examination_id}_fu_period",
+                            )
+                            hour_24 = hour % 12 + (12 if am_pm == "PM" else 0)
+                            follow_up_time = time(hour_24, minute)
+                            follow_up_notes = st.text_area(
+                                "Follow-Up Notes",
+                                placeholder="Reason for follow-up and instructions",
+                                key=f"pq_exam_{examination_id}_fu_notes",
+                            )
+                            st.caption(
+                                "Appointment: "
+                                f"{follow_up_date.strftime('%B %d, %Y')} at "
+                                f"{follow_up_time.strftime('%I:%M %p')} (PHT)"
+                            )
 
-        else:
-            st.info(
-                "A Chest X-Ray request will be created for the "
-                "Radiologic Technologist."
+            else:
+                st.info(
+                    "A Chest X-Ray request will be created for the "
+                    "Radiologic Technologist."
+                )
+
+                clinical_indication = st.text_area(
+                    "Clinical Indication / Reason for X-Ray",
+                    value="",
+                    placeholder=(
+                        "Enter the clinical reason for requesting the X-Ray. "
+                        "Example: Evaluate for suspected pneumonia."
+                    ),
+                    height=100,
+                    key=f"pq_exam_{examination_id}_clinical_indication",
+                    help=(
+                        "Describe the clinical question or suspected condition "
+                        "that the requested X-Ray should help evaluate."
+                    ),
+                )
+
+            st.divider()
+            cancel_col, save_col = st.columns(2)
+
+            cancel_clicked = cancel_col.button(
+                "Cancel",
+                key=f"pq_exam_{examination_id}_cancel",
+                width="stretch",
             )
-
-            clinical_indication = st.text_area(
-                "Clinical Indication / Reason for X-Ray",
-                value="",
-                placeholder=(
-                    "Enter the clinical reason for requesting the X-Ray. "
-                    "Example: Evaluate for suspected pneumonia."
-                ),
-                height=100,
-                key=f"pq_exam_{examination_id}_clinical_indication",
-                help=(
-                    "Describe the clinical question or suspected condition "
-                    "that the requested X-Ray should help evaluate."
-                ),
+            save_clicked = save_col.button(
+                "Request X-Ray" if order == "Chest X-Ray" else "Complete Examination",
+                key=f"pq_exam_{examination_id}_save",
+                type="primary",
+                width="stretch",
             )
-
-        st.divider()
-        cancel_col, save_col = st.columns(2)
-
-        cancel_clicked = cancel_col.button(
-            "Cancel",
-            key=f"pq_exam_{examination_id}_cancel",
-            width="stretch",
-        )
-        save_clicked = save_col.button(
-            "Request X-Ray" if order == "Chest X-Ray" else "Complete Examination",
-            key=f"pq_exam_{examination_id}_save",
-            type="primary",
-            width="stretch",
-        )
 
     if cancel_clicked:
         clear_dialog_state()
