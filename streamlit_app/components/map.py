@@ -36,26 +36,8 @@ CARTO_API_KEY = os.getenv("CARTO_API_KEY", "").strip()
 # CONFIG
 # ============================================================
 
-if CARTO_API_KEY:
-
-    # CartoDB Voyager — clean, muted, Google-Maps-like
-    DEFAULT_TILES = (
-        "https://basemaps.cartocdn.com/rastertiles/voyager/"
-        "{z}/{x}/{y}.png"
-        f"?key={CARTO_API_KEY}"
-    )
-
-    DEFAULT_ATTR = (
-        "&copy; OpenStreetMap contributors, "
-        "&copy; CARTO"
-    )
-
-else:
-
-    # Fallback — plain OpenStreetMap tiles
-    DEFAULT_TILES = "OpenStreetMap"
-
-    DEFAULT_ATTR = "&copy; OpenStreetMap contributors"
+DEFAULT_TILES = "OpenStreetMap"
+DEFAULT_ATTR = "&copy; OpenStreetMap contributors"
 
 
 SINGLE_HOSPITAL_ZOOM = 16
@@ -148,8 +130,8 @@ def render_hospital_map(
     m = folium.Map(
         location=center,
         zoom_start=zoom or auto_zoom,
-        tiles=DEFAULT_TILES,
-        attr=DEFAULT_ATTR,
+        tiles="OpenStreetMap",
+        attr="&copy; OpenStreetMap contributors",
         control_scale=True,
     )
 

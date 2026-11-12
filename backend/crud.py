@@ -451,7 +451,17 @@ def create_patient(
     created_by=None,
     hospital_id=None,
     emergency_contact_relationship=None,
+    province=None,
+    city=None,
+    barangay_id=None,
+    purok=None,
+    street=None,
+    address_details=None,
+    latitude=None,
+    longitude=None,
+    location_precision=None,
 ):
+
     """
     Create a new patient.
     """
@@ -476,6 +486,15 @@ def create_patient(
             "religion": religion,
             "contact_number": contact_number,
             "address": address,
+            "province": province,
+            "city": city,
+            "barangay_id": barangay_id,
+            "purok": purok,
+            "street": street,
+            "address_details": address_details,
+            "latitude": latitude,
+            "longitude": longitude,
+            "location_precision": location_precision,
             "emergency_contact_name": (
                 emergency_contact_name
             ),
@@ -536,7 +555,17 @@ def update_patient(
     emergency_contact_no=None,
     emergency_contact_relationship=None,
     hospital_id=None,
+    province=None,
+    city=None,
+    barangay_id=None,
+    purok=None,
+    street=None,
+    address_details=None,
+    latitude=None,
+    longitude=None,
+    location_precision=None,
 ):
+
     """
     Update an existing patient.
     """
@@ -560,6 +589,15 @@ def update_patient(
             "religion": religion,
             "contact_number": contact_number,
             "address": address,
+            "province": province,
+            "city": city,
+            "barangay_id": barangay_id,
+            "purok": purok,
+            "street": street,
+            "address_details": address_details,
+            "latitude": latitude,
+            "longitude": longitude,
+            "location_precision": location_precision,
             "emergency_contact_name": (
                 emergency_contact_name
             ),
