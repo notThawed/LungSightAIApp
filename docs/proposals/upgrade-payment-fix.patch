@@ -1,0 +1,167 @@
+diff --git a/supabase/functions/_shared/payments/upgrade.ts b/supabase/functions/_shared/payments/upgrade.ts
+new file mode 100644
+index 0000000..0498767
+--- /dev/null
++++ b/supabase/functions/_shared/payments/upgrade.ts
+@@ -0,0 +1,45 @@
++// PROPOSED (not applied): apply a paid plan upgrade from the PayMongo webhook.
++// Mirrors backend/backend_utils/subscription_utils.upgrade_subscription():
++// previous_plan_id <- plan_id, plan_id <- new plan, status Active,
++// last_changed_at / updated_at <- now. end_date is NOT changed.
++
++export type UpgradePayment = {
++  payment_id: string;
++  payment_type: string | null;
++  hospital_id: string | null;
++  hospital_subscription_id: string | null;
++  plan_id: number | null;
++};
++
++export type SubscriptionRow = {
++  hospital_subscription_id: string;
++  hospital_id: string | null;
++  plan_id: number | null;
++  status: string | null;
++};
++
++export type UpgradeDecision =
++  | { apply: true; expectedPlanId: number | null; update: Record<string, unknown> }
++  | { apply: false; reason: string };
++
++export function planUpgrade(payment: UpgradePayment, subscription: SubscriptionRow | null, nowIso: string): UpgradeDecision {
++  if (payment.payment_type !== "upgrade") return { apply: false, reason: "not_upgrade" };
++  if (!payment.hospital_subscription_id || payment.plan_id == null) return { apply: false, reason: "missing_fields" };
++  if (!subscription) return { apply: false, reason: "subscription_not_found" };
++  if (subscription.hospital_subscription_id !== payment.hospital_subscription_id) return { apply: false, reason: "subscription_mismatch" };
++  if (payment.hospital_id && subscription.hospital_id !== payment.hospital_id) return { apply: false, reason: "hospital_mismatch" };
++  if (subscription.plan_id === payment.plan_id) return { apply: false, reason: "already_applied" };
++  if (subscription.status === "Cancelled") return { apply: false, reason: "subscription_cancelled" };
++
++  return {
++    apply: true,
++    expectedPlanId: subscription.plan_id,
++    update: {
++      previous_plan_id: subscription.plan_id,
++      plan_id: payment.plan_id,
++      status: "Active",
++      last_changed_at: nowIso,
++      updated_at: nowIso,
++    },
++  };
++}
+diff --git a/supabase/functions/paymongo-webhook/index.ts b/supabase/functions/paymongo-webhook/index.ts
+index 7096695..f703a14 100644
+--- a/supabase/functions/paymongo-webhook/index.ts
++++ b/supabase/functions/paymongo-webhook/index.ts
+@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+ import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
+ 
++import { planUpgrade } from "../_shared/payments/upgrade.ts";
++
+ 
+ // ============================================================
+ // ENV
+@@ -359,6 +361,57 @@ serve(async (req) => {
+       idempotency_key: `subscription.renewed:payment:${payment.payment_id}`,
+     });
+ 
++  } else if (
++    payment.payment_type === "upgrade" &&
++    payment.hospital_subscription_id
++  ) {
++
++    // ------------------------------------------
++    // Upgrade path (proposed fix)
++    // ------------------------------------------
++
++    const { data: subscription } = await supabase
++      .from("hospital_subscriptions")
++      .select("hospital_subscription_id, hospital_id, plan_id, status")
++      .eq("hospital_subscription_id", payment.hospital_subscription_id)
++      .maybeSingle();
++
++    const decision = planUpgrade(payment, subscription ?? null, new Date().toISOString());
++
++    if (decision.apply) {
++      // Optimistic guard: only apply if the plan has not changed meanwhile.
++      const guard = supabase
++        .from("hospital_subscriptions")
++        .update(decision.update)
++        .eq("hospital_subscription_id", payment.hospital_subscription_id);
++
++      const { data: applied, error: upgradeErr } = await (
++        decision.expectedPlanId === null
++          ? guard.is("plan_id", null)
++          : guard.eq("plan_id", decision.expectedPlanId)
++      ).select("hospital_subscription_id");
++
++      const ok = !upgradeErr && Array.isArray(applied) && applied.length === 1;
++
++      await recordAudit({
++        event_type: "subscription.upgraded",
++        outcome: ok ? "success" : "failure",
++        hospital_id: payment.hospital_id ?? null,
++        target_type: "hospital_subscription",
++        target_id: payment.hospital_subscription_id,
++        metadata: ok
++          ? { payment_id: payment.payment_id }
++          : { payment_id: payment.payment_id, reason: "upgrade_update_failed" },
++        idempotency_key: `subscription.upgraded:payment:${payment.payment_id}`,
++      });
++
++      if (!ok) {
++        console.error("Failed to apply upgrade:", upgradeErr?.code ?? "no row updated");
++      }
++    } else {
++      console.log(`Upgrade not applied: ${decision.reason}`);
++    }
++
+   } else {
+ 
+     // ------------------------------------------
+diff --git a/tests/email/upgrade_proposal.test.ts b/tests/email/upgrade_proposal.test.ts
+new file mode 100644
+index 0000000..4b041f1
+--- /dev/null
++++ b/tests/email/upgrade_proposal.test.ts
+@@ -0,0 +1,39 @@
++import assert from "node:assert/strict";
++import { test } from "node:test";
++
++import { planUpgrade } from "../../supabase/functions/_shared/payments/upgrade.ts";
++
++const NOW = "2026-10-26T03:00:00.000Z";
++const payment = {
++  payment_id: "p1", payment_type: "upgrade", hospital_id: "h1", hospital_subscription_id: "s1", plan_id: 3,
++};
++const sub = { hospital_subscription_id: "s1", hospital_id: "h1", plan_id: 2, status: "Active" };
++
++test("a paid upgrade produces the same update as upgrade_subscription()", () => {
++  assert.deepEqual(planUpgrade(payment, sub, NOW), {
++    apply: true,
++    expectedPlanId: 2,
++    update: { previous_plan_id: 2, plan_id: 3, status: "Active", last_changed_at: NOW, updated_at: NOW },
++  });
++});
++
++test("end_date and billing fields are never touched", () => {
++  const decision = planUpgrade(payment, sub, NOW);
++  assert.ok(decision.apply);
++  for (const field of ["end_date", "start_date", "billing_cycle", "last_renewed_at"]) {
++    assert.ok(!(field in decision.update), field);
++  }
++});
++
++test("a repeated webhook is a no-op once applied", () => {
++  assert.deepEqual(planUpgrade(payment, { ...sub, plan_id: 3 }, NOW), { apply: false, reason: "already_applied" });
++});
++
++test("mismatches and missing data are refused", () => {
++  assert.equal((planUpgrade({ ...payment, payment_type: "renewal" }, sub, NOW) as { reason: string }).reason, "not_upgrade");
++  assert.equal((planUpgrade({ ...payment, plan_id: null }, sub, NOW) as { reason: string }).reason, "missing_fields");
++  assert.equal((planUpgrade(payment, null, NOW) as { reason: string }).reason, "subscription_not_found");
++  assert.equal((planUpgrade(payment, { ...sub, hospital_id: "h2" }, NOW) as { reason: string }).reason, "hospital_mismatch");
++  assert.equal((planUpgrade(payment, { ...sub, hospital_subscription_id: "s2" }, NOW) as { reason: string }).reason, "subscription_mismatch");
++  assert.equal((planUpgrade(payment, { ...sub, status: "Cancelled" }, NOW) as { reason: string }).reason, "subscription_cancelled");
++});
