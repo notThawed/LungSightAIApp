@@ -187,17 +187,17 @@ def examination_datetime(examination):
 # AI HELPERS
 # ============================================================
 
-def risk_label_from_findings(ai_findings):
+def finding_label_from_ai(ai_findings):
     if not ai_findings:
         return ("No AI Result", "slate")
 
     normalized = str(ai_findings).strip().lower()
 
     if normalized == "positive":
-        return ("HIGH", "red")
+        return ("Positive Pneumonia", "red")
 
     if normalized == "negative":
-        return ("LOW", "green")
+        return ("Negative Pneumonia", "green")
 
     return (str(ai_findings).title(), "slate")
 
@@ -236,26 +236,35 @@ def ai_findings_narrative(ai_findings, pneumonia_type):
 
     normalized = str(ai_findings).strip().lower()
 
+    disclaimer = (
+        " <i>This is a presumptive AI result and is not a "
+        "confirmed diagnosis. Clinical correlation is required.</i>"
+    )
+
     if normalized == "positive":
         if pneumonia_type == "bacterial_pneumonia":
             return (
                 "Bilateral consolidation detected. Findings "
                 "consistent with <b>bacterial pneumonia</b>."
+                + disclaimer
             )
         if pneumonia_type == "viral_pneumonia":
             return (
                 "Bilateral opacity patterns detected. Findings "
                 "consistent with <b>viral pneumonia</b>."
+                + disclaimer
             )
         return (
             "Patterns consistent with <b>pneumonia</b> detected. "
             "Recommend clinical correlation."
+            + disclaimer
         )
 
     if normalized == "negative":
         return (
             "No patterns consistent with pneumonia were detected. "
             "Continue standard clinical evaluation."
+            + disclaimer
         )
 
     return None
@@ -980,7 +989,7 @@ def render_ai_result_card(ai):
     ai_conf = (ai or {}).get("ai_confidence")
     class_conf = (ai or {}).get("classification_confidence")
 
-    risk_label, risk_tone = risk_label_from_findings(ai_findings)
+    risk_label, risk_tone = finding_label_from_ai(ai_findings)
     type_label, type_tone = pneumonia_type_label(
         pneumonia_type, ai_findings
     )
@@ -994,7 +1003,7 @@ def render_ai_result_card(ai):
         conf_block = (
             "<div class='rx-ai-row rx-ai-row-block'>"
             "<div class='rx-ai-label'>"
-            "<span>AI Confidence</span>"
+            "<span>AI Confidence </span>"
             f"<b>{conf_pct:.1f}%</b>"
             "</div>"
             "<div class='rx-conf-bar'>"
@@ -1011,9 +1020,14 @@ def render_ai_result_card(ai):
 
     if class_conf_pct is not None:
         class_conf_block = (
-            "<div class='rx-ai-row'>"
-            "<span>Classification Conf.</span>"
+            "<div class='rx-ai-row rx-ai-row-block'>"
+            "<div class='rx-ai-label'>"
+            "<span>Classification Confidence </span>"
             f"<b>{class_conf_pct:.1f}%</b>"
+            "</div>"
+            "<div class='rx-conf-bar'>"
+            f"<div class='rx-conf-fill' style='width:{class_conf_pct}%'></div>"
+            "</div>"
             "</div>"
         )
     else:
@@ -1041,7 +1055,7 @@ def render_ai_result_card(ai):
         "</div>"
         "<div class='rx-ai-card'>"
         "<div class='rx-ai-row'>"
-        "<span>Risk Level</span>"
+        "<span>AI Findings</span>"
         f"<div>{pill(risk_label, risk_tone)}</div>"
         "</div>"
         "<div class='rx-ai-row'>"
@@ -1071,7 +1085,7 @@ def render_confirmed_diagnosis(ai):
 
     if ai_predicted_key:
         ai_label_text = dict(CONFIRMED_LABEL_OPTIONS)[ai_predicted_key]
-        risk_label, risk_tone = risk_label_from_findings(ai_findings)
+        risk_label, risk_tone = finding_label_from_ai(ai_findings)
 
         st.markdown(
             "<div class='rx-training-ai-preview'>"
