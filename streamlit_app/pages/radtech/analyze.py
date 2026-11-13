@@ -60,7 +60,6 @@ AI_MODEL_VERSION = "pneumonia_resnet50_v1"
 CLASSIFICATION_MODEL_VERSION = "pneumonia_densenet121_v1"
 COVID_MODEL_VERSION = "covid_resnet50_v1"
 
-CONFIDENCE_THRESHOLD = 0.65
 
 ANALYSIS_STATE_KEY = "rx_analysis_state"
 ANALYSIS_RESULT_KEY = "radtech_analysis_result"
@@ -492,20 +491,6 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
         result["classification_confidence"] = None
         result["classification_model_version"] = None
 
-        # --- CONFIDENCE GATE: STEP 1 ---
-        if confidence < CONFIDENCE_THRESHOLD:
-            print(f"⚠️ LOW CONFIDENCE ({confidence:.2f}). Flagging as inconclusive.")
-            result["label"] = "inconclusive"
-            
-            status.markdown(_progress_steps_html(4), unsafe_allow_html=True)
-            time.sleep(0.4)
-            st.session_state[ANALYSIS_RESULT_KEY] = result
-            st.session_state["gradcam_result"] = gradcam_result
-            st.session_state["gradcam_error"] = gradcam_error
-            st.session_state.pop(OVERRIDE_OOD_KEY, None)
-            st.session_state[ANALYSIS_STATE_KEY] = "complete"
-            st.rerun()
-            return
 
     except Exception as error:
         print(f"❌ RESNET-50 FAILED: {error}")
@@ -549,20 +534,6 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
             result["classification_confidence"] = type_conf
             result["classification_model_version"] = CLASSIFICATION_MODEL_VERSION
 
-            # --- CONFIDENCE GATE: STEP 2 ---
-            if type_conf < CONFIDENCE_THRESHOLD:
-                print(f"⚠️ LOW TYPE CONFIDENCE ({type_conf:.2f}). Flagging type as inconclusive.")
-                result["pneumonia_type"] = "inconclusive"
-                
-                status.markdown(_progress_steps_html(4), unsafe_allow_html=True)
-                time.sleep(0.4)
-                st.session_state[ANALYSIS_RESULT_KEY] = result
-                st.session_state["gradcam_result"] = gradcam_result
-                st.session_state["gradcam_error"] = gradcam_error
-                st.session_state.pop(OVERRIDE_OOD_KEY, None)
-                st.session_state[ANALYSIS_STATE_KEY] = "complete"
-                st.rerun()
-                return
 
         except Exception as error:
             print(f"❌ DENSENET-121 (Type) FAILED: {error}")
@@ -605,11 +576,6 @@ def show_analysis_progress_dialog(uploaded_file, examination, patient, request):
                 result["pneumonia_type"] = covid_label
                 result["classification_confidence"] = covid_conf
                 result["classification_model_version"] = COVID_MODEL_VERSION
-
-                # --- CONFIDENCE GATE: STEP 3 ---
-                if covid_conf < CONFIDENCE_THRESHOLD:
-                    print(f"⚠️ LOW COVID CONFIDENCE ({covid_conf:.2f}). Flagging as inconclusive.")
-                    result["pneumonia_type"] = "inconclusive"
 
             except Exception as error:
                 print(f"⚠️ COVID MODEL FAILED (non-fatal): {error}")
@@ -701,10 +667,7 @@ def render_submission_summary(request, patient, uploaded_file, result):
     )
 
     pneu_type = result.get("pneumonia_type")
-    if pneu_type == "inconclusive":
-        pneu_display = "Inconclusive"
-        pneu_tag_class = "rx-tag-amber"
-    elif pneu_type:
+    if pneu_type:
         pneu_display = pneu_type.replace("_", " ").title()
         pneu_tag_class = "rx-tag-red" if any(w in pneu_type for w in ["covid", "viral", "bacterial"]) else "rx-tag-blue"
     else:
@@ -712,14 +675,11 @@ def render_submission_summary(request, patient, uploaded_file, result):
         pneu_tag_class = "rx-tag-green"
 
     main_label = str(result.get("label", "—")).strip().lower()
-    if main_label == "inconclusive":
-        main_display = "Inconclusive (Low Confidence)"
-        main_tag_class = "rx-tag-amber"
-    elif main_label == "positive":
-        main_display = "Positive for Infiltration"
+    if main_label == "positive":
+        main_display = "Positive Pneumonia"
         main_tag_class = "rx-tag-red"
     elif main_label == "negative":
-        main_display = "Negative / Normal"
+        main_display = "Negative Pneumonia"
         main_tag_class = "rx-tag-green"
     else:
         main_display = main_label.title()
@@ -790,10 +750,19 @@ def render_submission_summary(request, patient, uploaded_file, result):
         unsafe_allow_html=True,
     )
 
+    disclaimer = (
+        "This is a presumptive AI result and is not a "
+        "confirmed diagnosis. Clinical correlation is required."
+    )
+
     st.markdown(
         "<p class='rx-summary-note'>"
         "<span class='material-symbols-rounded'>info</span>"
         "The X-ray and Grad-CAM heatmap will be committed to the physician review queue upon saving."
+        "</p>"
+        "<p class='rx-summary-note rx-summary-disclaimer'>"
+        "<span class='material-symbols-rounded'>warning</span>"
+        f"{safe(disclaimer)}"
         "</p>",
         unsafe_allow_html=True,
     )
