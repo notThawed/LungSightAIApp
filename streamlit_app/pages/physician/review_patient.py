@@ -1520,10 +1520,14 @@ def render_report_actions(
         # NEW: Capture the exact admission timestamp
         now_utc = datetime.now(timezone.utc).isoformat()
         
-        update_examination(
+        # LUNGSIGHT_GEOSPATIAL_RECORDS_FIX_20261118
+        # Persist confirmed label in the clinical examination, not only AI training.
+        saved_exam = update_examination(
             examination_id=exam_id,
             status=exam_status,
             reviewed_by=user_id,
+            reviewed_at=now_utc,
+            confirmed_label=training_values["label"],
             diagnosis=form_values["diagnosis"].strip() or None,
             plans_orders=form_values["plans"].strip() or None,
             disposition=form_values["disposition"],
@@ -1534,7 +1538,9 @@ def render_report_actions(
             severity_status=form_values["severity_status"],
             time_in=now_utc if form_values["disposition"] == "Admission" else None,
         )
-
+        if not saved_exam:
+            st.error("Failed to save the examination and confirmed classification. Please retry.")
+            return
 
         if image_id:
             consented = patient.get("ai_consent_granted", False)

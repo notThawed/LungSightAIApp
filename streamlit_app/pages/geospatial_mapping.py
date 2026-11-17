@@ -67,6 +67,8 @@ def barangay_label(row):
     return f"{row['barangay']} — {row['city']}, {row['province']}"
 
 
+# LUNGSIGHT_GEOSPATIAL_RECORDS_FIX_20261118
+# Read directly on rerun; location grouping is shared with the patient-record data.
 def monthly_counts(hospital_id, year, month, age, sex):
     return {str(k): v for k, v in real_case_counts(hospital_id, year, month, age, sex).items()}
 
@@ -178,7 +180,7 @@ def excel_export(rows,trend,hospital_name,label):
 def show():
     if CSS.is_file():
         html('<style>'+CSS.read_text(encoding='utf-8')+'</style>')
-    html('<div class="geo-hero"><div class="geo-eyebrow">LungSightAI · Analytics & Monitoring</div><div class="geo-title">Geospatial Case Monitoring</div><div class="geo-sub">Hospital-specific, clinician-confirmed pneumonia cases by residential barangay</div></div>')
+    html('<div class="geo-hero"><div class="geo-eyebrow">LungSightAI · Analytics & Monitoring</div><div class="geo-title">Geospatial Case Monitoring</div><div class="geo-sub">Unique clinician-confirmed pneumonia patients (including admissions) by barangay</div></div>')
     try:
         hospital = hospital_context()
         geo_rows = load_geo_catalog(hospital["hospital_id"])

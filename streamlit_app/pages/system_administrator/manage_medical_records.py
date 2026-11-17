@@ -17,6 +17,8 @@ Role permissions:
 """
 
 import streamlit as st
+# LUNGSIGHT_GEOSPATIAL_RECORDS_FIX_20261118
+from backend.backend_utils.examination_record_utils import finalized_examination_records
 import streamlit.components.v1 as components
 
 from datetime import datetime, date
@@ -804,7 +806,7 @@ def count_category_items(patient):
     patient_id = patient.get("patient_id")
 
     exams = get_examinations_by_patient(patient_id) or []
-    valid_exams = [e for e in exams if (e.get("status") or "").lower() != "cancelled"]
+    valid_exams = finalized_examination_records(exams)
 
     general, follow_ups = split_examination_history(valid_exams)
     records = get_medical_records_by_patient(patient_id) or []
@@ -1080,7 +1082,7 @@ def render_category_list(patient, category):
 
     if category in (CATEGORY_GENERAL, CATEGORY_FOLLOWUP):
         exams = get_examinations_by_patient(patient_id) or []
-        valid_exams = [e for e in exams if (e.get("status") or "").lower() != "cancelled"]
+        valid_exams = finalized_examination_records(exams)
         general, follow_ups = split_examination_history(valid_exams)
 
         items = general if category == CATEGORY_GENERAL else follow_ups
@@ -1224,12 +1226,12 @@ def trigger_print_report(patient, exam, request, ai):
         <div class="content">{chief_complaint}</div>
         <div class="section-title">AI Findings (Research Tool):</div>
         <div class="content">{ai_text}</div>
-        <div class="section-title">******* [IMPRESSION] *******</div>
+        <div class="section-title">IMPRESSION</div>
         <div class="content" style="white-space: pre-wrap;">{doc_diagnosis}</div>
         <div class="signature">
             <div class="signature-line"></div>
             <div style="margin-top: 5px; font-weight: bold;">{doctor_name}</div>
-            <div style="font-size: 12px;">Attending Radiologist</div>
+            <div style="font-size: 12px;">Attending Physician</div>
         </div>
         <div class="footer">
             <div><b>Lungsight AI System</b><br>{hospital_contact} | {hospital_email}</div>

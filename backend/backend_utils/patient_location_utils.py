@@ -7,6 +7,7 @@ Patient-level locations never leave the Streamlit server.
 from __future__ import annotations
 from collections import defaultdict
 from datetime import date
+# LUNGSIGHT_GEOSPATIAL_RECORDS_FIX_20261118
 
 from backend.supabase_client import admin_supabase
 
@@ -22,6 +23,61 @@ def location_key(row):
     if not barangay or not city:
         return None
     return f"legacy:{province}|{city}|{barangay}"
+
+
+
+
+def _normalized_place(value, kind=""):
+    """Normalize spelling variants for grouping, not for database rewriting."""
+    import re
+    s = str(value or "").casefold().strip()
+    s = re.sub(r"[^\w\s]", " ", s)
+    s = " ".join(s.split())
+    if kind == "city":
+        if s.startswith("city of "):
+            s = s[8:]
+        if s.endswith(" city"):
+            s = s[:-5]
+    elif kind == "barangay":
+        s = re.sub(r"^(?:barangay|brgy)\s+", "", s)
+    return s
+
+
+def _place_tuple(row):
+    return (
+        _normalized_place(row.get("province")),
+        _normalized_place(row.get("city"), "city"),
+        _normalized_place(row.get("barangay"), "barangay"),
+    )
+
+
+def _psgc_lookup(rows):
+    """Infer legacy-to-PSGC matches ONLY from coded patients in the same data.
+
+    Ambiguous place names with different PSGC codes are intentionally NOT merged.
+    """
+    candidates = defaultdict(set)
+    for row in rows:
+        code = str(row.get("psgc_barangay_code") or "").strip()
+        key = _place_tuple(row)
+        if code and key[1] and key[2]:
+            candidates[key].add(code)
+    return {key: next(iter(codes)) for key, codes in candidates.items()
+            if len(codes) == 1}
+
+
+def _group_key(row, code_lookup):
+    code = str(row.get("psgc_barangay_code") or "").strip()
+    if code:
+        return code
+    place = _place_tuple(row)
+    if not place[1] or not place[2]:
+        return None
+    matched = code_lookup.get(place)
+    if matched:
+        return matched
+    # Keep unmatched legacy places visible; never merge unrelated localities.
+    return "legacy:" + "|".join(place)
 
 
 def _age_group(birthdate, year, month):
@@ -56,16 +112,19 @@ def _all_patient_rows(hospital_id, fields):
 
 
 def catalog_by_hospital(hospital_id):
-    """Only observed residential barangays; no manual reference tables."""
+    """Observed barangays grouped by PSGC code where a verified local match exists."""
     patients = _all_patient_rows(
         hospital_id,
         "psgc_barangay_code,province,city,barangay,latitude,longitude,location_precision",
     )
+    lookup = _psgc_lookup(patients)
     result = {}
     for row in patients:
-        key = location_key(row)
+        key = _group_key(row, lookup)
         if not key:
             continue
+        # Prefer display names from coded rows; preserve validated coordinates.
+        coded = bool(str(row.get("psgc_barangay_code") or "").strip())
         if key not in result:
             result[key] = {
                 "barangay_id": key,
@@ -74,26 +133,38 @@ def catalog_by_hospital(hospital_id):
                 "barangay": row.get("barangay") or "",
                 "latitude": None,
                 "longitude": None,
+                "_coded_name": coded,
             }
-        # Only validated barangay centroids; never expose precise home coordinates.
+        elif coded and not result[key]["_coded_name"]:
+            for field in ("province", "city", "barangay"):
+                result[key][field] = row.get(field) or result[key][field]
+            result[key]["_coded_name"] = True
         if (row.get("location_precision") == "barangay"
-                and row.get("latitude") is not None and row.get("longitude") is not None):
+                and row.get("latitude") is not None
+                and row.get("longitude") is not None):
             result[key]["latitude"] = row["latitude"]
             result[key]["longitude"] = row["longitude"]
+    for grouped in result.values():
+        grouped.pop("_coded_name", None)
     return list(result.values())
 
 
 def real_case_counts(hospital_id, year, month, age="All ages", sex="All"):
-    """One confirmed unique patient per month, hospital scoped."""
+    """One unique clinician-confirmed patient per hospital/reporting month.
+
+    Include admitted patients when a physician confirmed pneumonia; do not count
+    raw AI results. A patient's currently stored residential location is used.
+    """
     start = date(year, month, 1)
     end = date(year + (month == 12), month % 12 + 1, 1)
     patients = _all_patient_rows(
         hospital_id,
         "patient_id,date_of_birth,sex,psgc_barangay_code,province,city,barangay",
     )
+    lookup = _psgc_lookup(patients)
     eligible = {
         str(p["patient_id"]): p for p in patients
-        if location_key(p)
+        if _group_key(p, lookup)
         and (sex == "All" or p.get("sex") == sex)
         and (age == "All ages" or _age_group(p.get("date_of_birth"), year, month) == age)
     }
@@ -109,7 +180,7 @@ def real_case_counts(hospital_id, year, month, age="All ages", sex="All"):
                 .in_("patient_id", chunk)
                 .gte("examination_date", start.isoformat())
                 .lt("examination_date", end.isoformat())
-                .in_("status", ["Completed", "Discharged"])
+                .in_("status", ["Completed", "Admitted", "Discharged"])
                 .range(offset, offset + 999).execute().data or []
             )
             for exam in exams:
@@ -120,15 +191,21 @@ def real_case_counts(hospital_id, year, month, age="All ages", sex="All"):
             offset += len(exams)
     counts = defaultdict(int)
     for pid in confirmed:
-        counts[location_key(eligible[pid])] += 1
+        counts[_group_key(eligible[pid], lookup)] += 1
     return dict(counts)
 
 
 def real_registered_patient_counts(hospital_id, year, month, age="All ages", sex="All"):
+    """Count actual registered patients using the SAME barangay grouping as cases."""
     end = date(year + (month == 12), month % 12 + 1, 1)
+    patients = _all_patient_rows(
+        hospital_id,
+        "psgc_barangay_code,province,city,barangay,date_of_birth,sex,created_at",
+    )
+    lookup = _psgc_lookup(patients)
     counts = defaultdict(int)
-    for row in _all_patient_rows(hospital_id, "psgc_barangay_code,province,city,barangay,date_of_birth,sex,created_at"):
-        key = location_key(row)
+    for row in patients:
+        key = _group_key(row, lookup)
         if not key or str(row.get("created_at") or "")[:10] >= end.isoformat():
             continue
         if sex != "All" and row.get("sex") != sex:

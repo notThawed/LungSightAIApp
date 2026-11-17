@@ -1,6 +1,10 @@
 # streamlit_app/pages/physician/physician_patient_records.py
 
 import streamlit as st
+# LUNGSIGHT_GEOSPATIAL_RECORDS_FIX_20261118
+from backend.backend_utils.examination_record_utils import (
+    is_finalized_examination_record, finalized_examination_records,
+)
 import streamlit.components.v1 as components
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
@@ -35,6 +39,11 @@ from backend.backend_utils.lab_request_utils import (
 )
 
 from shared.assets import load_css
+
+# Share the existing hospital-branded X-ray print report with Medical Records.
+from streamlit_app.pages.system_administrator.manage_medical_records import (
+    trigger_print_report,
+)
 
 
 # ============================================================
@@ -232,9 +241,7 @@ def get_latest_patient_record_exam(examinations):
     eligible = [
         exam
         for exam in (examinations or [])
-        if str(exam.get("status") or "").strip().lower()
-        in ("completed", "admitted", "discharged")
-        and not is_inpatient_round(exam)
+        if is_finalized_examination_record(exam)
     ]
 
     if not eligible:
@@ -515,7 +522,7 @@ def render_patient_list(rows):
 def count_category_items(patient):
     patient_id = patient.get("patient_id")
     exams = get_examinations_by_patient(patient_id) or []
-    eligible = [e for e in exams if e.get("status") in ("Completed", "Admitted", "Discharged")]
+    eligible = finalized_examination_records(exams)
     general, follow_ups, _rounds = split_examination_history(eligible)
     records = get_medical_records_by_patient(patient_id) or []
     return {
@@ -1024,7 +1031,7 @@ def render_category_list(patient, category):
     patient_id = patient.get("patient_id")
     if category in (CATEGORY_GENERAL, CATEGORY_FOLLOWUP):
         exams = get_examinations_by_patient(patient_id) or []
-        eligible = [e for e in exams if e.get("status") in ("Completed", "Admitted", "Discharged")]
+        eligible = finalized_examination_records(exams)
         general, follow_ups, _rounds = split_examination_history(eligible)
         items = general if category == CATEGORY_GENERAL else follow_ups
         if not items:
@@ -1633,8 +1640,35 @@ def render_examination_lab_results(exam):
 
 
 def render_examination_report(patient, exam):
-    if st.button("Back to Records", key="pr_back_to_category", icon=":material/arrow_back:"):
-        back_to_category()
+    # The print report is identical in Physician and Medical Records portals.
+    back_col, print_col, _ = st.columns([2, 2, 6], vertical_alignment="center")
+    with back_col:
+        if st.button(
+            "Back to Records",
+            key="pr_back_to_category",
+            icon=":material/arrow_back:",
+            width="stretch",
+        ):
+            back_to_category()
+    with print_col:
+        if st.button(
+            "Print Result",
+            key="pr_print_result",
+            icon=":material/print:",
+            type="primary",
+            width="stretch",
+        ):
+            examination_id = exam.get("examination_id")
+            try:
+                request = get_xray_request_by_examination(examination_id)
+                ai_result = None
+                if request:
+                    images = get_xray_images_by_request(request["request_id"]) or []
+                    if images:
+                        ai_result = get_xray_ai_result(images[0].get("image_id"))
+                trigger_print_report(patient, exam, request or {}, ai_result)
+            except Exception as error:
+                st.error(f"Could not prepare the X-ray report: {error}")
     render_admission_banner(exam)
     exam_date = exam.get("examination_date") or exam.get("created_at")
     st.markdown(
