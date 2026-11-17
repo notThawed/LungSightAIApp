@@ -1,3 +1,4 @@
+# LUNGSIGHT_PSGC_NO_MANUAL_GEO_V2
 from datetime import date
 
 import streamlit as st
@@ -34,12 +35,7 @@ from streamlit_app.components.ui import (
 
 from shared.assets import load_css
 
-from backend.backend_utils.patient_location_utils import (
-    get_barangays,
-    get_puroks,
-    get_streets,
-    patient_location_fields,
-)
+from backend.backend_utils.psgc_locations import (choose_psgc_location, patient_location_payload)
 
 from backend.backend_utils.subscription_usage import (
     can_register_patient,
@@ -717,87 +713,31 @@ def render_patient_form(patient=None):
             key=f"{form_prefix}contact",
         )
 
-        # Location choices are outside st.form so dependent dropdowns rerun.
-        # Only verified barangays are offered; staff can supply missing puroks
-        # and streets without inventing reference catalog entries.
-        barangays = get_barangays()
-        provinces = sorted({row["province"] for row in barangays})
-
-        if not provinces:
-            st.error("No barangays found. Run the location migration first.")
-            return
-
-        existing_province = patient.get("province")
-        province = st.selectbox(
-            "Province *", provinces,
-            index=provinces.index(existing_province) if existing_province in provinces else 0,
-            key=f"{form_prefix}province",
+        # Automatic Philippine geographic hierarchy; no geo_* lookup tables.
+        selected_patient_location = choose_psgc_location(
+            f"{form_prefix}patient_geo_", existing=patient
         )
-
-        cities = sorted({row["city"] for row in barangays if row["province"] == province})
-        existing_city = patient.get("city")
-        city = st.selectbox(
-            "City / Municipality *", cities,
-            index=cities.index(existing_city) if existing_city in cities else 0,
-            key=f"{form_prefix}city",
-        )
-
-        local_barangays = [
-            row for row in barangays
-            if row["province"] == province and row["city"] == city
-        ]
-        names = [row["barangay"] for row in local_barangays]
-        old_id = patient.get("barangay_id")
-        old_index = next(
-            (i for i, row in enumerate(local_barangays)
-             if str(row["barangay_id"]) == str(old_id)), 0,
-        )
-        selected_name = st.selectbox(
-            "Barangay *", names, index=old_index,
-            key=f"{form_prefix}barangay",
-        )
-        barangay_row = next(row for row in local_barangays if row["barangay"] == selected_name)
-
-        def location_detail(field, options, previous):
-            options = sorted(set(options))
-            options = ["Not specified", *options, "Other / Not listed"]
-            initial = previous if previous in options else (
-                "Other / Not listed" if previous else "Not specified"
-            )
-            selection = st.selectbox(
-                field, options, index=options.index(initial),
-                key=f"{form_prefix}{field.lower().replace(' ', '_').replace('/', '_')}",
-            )
-            if selection == "Not specified":
-                return None
-            if selection == "Other / Not listed":
-                return st.text_input(
-                    f"Specify {field.lower()}",
-                    value=previous if previous and previous not in options else "",
-                    key=f"{form_prefix}{field.lower().replace(' ', '_')}_custom",
-                ).strip() or None
-            return selection
-
-        purok = location_detail(
-            "Purok / Sitio",
-            [item["purok"] for item in get_puroks(barangay_row["barangay_id"])],
-            patient.get("purok"),
-        )
-        street = location_detail(
-            "Street",
-            [item["street"] for item in get_streets(barangay_row["barangay_id"])],
-            patient.get("street"),
-        )
-        address_details = st.text_input(
-            "House number / building / landmark (optional)",
-            value=patient.get("address_details") or "",
-            key=f"{form_prefix}address_details",
-        )
-        location = patient_location_fields(
-            barangay_row, purok=purok, street=street,
-            details=address_details.strip() or None,
-        )
-        st.caption("Address preview: " + location["address"])
+        if selected_patient_location:
+            location = patient_location_payload(selected_patient_location, patient)
+        else:
+            # Preserve existing legacy addresses when editing unrelated fields.
+            location = {
+                "region": patient.get("region"),
+                "province": patient.get("province"),
+                "city": patient.get("city"),
+                "barangay": patient.get("barangay"),
+                "psgc_region_code": patient.get("psgc_region_code"),
+                "psgc_province_code": patient.get("psgc_province_code"),
+                "psgc_city_code": patient.get("psgc_city_code"),
+                "psgc_barangay_code": patient.get("psgc_barangay_code"),
+                "purok": patient.get("purok"),
+                "street": patient.get("street"),
+                "address_details": patient.get("address_details"),
+                "latitude": patient.get("latitude"),
+                "longitude": patient.get("longitude"),
+                "location_precision": patient.get("location_precision"),
+                "address": patient.get("address"),
+            }
 
         # 5. Emergency Contact
         st.markdown(
@@ -892,6 +832,12 @@ def render_patient_form(patient=None):
         return
 
     if birthdate is None:
+        return
+
+    if selected_patient_location is None and (
+        not is_edit or st.session_state.get(f"{form_prefix}patient_geo_region")
+    ):
+        errors.error("Select the full Region, Province, City, and Barangay.")
         return
 
     if (

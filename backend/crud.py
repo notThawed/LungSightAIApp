@@ -1,3 +1,4 @@
+# LUNGSIGHT_PSGC_NO_MANUAL_GEO_V2
 from datetime import datetime, timezone
 
 from backend.supabase_client import admin_supabase
@@ -40,6 +41,7 @@ def create_user(
     contact_number,
     address,
     hospital_id,
+    address_fields=None,
 ):
     """
     Create a Supabase Auth user through invitation
@@ -118,6 +120,8 @@ def create_user(
             "hospital_id": hospital_id,
             "is_active": True,
         }
+        if address_fields is not None:
+            profile_data.update(address_fields)
 
         profile_response = (
             admin_supabase
@@ -190,6 +194,7 @@ def update_user(
     contact_number,
     address,
     hospital_id=None,
+    address_fields=None,
 ):
     """
     Update both the Supabase Auth account
@@ -243,6 +248,8 @@ def update_user(
                 timezone.utc
             ).isoformat(),
         }
+        if address_fields is not None:
+            profile_data.update(address_fields)
 
         response = (
             admin_supabase
@@ -454,6 +461,12 @@ def create_patient(
     province=None,
     city=None,
     barangay_id=None,
+    barangay=None,
+    region=None,
+    psgc_region_code=None,
+    psgc_province_code=None,
+    psgc_city_code=None,
+    psgc_barangay_code=None,
     purok=None,
     street=None,
     address_details=None,
@@ -486,9 +499,14 @@ def create_patient(
             "religion": religion,
             "contact_number": contact_number,
             "address": address,
+            "region": region,
             "province": province,
             "city": city,
-            "barangay_id": barangay_id,
+            "barangay": barangay,
+            "psgc_region_code": psgc_region_code,
+            "psgc_province_code": psgc_province_code,
+            "psgc_city_code": psgc_city_code,
+            "psgc_barangay_code": psgc_barangay_code,
             "purok": purok,
             "street": street,
             "address_details": address_details,
@@ -558,6 +576,12 @@ def update_patient(
     province=None,
     city=None,
     barangay_id=None,
+    barangay=None,
+    region=None,
+    psgc_region_code=None,
+    psgc_province_code=None,
+    psgc_city_code=None,
+    psgc_barangay_code=None,
     purok=None,
     street=None,
     address_details=None,
@@ -589,9 +613,14 @@ def update_patient(
             "religion": religion,
             "contact_number": contact_number,
             "address": address,
+            "region": region,
             "province": province,
             "city": city,
-            "barangay_id": barangay_id,
+            "barangay": barangay,
+            "psgc_region_code": psgc_region_code,
+            "psgc_province_code": psgc_province_code,
+            "psgc_city_code": psgc_city_code,
+            "psgc_barangay_code": psgc_barangay_code,
             "purok": purok,
             "street": street,
             "address_details": address_details,

@@ -1,3 +1,4 @@
+# LUNGSIGHT_PSGC_NO_MANUAL_GEO_V2
 from datetime import date, datetime
 
 import streamlit as st
@@ -36,6 +37,7 @@ from streamlit_app.components.ui import (
     pill,
 )
 
+from backend.backend_utils.psgc_locations import choose_psgc_location, user_location_payload
 from shared.assets import load_css
 
 from backend.backend_utils.subscription_usage import (
@@ -350,7 +352,7 @@ def render_user_form(user=None):
     errors = st.container()
 
     # ---- Form structure ----
-    with st.form(f"user_form_{form_prefix}", clear_on_submit=False):
+    with st.container():  # PSGC cascading address selectors need reruns
 
         st.markdown(
             f"<div class='sa-form-section-title'>"
@@ -433,18 +435,23 @@ def render_user_form(user=None):
             errors.error("Invalid date selected.")
             birthdate = None
 
-        contact_col, addr_col = st.columns([1, 1.5])
-        contact_number = contact_col.text_input(
+        contact_number = st.text_input(
             "Contact number",
             value=user.get("user_contact_number") or "",
             placeholder="+63 912 345 6789",
             key=f"{form_prefix}contact",
         )
-        address = addr_col.text_input(
-            "Address",
-            value=user.get("user_address") or "",
-            placeholder="City / Province",
-            key=f"{form_prefix}address",
+        st.markdown("**Residential Address (PSGC)**")
+        selected_user_location = choose_psgc_location(
+            f"{form_prefix}user_geo_", existing=user
+        )
+        address = (
+            selected_user_location["address"] if selected_user_location
+            else (user.get("user_address") or "")
+        )
+        user_address_fields = (
+            user_location_payload(selected_user_location)
+            if selected_user_location else None
         )
 
         st.markdown(
@@ -473,8 +480,8 @@ def render_user_form(user=None):
 
         st.write("")
         cancel_col, save_col = st.columns(2)
-        cancel = cancel_col.form_submit_button("Cancel", width="stretch")
-        submitted = save_col.form_submit_button(
+        cancel = cancel_col.button("Cancel", width="stretch")
+        submitted = save_col.button(
             "Save changes" if is_edit else "Create user", type="primary", width="stretch"
         )
 
@@ -486,6 +493,12 @@ def render_user_form(user=None):
 
     # ---- Validation ----
     if birthdate is None:
+        return
+
+    if selected_user_location is None and (
+        not is_edit or st.session_state.get(f"{form_prefix}user_geo_region")
+    ):
+        errors.error("Choose the complete Region, Province, City, and Barangay.")
         return
 
     if not is_edit and not email.strip():
@@ -529,6 +542,7 @@ def render_user_form(user=None):
                 sex=sex,
                 contact_number=contact_number.strip(),
                 address=address.strip(),
+                address_fields=user_address_fields,
                 hospital_id=hospital_id,
             )
         done_message, fail_message = "User updated successfully.", "Failed to update user."
@@ -556,6 +570,7 @@ def render_user_form(user=None):
                 sex=sex,
                 contact_number=contact_number.strip(),
                 address=address.strip(),
+                address_fields=user_address_fields,
                 hospital_id=hospital_id,
             )
         done_message, fail_message = "User registered successfully.", "Failed to create user."

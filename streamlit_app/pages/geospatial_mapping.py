@@ -1,3 +1,4 @@
+# LUNGSIGHT_PSGC_NO_MANUAL_GEO_V2
 """One shared hospital-scoped geospatial monitoring page for all Streamlit roles.
 
 Real hospital-scoped records only. No demonstration or simulated data.
@@ -16,7 +17,7 @@ from streamlit_folium import st_folium
 
 from backend.supabase_client import admin_supabase
 from backend.backend_utils.geospatial_utils import AGE_GROUPS, month_shift
-from backend.backend_utils.patient_location_utils import (get_barangays, real_case_counts)
+from backend.backend_utils.patient_location_utils import (catalog_by_hospital, real_case_counts)
 
 CSS = Path(__file__).resolve().parents[2] / 'shared/theme/css_content/geospatial.css'
 COLORS={'Higher':'#ef4444','Moderate':'#f59e0b','Lower':'#22c55e','No cases':'#94a3b8'}
@@ -57,20 +58,9 @@ def hospital_context():
     return rows[0]
 
 
-def load_geo_catalog():
-    """Read only reference barangays; never synthesize geographic coordinates."""
-    all_rows = []
-    offset = 0
-    while True:
-        batch = (admin_supabase.table('geo_barangays')
-                 .select('barangay_id,province,city,barangay,latitude,longitude')
-                 .eq('is_active', True).order('barangay_id')
-                 .range(offset, offset + 999).execute().data or [])
-        all_rows.extend(batch)
-        if len(batch) < 1000:
-            break
-        offset += len(batch)
-    return all_rows
+def load_geo_catalog(hospital_id):
+    """Hospital-scoped observed barangays from patient records, no geo_* tables."""
+    return catalog_by_hospital(hospital_id)
 
 
 def barangay_label(row):
@@ -191,38 +181,30 @@ def show():
     html('<div class="geo-hero"><div class="geo-eyebrow">LungSightAI · Analytics & Monitoring</div><div class="geo-title">Geospatial Case Monitoring</div><div class="geo-sub">Hospital-specific, clinician-confirmed pneumonia cases by residential barangay</div></div>')
     try:
         hospital = hospital_context()
-        geo_rows = load_geo_catalog()
+        geo_rows = load_geo_catalog(hospital["hospital_id"])
     except Exception as exc:
         st.error(f'Cannot load hospital geospatial data: {exc}')
         return
     name = hospital.get('hospital_name') or 'Assigned hospital'
     catalog = {str(x['barangay_id']): x for x in geo_rows}
     if not catalog:
-        st.info('No barangays have been configured. Import verified location reference data first.')
+        st.info('No patient records with barangay addresses exist for this hospital yet.')
         return
-    options = month_options()
-    labels = {f'{date(y,m,1):%B %Y}':(y,m) for y,m in options}
-    c1,c2,c3,c4 = st.columns([1.4,1.4,1,1])
-    with c1:
-        period = st.selectbox('Reporting month', list(labels), index=0, key='geo_month')
-    with c2:
-        chosen = st.multiselect('Barangays', list(catalog), default=list(catalog),
-                                format_func=lambda key: barangay_label(catalog[key]),key='geo_barangays')
-    with c3:
-        age = st.selectbox('Age group',['All ages',*AGE_GROUPS],key='geo_age')
-    with c4:
-        sex = st.selectbox('Sex',['All','Female','Male'],key='geo_sex')
-    if not chosen:
-        st.warning('Select at least one barangay.')
-        return
-    year, month = labels[period]
+    # No manual geographic filters; report is for the current PH month.
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    today = datetime.now(ZoneInfo("Asia/Manila")).date()
+    year, month = today.year, today.month
+    period = f"{date(year, month, 1):%B %Y}"
+    chosen = list(catalog)
+    age, sex = "All ages", "All"
     previous_year, previous_month = month_shift(year, month, -1)
-    hid = str(hospital['hospital_id'])
+    hid = str(hospital["hospital_id"])
     try:
-        current = monthly_counts(hid,year,month,age,sex)
-        prior = monthly_counts(hid,previous_year,previous_month,age,sex)
+        current = monthly_counts(hid, year, month, age, sex)
+        prior = monthly_counts(hid, previous_year, previous_month, age, sex)
     except Exception as exc:
-        st.error(f'Could not load confirmed cases from Supabase: {exc}')
+        st.error(f"Could not load confirmed cases from Supabase: {exc}")
         return
     rows = summary_rows_real(catalog,chosen,current,prior)
     total = sum(current.get(key,0) for key in chosen)
@@ -239,7 +221,7 @@ def show():
     left,right = st.columns([1.5,1],gap='medium')
     with left:
         section('Geographic Distribution')
-        mode = st.segmented_control('Map layer',['Hotspots','Heatmap'],default='Hotspots',key='geo_layer')
+        mode = 'Hotspots'  # No manually selected map filter
         selected = st.session_state.get('geo_selected')
         result = st_folium(make_map(rows,mode,selected,hospital),height=510,width=None,
                            use_container_width=True,key=f'geo_map_{hid}_{mode}',
@@ -257,7 +239,7 @@ def show():
                      hide_index=True,use_container_width=True,height=270)
         names = [r['Barangay'] for r in rows]
         default_idx = names.index(selected) if selected in names else 0
-        barangay = st.selectbox('Select barangay to inspect',names,index=default_idx,key='geo_detail_pick')
+        barangay = selected if selected in names else names[default_idx]
         if st.button('View Detailed Summary',icon=':material/insights:',use_container_width=True,type='primary'):
             st.session_state['geo_detail_open'] = barangay
         if st.session_state.get('geo_detail_open'):
@@ -283,7 +265,7 @@ def show():
     if missing:
         st.warning(f'{missing} barangay group(s) have recorded cases but no verified coordinates. They are shown in the table but cannot be plotted yet.')
     section('Export Geospatial Report')
-    st.caption('Exports reflect this hospital, reporting month, barangays, age group, and sex. PNG uses verified barangay centroids and is not a screenshot of map tiles.')
+    st.caption('Exports reflect this hospital and the current Philippine reporting month. PNG uses verified barangay centroids and is not a screenshot of map tiles.')
     try:
         png = png_export(rows,name,period)
         p1,p2,p3 = st.columns(3)
