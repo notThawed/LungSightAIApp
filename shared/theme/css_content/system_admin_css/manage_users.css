@@ -683,3 +683,7 @@ div[data-testid="stMainBlockContainer"],
   display: inline-block;
   line-height: 1;
 }
+
+
+.ls-admin-recovery-heading{display:flex;align-items:center;gap:8px;font-weight:800;color:#0D283C;font-size:14px;margin:20px 0 6px}
+.ls-admin-recovery-heading .material-symbols-rounded{color:#0F7C88;font-size:20px}

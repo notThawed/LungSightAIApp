@@ -659,3 +659,16 @@ footer,
         transition-duration: 0.01ms !important;
     }
 }
+
+/* LungSightAI password recovery UI */
+.st-key-ls_forgot_password_link button,
+.st-key-ls_forgot_back_btn button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #0F7C88 !important;
+    font-weight: 750 !important;
+}
+.ls-recovery-intro{padding:0 0 18px}
+.ls-recovery-title{font-weight:800;font-size:23px;color:#0A2234;margin:0 0 7px}
+.ls-recovery-copy{font-size:13px;color:#617A89;line-height:1.75;margin:0}

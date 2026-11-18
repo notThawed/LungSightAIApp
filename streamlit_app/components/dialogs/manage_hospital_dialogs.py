@@ -31,7 +31,7 @@ from backend.fetches import (
     get_hospital_staff_member,
 )
 
-from backend.backend_utils.geocode_utils import (
+from backend.geospatial_backend.geocode_utils import (
     geocode_address,
 )
 

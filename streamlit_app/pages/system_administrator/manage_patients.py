@@ -35,7 +35,7 @@ from streamlit_app.components.ui import (
 
 from shared.assets import load_css
 
-from backend.backend_utils.psgc_locations import (choose_psgc_location, patient_location_payload)
+from backend.geospatial_backend.psgc_locations import (choose_psgc_location, patient_location_payload)
 
 from backend.backend_utils.subscription_usage import (
     can_register_patient,
@@ -835,9 +835,12 @@ def render_patient_form(patient=None):
         return
 
     if selected_patient_location is None and (
-        not is_edit or st.session_state.get(f"{form_prefix}patient_geo_region")
+        not is_edit
+        or not str(patient.get("psgc_barangay_code") or "").strip()
+        or st.session_state.get(f"{form_prefix}patient_geo_region")
     ):
-        errors.error("Select the full Region, Province, City, and Barangay.")
+        errors.error("Select Region, Province, City, and Barangay. "
+                     "Legacy records without PSGC codes must be mapped before saving.")
         return
 
     if (

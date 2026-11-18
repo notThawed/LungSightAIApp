@@ -8,7 +8,7 @@ Rate-limited to comply with Nominatim's usage policy:
     https://operations.osmfoundation.org/policies/nominatim/
 
 Run once with:
-    python -m backend.backend_utils.geocode_utils
+    python -m backend.geospatial_backend.geocode_utils
 """
 
 import time

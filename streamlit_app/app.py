@@ -121,60 +121,37 @@ from pages.hospital_administrator import (
 
 
 
+
 # ==================================================
-# INVITE / SET PASSWORD ROUTE
+# INVITATION + RECOVERY TOKEN ROUTING
 # ==================================================
-#
-# Supabase puts the invite token in the URL fragment
-# (#access_token=...).
-#
-# Streamlit cannot directly read URL fragments, so the
-# login flow moves the token into query parameters.
-# ==================================================
+# The existing LungSightAuthRedirect GitHub Pages bridge forwards successful
+# invite/recovery access and refresh tokens into Streamlit query parameters.
+# Strip them from the browser URL as soon as they have been copied to the
+# per-browser Streamlit session state.
+incoming_access = st.query_params.get("access_token")
+incoming_refresh = st.query_params.get("refresh_token")
+incoming_type = (st.query_params.get("type") or "invite").lower()
+if incoming_access or incoming_refresh:
+    for key in ("invite_access_token", "invite_refresh_token",
+                "invite_session_ready", "ls_recovery_auth_client",
+                "password_set_success", "ls_new_password", "ls_confirm_password"):
+        st.session_state.pop(key, None)
+    if incoming_access and incoming_refresh and incoming_type in ("invite", "recovery"):
+        st.session_state["invite_access_token"] = incoming_access
+        st.session_state["invite_refresh_token"] = incoming_refresh
+        st.session_state["invite_type"] = incoming_type
+        st.session_state["ls_auth_view"] = "login"
+    else:
+        st.session_state["invite_type"] = incoming_type
+        st.session_state["ls_link_error"] = True
+    st.query_params.clear()
 
-access_token = st.query_params.get(
-    "access_token"
-)
-
-refresh_token = st.query_params.get(
-    "refresh_token"
-)
-
-invite_type = st.query_params.get(
-    "type"
-)
-
-if access_token and refresh_token:
-
-    st.session_state["invite_access_token"] = (
-        access_token
-    )
-
-    st.session_state["invite_refresh_token"] = (
-        refresh_token
-    )
-
-    st.session_state["invite_type"] = (
-        invite_type
-    )
-
-
-if (
-    st.session_state.get(
-        "invite_access_token"
-    )
-    and
-    st.session_state.get(
-        "invite_refresh_token"
-    )
-):
-
+if (st.session_state.get("invite_access_token")
+        and st.session_state.get("invite_refresh_token")) or st.session_state.get("ls_link_error"):
     from screens.set_password import show as show_set_password
-
     show_set_password()
-
     st.stop()
-
 
 # ==================================================
 # SUBSCRIPTION CONTEXT

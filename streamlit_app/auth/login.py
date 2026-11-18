@@ -114,7 +114,6 @@ def show_showcase_panel():
 # ============================================================
 
 def check_login(email, password):
-
     if not email or not password:
         st.error("Enter your email and password.")
         return
@@ -128,19 +127,105 @@ def check_login(email, password):
             audit.record_login_once(user)
             st.rerun()
         else:
-            st.error("Email or password is incorrect.")
+            st.error("Incorrect email or password. Please try again.")
 
     except ValueError as e:
+        # Business-level errors from backend/auth.py:
+        # inactive accounts, missing profiles, invalid roles, etc.
         st.error(str(e))
 
-    except Exception:
-        st.error(
-            "Unable to sign in right now. "
-            "Please try again later."
+    except Exception as e:
+        # Supabase Auth errors expose a structured error code.
+        error_code = str(
+            getattr(e, "code", "") or ""
+        ).lower()
+
+        status = getattr(e, "status", None)
+
+        if error_code == "invalid_credentials":
+            st.error(
+                "Incorrect email or password. Please try again."
+            )
+
+        elif error_code == "email_not_confirmed":
+            st.warning(
+                "Your email address has not been verified. "
+                "Please check your inbox or contact your administrator."
+            )
+
+        elif error_code in (
+            "over_request_rate_limit",
+            "over_email_send_rate_limit",
+            "too_many_requests",
+        ) or status == 429:
+            st.warning(
+                "Too many attempts. Please wait a few minutes "
+                "before trying again."
+            )
+
+        elif error_code in (
+            "request_timeout",
+            "unexpected_failure",
+        ) or status in (500, 502, 503, 504):
+            st.error(
+                "The authentication service is temporarily "
+                "unavailable. Please try again later."
+            )
+
+        else:
+            st.error(
+                "Unable to complete sign-in. "
+                "Please try again or contact your administrator."
+            )
+
+
+
+
+
+def show_forgot_password_form():
+    """Public recovery request UI: identical response regardless of account existence."""
+    from backend.backend_utils.account_recovery import request_recovery_email
+    with st.container(key="login_card"):
+        st.markdown(
+            '<div class="ls-recovery-intro"><h2 class="ls-recovery-title">Forgot your password?</h2>'
+            '<p class="ls-recovery-copy">Enter your registered work email. '
+            'We will send instructions if it is associated with a LungSightAI account. '
+            'This also works when your initial setup link has expired.</p></div>',
+            unsafe_allow_html=True,
         )
+        if st.session_state.get("ls_recovery_sent"):
+            st.success("If an account exists for that email, a recovery link will arrive shortly. Check your inbox and spam folder.")
+            if st.button("Send another email", key="ls_resend_recovery", icon=":material/refresh:"):
+                st.session_state.pop("ls_recovery_sent", None)
+                st.rerun()
+        else:
+            with st.form("ls_forgot_password_form", border=False):
+                email = st.text_input("Email address", key="ls_recovery_email",
+                                      placeholder="you@hospital.org")
+                submitted = st.form_submit_button("Email me a recovery link", type="primary", use_container_width=True)
+            if submitted:
+                import re
+                if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", (email or "").strip()):
+                    st.error("Enter a valid email address.")
+                else:
+                    try:
+                        request_recovery_email(email)
+                    except Exception:
+                        # Deliberately avoid exposing whether a user exists.
+                        pass
+                    st.session_state["ls_recovery_sent"] = True
+                    st.rerun()
+        if st.button("Back to Sign In", key="ls_forgot_back_btn", icon=":material/arrow_back:"):
+            st.session_state["ls_auth_view"] = "login"
+            st.session_state.pop("ls_recovery_sent", None)
+            st.rerun()
 
 
 def show_login_form():
+
+    if st.session_state.get("ls_auth_view") == "forgot":
+        show_forgot_password_form()
+        return
 
     with st.container(key="login_card"):
 
@@ -174,6 +259,11 @@ def show_login_form():
         if submitted:
             with st.spinner("Authenticating and loading workspace..."):
                 check_login(email, password)
+
+        if st.button("Forgot Password?", key="ls_forgot_password_link", icon=":material/lock_reset:"):
+            st.session_state["ls_auth_view"] = "forgot"
+            st.session_state.pop("ls_recovery_sent", None)
+            st.rerun()
 
         footer_html = (
             "<p class='ls-login-help'>Need assistance? Contact your Hospital Administrator.</p>"

@@ -13,7 +13,7 @@ from backend.backend_utils.hospital_utils import (
 from backend.backend_utils.subscription_utils import get_hospital_subscription_details
 from backend.backend_utils.storage_utils import upload_hospital_logo, upload_profile_picture
 
-from backend.backend_utils.geocode_utils import (
+from backend.geospatial_backend.geocode_utils import (
     geocode_address,
     REQUEST_INTERVAL_SECONDS,
 )

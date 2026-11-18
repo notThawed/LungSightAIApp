@@ -37,7 +37,7 @@ from streamlit_app.components.ui import (
     pill,
 )
 
-from backend.backend_utils.psgc_locations import choose_psgc_location, user_location_payload
+from backend.geospatial_backend.psgc_locations import choose_psgc_location, user_location_payload
 from shared.assets import load_css
 
 from backend.backend_utils.subscription_usage import (
@@ -701,6 +701,46 @@ def show_view_user(user_id):
                 f"</div>",
                 unsafe_allow_html=True,
             )
+
+
+        # Resend setup/recovery email for an existing Supabase Auth user.
+        # Only offer the action on active accounts; backend re-checks rights.
+        actor, is_hospital_admin, actor_hospital_id, _ = get_current_user_info()
+        actor_role = (actor.get("role") or "").strip().lower()
+        allowed = (
+            bool(st.session_state.get("logged_in"))
+            and actor_role in ("superadmin", "hospital admin")
+            and bool(user.get("is_active"))
+            and str(actor.get("user_id")) != str(user_id)
+            and (
+                actor_role == "superadmin"
+                or (
+                    actor_hospital_id is not None
+                    and str(actor_hospital_id) == str(user.get("hospital_id"))
+                    and role_name_of(user).strip().lower() != "superadmin"
+                )
+            )
+        )
+        if allowed:
+            st.markdown('<div class="ls-admin-recovery-heading"><span class="material-symbols-rounded">mail</span>Account Access Recovery</div>', unsafe_allow_html=True)
+            st.caption("If the original invitation expired, send a fresh account access link. This does not create a duplicate user.")
+            if st.button(
+                "Resend Setup / Recovery Email",
+                key=f"resend_access_{user_id}",
+                icon=":material/forward_to_inbox:",
+                use_container_width=True,
+                help="Send to the staff member's existing registered authentication email.",
+            ):
+                from backend.backend_utils.account_recovery import send_staff_access_email
+                try:
+                    send_staff_access_email(str(actor.get("user_id")), str(user_id))
+                    st.success("Account access email requested. Ask the user to check their inbox and spam folder.")
+                except PermissionError:
+                    st.error("You do not have permission to send this email.")
+                except ValueError as exc:
+                    st.error(str(exc))
+                except Exception:
+                    st.error("The email request could not be completed. Check Supabase email settings or retry later.")
 
         close_button(f"close_user_{user_id}")
 
