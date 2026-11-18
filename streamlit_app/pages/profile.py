@@ -6578,6 +6578,8 @@ def render_security_section(
 
 
 
+        st.caption("Strong password: 12+ characters, uppercase and lowercase letters, a number, a symbol, and no spaces.")
+
         with st.form(
 
 

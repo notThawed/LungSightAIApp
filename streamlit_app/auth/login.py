@@ -124,7 +124,11 @@ def check_login(email, password):
         if user:
             st.session_state.logged_in = True
             st.session_state.user = user
-            audit.record_login_once(user)
+            # Audit logging must not turn a successful sign-in into an error.
+            try:
+                audit.record_login_once(user)
+            except Exception:
+                pass
             st.rerun()
         else:
             st.error("Incorrect email or password. Please try again.")

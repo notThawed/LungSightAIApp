@@ -374,7 +374,9 @@ def render_user_form(user=None):
                 type="password",
                 placeholder="Leave blank to keep the current password",
                 key=f"{form_prefix}password",
+                help="Strong password: at least 12 characters, uppercase/lowercase, number, symbol, and no spaces. Prefer sending an account recovery email instead.",
             )
+            st.caption("Password changes require 12+ characters, upper/lowercase letters, a number, and a symbol. For self-service, use Account Access Recovery.")
 
         st.markdown(
             f"<div class='sa-form-section-title' style='margin-top:1.25rem;'>"

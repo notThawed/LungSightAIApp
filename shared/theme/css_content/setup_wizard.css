@@ -1,10 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
-
 /* ==========================================================
    LungSight hospital setup wizard
    ========================================================== */
-
 :root {
   --ap-film:       #F2F6F7;
   --ap-white:      #FFFFFF;
@@ -16,20 +14,15 @@
   --ap-teal-soft:  #E8F4F6;
   --ap-green:      #2E8B6A;
   --ap-green-soft: #EAF6F1;
-
   --ap-font-display: 'Fraunces', Georgia, serif;
   --ap-font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
-
   --ap-radius-sm: 8px;
   --ap-radius-md: 12px;
   --ap-radius-lg: 16px;
 }
-
-
 /* ----------------------------------------------------------
    Material Symbols base
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard .material-symbols-rounded {
   font-family: 'Material Symbols Rounded';
   font-weight: 400;
@@ -47,30 +40,23 @@
   -webkit-font-smoothing: antialiased;
   vertical-align: middle;
 }
-
-
 /* ----------------------------------------------------------
    Wizard container
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard {
   font-family: var(--ap-font-body);
   color: var(--ap-ink);
   max-width: 100%;
 }
-
-
 /* ----------------------------------------------------------
    Brand header
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard .ls-brand {
   display: flex;
   align-items: center;
   gap: 0.7rem;
   margin-bottom: 1.1rem;
 }
-
 .st-key-setup_wizard .ls-brand-mark {
   width: 38px;
   height: 38px;
@@ -82,13 +68,11 @@
   color: var(--ap-teal);
   font-size: 22px;
 }
-
 .st-key-setup_wizard .ls-brand-text {
   display: flex;
   flex-direction: column;
   line-height: 1.15;
 }
-
 .st-key-setup_wizard .ls-brand-name {
   font-family: var(--ap-font-display);
   font-size: 1.05rem;
@@ -96,18 +80,14 @@
   color: var(--ap-ink);
   margin: 0;
 }
-
 .st-key-setup_wizard .ls-brand-sub {
   font-size: 0.75rem;
   color: var(--ap-slate);
   margin: 0;
 }
-
-
 /* ----------------------------------------------------------
    Sign out button
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard .st-key-setup_back_to_login button {
   background: transparent !important;
   border: 1px solid var(--ap-mist) !important;
@@ -117,27 +97,21 @@
   padding: 0.35rem 0.75rem;
   box-shadow: none !important;
 }
-
 .st-key-setup_wizard .st-key-setup_back_to_login button:hover {
   border-color: var(--ap-teal) !important;
   color: var(--ap-teal) !important;
 }
-
 .st-key-setup_wizard .st-key-setup_back_to_login button p {
   color: inherit;
   font-weight: 500;
   font-size: 0.82rem;
 }
-
-
 /* ----------------------------------------------------------
    Page title
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard .ls-page-title {
   margin-bottom: 1.25rem;
 }
-
 .st-key-setup_wizard .ls-page-title h1 {
   font-family: var(--ap-font-display);
   font-size: 1.65rem;
@@ -146,18 +120,14 @@
   margin: 0 0 0.2rem;
   letter-spacing: -0.01em;
 }
-
 .st-key-setup_wizard .ls-page-title p {
   font-size: 0.9rem;
   color: var(--ap-slate);
   margin: 0;
 }
-
-
 /* ----------------------------------------------------------
    Progress tracker
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard .ls-progress {
   background: var(--ap-white);
   border: 1px solid var(--ap-mist);
@@ -165,14 +135,12 @@
   padding: 1rem 1.15rem 0.9rem;
   margin-bottom: 1.5rem;
 }
-
 .st-key-setup_wizard .ls-progress-top {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
 }
-
 .st-key-setup_wizard .ls-progress-title {
   font-family: var(--ap-font-display);
   font-size: 1rem;
@@ -180,13 +148,11 @@
   color: var(--ap-ink);
   margin: 0;
 }
-
 .st-key-setup_wizard .ls-progress-meta {
   font-size: 0.78rem;
   color: var(--ap-slate);
   margin: 0.2rem 0 0;
 }
-
 .st-key-setup_wizard .ls-progress-percent {
   font-size: 1.2rem;
   font-weight: 700;
@@ -194,7 +160,6 @@
   color: var(--ap-teal);
   text-align: right;
 }
-
 .st-key-setup_wizard .ls-progress-percent small {
   display: block;
   margin-top: 0.2rem;
@@ -203,7 +168,6 @@
   color: var(--ap-slate);
   letter-spacing: 0.02em;
 }
-
 .st-key-setup_wizard .ls-bar {
   height: 5px;
   margin: 0.85rem 0 1rem;
@@ -211,18 +175,15 @@
   border-radius: 999px;
   overflow: hidden;
 }
-
 .st-key-setup_wizard .ls-bar-fill {
   height: 100%;
   background: var(--ap-teal);
   border-radius: 999px;
   transition: width 0.3s ease;
 }
-
 .st-key-setup_wizard .ls-steps {
   display: flex;
 }
-
 .st-key-setup_wizard .ls-step {
   position: relative;
   flex: 1;
@@ -232,7 +193,6 @@
   gap: 0.4rem;
   text-align: center;
 }
-
 .st-key-setup_wizard .ls-step::before {
   content: "";
   position: absolute;
@@ -243,16 +203,13 @@
   background: var(--ap-mist);
   z-index: 0;
 }
-
 .st-key-setup_wizard .ls-step:first-child::before {
   display: none;
 }
-
 .st-key-setup_wizard .ls-step-done::before,
 .st-key-setup_wizard .ls-step-current::before {
   background: var(--ap-teal);
 }
-
 .st-key-setup_wizard .ls-dot {
   position: relative;
   z-index: 1;
@@ -267,47 +224,38 @@
   color: var(--ap-slate);
   font-size: 16px;
 }
-
 .st-key-setup_wizard .ls-step-done .ls-dot {
   background: var(--ap-teal);
   border-color: var(--ap-teal);
   color: #FFFFFF;
 }
-
 .st-key-setup_wizard .ls-step-current .ls-dot {
   border-color: var(--ap-teal);
   color: var(--ap-teal);
   box-shadow: 0 0 0 4px rgba(15, 124, 136, 0.14);
 }
-
 .st-key-setup_wizard .ls-step-name {
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--ap-slate);
   letter-spacing: 0.01em;
 }
-
 .st-key-setup_wizard .ls-step-done .ls-step-name {
   color: var(--ap-teal-dark);
 }
-
 .st-key-setup_wizard .ls-step-current .ls-step-name {
   color: var(--ap-ink);
   font-weight: 700;
 }
-
-
 /* ----------------------------------------------------------
    Step heading
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard .ls-step-header {
   display: flex;
   align-items: center;
   gap: 0.85rem;
   margin: 0.5rem 0 1.5rem;
 }
-
 .st-key-setup_wizard .ls-step-header-icon {
   width: 40px;
   height: 40px;
@@ -319,16 +267,13 @@
   background: var(--ap-teal-soft);
   color: var(--ap-teal);
 }
-
 .st-key-setup_wizard .ls-step-header-icon .material-symbols-rounded {
   font-size: 22px;
 }
-
 .st-key-setup_wizard .ls-step-header-text {
   display: flex;
   flex-direction: column;
 }
-
 .st-key-setup_wizard .ls-step-title {
   font-family: var(--ap-font-display);
   font-size: 1.2rem;
@@ -337,32 +282,25 @@
   margin: 0;
   line-height: 1.2;
 }
-
 .st-key-setup_wizard .ls-step-caption {
   font-size: 0.85rem;
   color: var(--ap-slate);
   margin: 0.15rem 0 0;
 }
-
-
 /* ----------------------------------------------------------
    Upload heading
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard .ls-upload-label {
   font-size: 0.83rem;
   font-weight: 600;
   color: var(--ap-ink);
   margin: 0 0 0.15rem;
 }
-
 .st-key-setup_wizard .ls-upload-caption {
   font-size: 0.78rem;
   color: var(--ap-slate);
   margin: 0 0 0.85rem;
 }
-
-
 /* ----------------------------------------------------------
    Image previews — square (hospital logo) & circle (profile)
    ----------------------------------------------------------
@@ -371,9 +309,7 @@
    border-radius, and the image is clipped via
    overflow: hidden on the container.
    ---------------------------------------------------------- */
-
 /* -------- Square wrapper -------- */
-
 .st-key-setup_logo_preview_current,
 .st-key-setup_logo_preview_pending {
   width: 120px;
@@ -387,14 +323,12 @@
   overflow: hidden;
   box-sizing: border-box;
 }
-
 .st-key-setup_logo_preview_current [data-testid="stImage"],
 .st-key-setup_logo_preview_pending [data-testid="stImage"] {
   width: 100% !important;
   height: 100% !important;
   margin: 0 !important;
 }
-
 .st-key-setup_logo_preview_current [data-testid="stImage"] img,
 .st-key-setup_logo_preview_pending [data-testid="stImage"] img {
   width: 100% !important;
@@ -403,15 +337,11 @@
   display: block;
   border-radius: calc(var(--ap-radius-md) - 6px);
 }
-
 .st-key-setup_logo_preview_pending {
   border-color: var(--ap-teal);
   box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.12);
 }
-
-
 /* -------- Circle wrapper -------- */
-
 .st-key-setup_profile_preview_current,
 .st-key-setup_profile_preview_pending {
   width: 120px;
@@ -425,14 +355,12 @@
   overflow: hidden;
   box-sizing: border-box;
 }
-
 .st-key-setup_profile_preview_current [data-testid="stImage"],
 .st-key-setup_profile_preview_pending [data-testid="stImage"] {
   width: 100% !important;
   height: 100% !important;
   margin: 0 !important;
 }
-
 .st-key-setup_profile_preview_current [data-testid="stImage"] img,
 .st-key-setup_profile_preview_pending [data-testid="stImage"] img {
   width: 100% !important;
@@ -441,15 +369,11 @@
   display: block;
   border-radius: 50%;
 }
-
 .st-key-setup_profile_preview_pending {
   border-color: var(--ap-teal);
   box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.12);
 }
-
-
 /* -------- Placeholders -------- */
-
 .st-key-setup_wizard .ls-preview-empty {
   width: 100%;
   height: 100%;
@@ -457,12 +381,10 @@
   align-items: center;
   justify-content: center;
 }
-
 .st-key-setup_wizard .ls-preview-empty .material-symbols-rounded {
   font-size: 42px;
   color: var(--ap-teal);
 }
-
 .st-key-setup_wizard .ls-preview-initials {
   font-family: var(--ap-font-display);
   font-size: 2.25rem;
@@ -470,31 +392,23 @@
   color: var(--ap-teal-dark);
   letter-spacing: -0.02em;
 }
-
 .st-key-setup_wizard .ls-preview-square--empty,
 .st-key-setup_wizard .ls-preview-circle--empty {
   background: var(--ap-teal-soft);
 }
-
-
 /* -------- Caption under the preview -------- */
-
 .st-key-setup_wizard .ls-preview-caption {
   text-align: center;
   font-size: 0.78rem;
   color: var(--ap-slate);
   margin: 0 0 0.85rem;
 }
-
-
 /* ----------------------------------------------------------
    Label / value rows
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard .ls-rows {
   border-top: 1px solid var(--ap-mist);
 }
-
 .st-key-setup_wizard .ls-row {
   display: flex;
   justify-content: space-between;
@@ -504,22 +418,17 @@
   font-size: 0.86rem;
   color: var(--ap-slate);
 }
-
 .st-key-setup_wizard .ls-row:last-child {
   border-bottom: none;
 }
-
 .st-key-setup_wizard .ls-row b {
   color: var(--ap-ink);
   font-weight: 600;
   text-align: right;
 }
-
-
 /* ----------------------------------------------------------
    Review sections
    ---------------------------------------------------------- */
-
 [class*="st-key-setup_section_"] {
   padding: 1rem 1.15rem 1.15rem;
   background: var(--ap-white);
@@ -527,7 +436,6 @@
   border-radius: var(--ap-radius-md);
   margin-bottom: 0.85rem;
 }
-
 [class*="st-key-setup_section_"] .ls-review-title {
   display: flex;
   align-items: center;
@@ -538,10 +446,7 @@
   font-weight: 600;
   color: var(--ap-ink);
 }
-
-
 /* -------- Review avatar (square or circle, 64x64) -------- */
-
 .st-key-setup_wizard [class*="st-key-setup_review_avatar_"] {
   width: 64px;
   height: 64px;
@@ -554,7 +459,6 @@
   align-items: center;
   justify-content: center;
 }
-
 .st-key-setup_wizard [class*="st-key-setup_review_avatar_"] .ls-review-avatar-inner {
   width: 100%;
   height: 100%;
@@ -563,41 +467,32 @@
   align-items: center;
   justify-content: center;
 }
-
 .st-key-setup_wizard [class*="st-key-setup_review_avatar_"] .ls-review-avatar--square {
   border-radius: calc(var(--ap-radius-sm) - 1px);
 }
-
 .st-key-setup_wizard [class*="st-key-setup_review_avatar_"] .ls-review-avatar--circle {
   border-radius: 50%;
 }
-
 .st-key-setup_wizard [class*="st-key-setup_review_avatar_"] [data-testid="stImage"] {
   width: 100% !important;
   height: 100% !important;
   margin: 0 !important;
 }
-
 .st-key-setup_wizard [class*="st-key-setup_review_avatar_"] [data-testid="stImage"] img {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover;
   display: block;
 }
-
 .st-key-setup_wizard [class*="st-key-setup_review_avatar_"] .ls-review-avatar--square [data-testid="stImage"] img {
   border-radius: calc(var(--ap-radius-sm) - 2px);
 }
-
 .st-key-setup_wizard [class*="st-key-setup_review_avatar_"] .ls-review-avatar--circle [data-testid="stImage"] img {
   border-radius: 50%;
 }
-
-
 /* ----------------------------------------------------------
    Subscription plan card
    ---------------------------------------------------------- */
-
 .st-key-setup_plan {
   padding: 1.35rem 1.5rem 1.4rem;
   background: var(--ap-ink);
@@ -606,7 +501,6 @@
   box-shadow: 0 16px 34px -18px rgba(18, 40, 58, 0.55);
   margin-bottom: 1rem;
 }
-
 .st-key-setup_plan .ls-plan-label {
   display: flex;
   align-items: center;
@@ -618,11 +512,9 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-
 .st-key-setup_plan .ls-plan-label .material-symbols-rounded {
   font-size: 16px;
 }
-
 .st-key-setup_plan .ls-plan-name {
   margin: 0.35rem 0 0.5rem;
   font-family: var(--ap-font-display);
@@ -630,27 +522,23 @@
   font-weight: 600;
   color: #FFFFFF;
 }
-
 .st-key-setup_plan .ls-plan-desc {
   font-size: 0.83rem;
   color: #A9BAC7;
   margin: 0 0 0.85rem;
   line-height: 1.5;
 }
-
 .st-key-setup_plan .ls-plan-price {
   font-size: 1.7rem;
   font-weight: 700;
   color: #FFFFFF;
   margin: 0;
 }
-
 .st-key-setup_plan .ls-plan-price small {
   font-size: 0.85rem;
   font-weight: 500;
   color: #A9BAC7;
 }
-
 .st-key-setup_plan .ls-limits {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -659,19 +547,16 @@
   padding-top: 0.9rem;
   border-top: 1px solid rgba(255, 255, 255, 0.16);
 }
-
 .st-key-setup_plan .ls-limit b {
   display: block;
   font-size: 1.1rem;
   font-weight: 700;
   color: #FFFFFF;
 }
-
 .st-key-setup_plan .ls-limit span {
   font-size: 0.74rem;
   color: #A9BAC7;
 }
-
 .st-key-setup_plan .ls-plan-dates {
   display: flex;
   justify-content: space-between;
@@ -682,27 +567,21 @@
   font-size: 0.8rem;
   color: #A9BAC7;
 }
-
 .st-key-setup_plan .ls-plan-dates > span {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
 }
-
 .st-key-setup_plan .ls-plan-dates .material-symbols-rounded {
   font-size: 16px;
 }
-
 .st-key-setup_plan .ls-plan-dates b {
   color: #FFFFFF;
   font-weight: 600;
 }
-
-
 /* ----------------------------------------------------------
    Note boxes
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard .ls-note {
   display: flex;
   gap: 0.6rem;
@@ -717,33 +596,26 @@
   line-height: 1.5;
   color: var(--ap-ink);
 }
-
 .st-key-setup_wizard .ls-note-icon {
   color: var(--ap-teal);
   font-size: 18px;
   flex-shrink: 0;
   margin-top: 1px;
 }
-
 .st-key-setup_wizard .ls-note-text {
   color: var(--ap-ink);
 }
-
 .st-key-setup_wizard [data-testid="stAlert"] {
   border-radius: var(--ap-radius-sm);
 }
-
-
 /* ----------------------------------------------------------
    Form fields
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard label p {
   font-size: 0.83rem;
   font-weight: 600;
   color: var(--ap-ink);
 }
-
 .st-key-setup_wizard [data-testid="stTextInputRootElement"],
 .st-key-setup_wizard [data-testid="stTextAreaRootElement"],
 .st-key-setup_wizard [data-testid="stSelectbox"] [role="group"],
@@ -755,7 +627,6 @@
   border-radius: var(--ap-radius-sm);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-
 .st-key-setup_wizard input,
 .st-key-setup_wizard textarea,
 .st-key-setup_wizard div[data-baseweb="base-input"] {
@@ -764,7 +635,6 @@
   font-family: var(--ap-font-body);
   font-size: 0.9rem;
 }
-
 .st-key-setup_wizard [data-testid="stTextInputRootElement"]:focus-within,
 .st-key-setup_wizard [data-testid="stTextAreaRootElement"]:focus-within,
 .st-key-setup_wizard [data-testid="stSelectbox"] [role="group"]:focus-within,
@@ -772,13 +642,10 @@
   border-color: var(--ap-teal);
   box-shadow: 0 0 0 3px rgba(15, 124, 136, 0.14);
 }
-
-
 /* ----------------------------------------------------------
    File uploader — make the "Browse files" button
    look like a real, well-placed button
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard [data-testid="stFileUploaderDropzone"] {
   background: var(--ap-film);
   border: 1px dashed var(--ap-mist);
@@ -789,7 +656,6 @@
   justify-content: space-between;
   gap: 0.75rem;
 }
-
 /* The inner button inside the dropzone */
 .st-key-setup_wizard [data-testid="stFileUploaderDropzone"] button {
   background: var(--ap-teal) !important;
@@ -803,90 +669,71 @@
   box-shadow: 0 1px 2px rgba(18, 40, 58, 0.06) !important;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
-
 .st-key-setup_wizard [data-testid="stFileUploaderDropzone"] button:hover {
   background: var(--ap-teal-dark) !important;
   border-color: var(--ap-teal-dark) !important;
 }
-
 .st-key-setup_wizard [data-testid="stFileUploaderDropzone"] button p,
 .st-key-setup_wizard [data-testid="stFileUploaderDropzone"] button span {
   color: #FFFFFF !important;
   font-weight: 600 !important;
   font-size: 0.82rem !important;
 }
-
 /* The small instructions on the right of the dropzone */
 .st-key-setup_wizard [data-testid="stFileUploaderDropzoneInstructions"] {
   color: var(--ap-slate);
   font-size: 0.78rem;
   line-height: 1.4;
 }
-
 /* The filename chips after upload */
 .st-key-setup_wizard [data-testid="stFileUploaderFileName"] {
   color: var(--ap-ink);
   font-size: 0.82rem;
 }
-
 .st-key-setup_wizard [data-testid="stFileUploaderDeleteBtn"] {
   color: var(--ap-slate);
 }
-
-
 /* ----------------------------------------------------------
    Buttons
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard [data-testid^="stBaseButton"] {
   border-radius: var(--ap-radius-sm);
   transition: background 0.15s ease, border-color 0.15s ease;
   font-weight: 600;
 }
-
 .st-key-setup_wizard [data-testid^="stBaseButton-primary"] {
   background: var(--ap-teal) !important;
   border: 1px solid var(--ap-teal) !important;
 }
-
 .st-key-setup_wizard [data-testid^="stBaseButton-primary"] p {
   color: #FFFFFF;
   font-weight: 600;
 }
-
 .st-key-setup_wizard [data-testid^="stBaseButton-primary"]:hover {
   background: var(--ap-teal-dark) !important;
   border-color: var(--ap-teal-dark) !important;
 }
-
 .st-key-setup_wizard [data-testid^="stBaseButton-secondary"] {
   background: var(--ap-white) !important;
   border: 1px solid var(--ap-mist) !important;
 }
-
 .st-key-setup_wizard [data-testid^="stBaseButton-secondary"] p {
   color: var(--ap-slate);
   font-weight: 600;
 }
-
 .st-key-setup_wizard [data-testid^="stBaseButton-secondary"]:hover {
   border-color: var(--ap-teal) !important;
 }
-
 .st-key-setup_wizard [data-testid^="stBaseButton-secondary"]:hover p {
   color: var(--ap-teal);
 }
-
 .st-key-setup_wizard [data-testid^="stBaseButton"]:focus-visible {
   outline: 3px solid rgba(15, 124, 136, 0.35);
   outline-offset: 2px;
 }
-
-
 /* ----------------------------------------------------------
    Address map preview
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard .ls-map-card {
   margin: 0 0 0.6rem;
   padding: 0.7rem 0.95rem 0.75rem;
@@ -896,12 +743,10 @@
   border-radius: var(--ap-radius-sm);
   height: 100%;
 }
-
 .st-key-setup_wizard .ls-map-card--ok {
   border-left-color: var(--ap-green);
   background: var(--ap-green-soft);
 }
-
 .st-key-setup_wizard .ls-map-header {
   display: flex;
   align-items: center;
@@ -912,38 +757,30 @@
   color: var(--ap-ink);
   letter-spacing: 0.01em;
 }
-
 .st-key-setup_wizard .ls-map-header .material-symbols-rounded {
   font-size: 16px;
   color: var(--ap-teal);
 }
-
 .st-key-setup_wizard .ls-map-card--ok .ls-map-header .material-symbols-rounded {
   color: var(--ap-green);
 }
-
 .st-key-setup_wizard .ls-map-caption {
   margin: 0;
   font-size: 0.81rem;
   line-height: 1.45;
   color: var(--ap-slate);
 }
-
 .st-key-setup_wizard [data-testid="stIFrame"] {
   border-radius: var(--ap-radius-sm);
   overflow: hidden;
   margin-top: 0.35rem;
 }
-
 .st-key-setup_wizard iframe[title*="streamlit_folium"] {
   border-radius: var(--ap-radius-sm);
 }
-
-
 /* ----------------------------------------------------------
    Confirm / Fix row
    ---------------------------------------------------------- */
-
 .st-key-setup_wizard .ls-confirm-prompt {
   display: flex;
   align-items: center;
@@ -953,67 +790,54 @@
   font-weight: 600;
   color: var(--ap-ink);
 }
-
 .st-key-setup_wizard .ls-confirm-prompt .material-symbols-rounded {
   font-size: 18px;
   color: var(--ap-teal);
 }
-
 [class*="st-key-setup_fix_"] button {
   background: var(--ap-white) !important;
   border: 1px solid var(--ap-mist) !important;
   color: var(--ap-slate) !important;
   font-weight: 600;
 }
-
 [class*="st-key-setup_fix_"] button:hover {
   border-color: var(--ap-teal) !important;
   color: var(--ap-teal) !important;
 }
-
 [class*="st-key-setup_confirm_done_"] button {
   background: var(--ap-green-soft) !important;
   border: 1px solid var(--ap-green) !important;
   opacity: 1 !important;
   cursor: default !important;
 }
-
 [class*="st-key-setup_confirm_done_"] button p {
   color: var(--ap-green) !important;
   font-weight: 700 !important;
 }
-
 [class*="st-key-setup_relocate_"] button {
   background: var(--ap-white) !important;
   border: 1px solid var(--ap-mist) !important;
   color: var(--ap-teal) !important;
   font-weight: 600;
 }
-
 [class*="st-key-setup_relocate_"] button:hover {
   background: var(--ap-teal-soft) !important;
   border-color: var(--ap-teal) !important;
 }
-
-
 /* ----------------------------------------------------------
    Responsive
    ---------------------------------------------------------- */
-
 @media (max-width: 640px) {
   .st-key-setup_wizard .ls-step-name,
   .st-key-setup_wizard .ls-progress-percent small {
     display: none;
   }
-
   .st-key-setup_wizard .ls-page-title h1 {
     font-size: 1.4rem;
   }
-
   .st-key-setup_wizard .ls-step-header {
     gap: 0.6rem;
   }
-
   .st-key-setup_logo_preview_current,
   .st-key-setup_logo_preview_pending,
   .st-key-setup_profile_preview_current,
@@ -1021,14 +845,238 @@
     width: 100px;
     height: 100px;
   }
-
   .st-key-setup_wizard .ls-preview-initials {
     font-size: 1.9rem;
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
   .st-key-setup_wizard * {
     transition: none !important;
   }
+}
+/* Administrator account form enhancements */
+.st-key-setup_wizard .ls-section-kicker {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin: 1.5rem 0 .85rem;
+  padding-bottom: .55rem;
+  border-bottom: 1px solid var(--ap-mist);
+  font-size: .93rem;
+  font-weight: 700;
+  color: var(--ap-ink);
+}
+.st-key-setup_wizard .ls-section-kicker .material-symbols-rounded {
+  font-size: 21px;
+  color: var(--ap-teal);
+}
+.st-key-setup_wizard .ls-address-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: .55rem;
+  margin: .8rem 0 1.1rem;
+  padding: .85rem 1rem;
+  border: 1px solid #cfe7eb;
+  border-radius: 10px;
+  background: var(--ap-teal-soft);
+  font-size: .84rem;
+  line-height: 1.5;
+  color: var(--ap-ink);
+}
+.st-key-setup_wizard .ls-address-preview .material-symbols-rounded {
+  color: var(--ap-teal);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.st-key-setup_wizard [data-testid="stDateInput"] input {
+  color: var(--ap-ink);
+}
+@media (max-width: 640px) {
+  .st-key-setup_wizard .ls-section-kicker {
+    margin-top: 1.1rem;
+  }
+}
+
+
+/* ================================================================
+   LUNGSIGHT SETUP WIZARD — FOUR-STEP CARD REDESIGN
+   Reference: screenshot 2x2 Hospital/Administrator/Subscription/Review
+   ================================================================ */
+:root {
+  --ap-ink: #0e2845;
+  --ap-slate: #546b83;
+  --ap-mist: #d8e7ef;
+  --ap-teal: #008f9c;
+  --ap-teal-dark: #007987;
+  --ap-teal-soft: #def6f7;
+  --ap-film: #f6fbfd;
+  --ap-green: #188c67;
+  --ap-green-soft: #e4f7ef;
+  --ap-font-display: 'Manrope', system-ui, sans-serif;
+}
+.st-key-setup_wizard {
+  max-width: 1280px;
+  margin: 0 auto;
+  font-family: 'Manrope', system-ui, sans-serif;
+  color: var(--ap-ink);
+}
+.st-key-setup_wizard .ls-page-title h1 {
+  font-family: 'Manrope', system-ui, sans-serif;
+  font-size: clamp(1.35rem, 2vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+.st-key-setup_wizard .ls-page-title {margin: 0.45rem 0 1.2rem;}
+.st-key-setup_wizard .ls-brand-mark {background: #d9f5fd; color: #028db2;}
+.st-key-setup_wizard .ls-brand-name {font-family: 'Manrope', sans-serif; font-weight: 800;}
+.st-key-setup_wizard .ls-progress {
+  background: #fff;
+  border: 1px solid #d3e5ed;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(17, 50, 75, .035);
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+}
+.st-key-setup_wizard .ls-progress-title {font-family: 'Manrope', sans-serif; font-weight: 800;}
+.st-key-setup_wizard .ls-progress-percent {color: #078db9;}
+.st-key-setup_wizard .ls-bar-fill {background: linear-gradient(90deg,#069ed7,#008d98);}
+.st-key-setup_wizard .ls-step-done .ls-dot {background:#00939d;border-color:#00939d;}
+.st-key-setup_wizard .ls-step-current .ls-dot {border-color:#00939d;color:#00939d;}
+.st-key-setup_wizard .ls-step-current .ls-step-name {font-weight:800;color:#0c2440;}
+.st-key-setup_wizard .ls-step-header {
+  display:flex; align-items:center; margin: .55rem 0 1rem; gap:.7rem;
+}
+.st-key-setup_wizard .ls-step-header-icon {
+  background:#dcf5fd;color:#0289ac; border-radius:11px; width:42px;height:42px;
+}
+.st-key-setup_wizard .ls-step-title {font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;}
+.st-key-setup_wizard .ls-step-caption {font-size:.78rem;}
+/* The actual Streamlit containers get the card borders and light background. */
+.st-key-setup_hospital_logo_card,
+.st-key-setup_hospital_info_card,
+.st-key-setup_hospital_address_card,
+.st-key-setup_hospital_map_card,
+.st-key-setup_admin_photo_card,
+.st-key-setup_admin_personal_card,
+.st-key-setup_admin_address_card,
+.st-key-setup_section_hospital,
+.st-key-setup_section_administrator,
+.st-key-setup_section_subscription {
+  background: #fff !important;
+  border: 1px solid #d9e9ee !important;
+  border-radius: 15px !important;
+  box-shadow: 0 4px 18px rgba(15,49,73,.035);
+  padding: 1rem 1.1rem !important;
+}
+.st-key-setup_hospital_logo_card,
+.st-key-setup_admin_photo_card {
+  background: linear-gradient(155deg,#e9fafd 0%,#ffffff 38%,#ffffff 100%) !important;
+}
+.st-key-setup_hospital_logo_card,
+.st-key-setup_hospital_info_card,
+.st-key-setup_admin_photo_card,
+.st-key-setup_admin_personal_card {min-height:380px;}
+.st-key-setup_admin_address_card {margin-top:.8rem;}
+/* Section headings with actual icon glyphs */
+.st-key-setup_wizard .ls-ui-section {
+  display:flex;align-items:center;gap:.65rem;
+  padding-bottom:.65rem;margin-bottom:.8rem;
+  border-bottom:1px solid #e0ecf1;
+}
+.st-key-setup_wizard .ls-ui-section > .material-symbols-rounded {
+  display:flex;align-items:center;justify-content:center;
+  width:35px;height:35px;flex:0 0 35px;
+  border-radius:9px;background:#dff7f8;color:#008f9c;font-size:21px;
+}
+.st-key-setup_wizard .ls-ui-section-copy {display:flex;flex-direction:column;gap:.12rem;}
+.st-key-setup_wizard .ls-ui-section-copy strong {font-size:.87rem;font-weight:800;color:#0d2a47;}
+.st-key-setup_wizard .ls-ui-section-copy small {font-size:.69rem;color:#64788c;}
+/* All native input components should look like compact product UI. */
+.st-key-setup_wizard [data-testid='stTextInput'] input,
+.st-key-setup_wizard [data-testid='stTextArea'] textarea,
+.st-key-setup_wizard [data-baseweb='select'] > div {
+  border-radius:9px !important; font-size:.84rem;min-height:37px;
+}
+.st-key-setup_wizard [data-testid='stTextArea'] textarea {min-height:90px;}
+.st-key-setup_wizard label p {font-family:'Manrope',sans-serif;font-size:.75rem;font-weight:700;}
+.st-key-setup_wizard [data-testid='stFileUploaderDropzone'] {
+  background: #f2f9fc;
+  border: 1px dashed #b8dce7;
+  padding:.68rem .85rem;
+  border-radius:10px;
+}
+.st-key-setup_wizard [data-testid='stFileUploaderDropzone'] button {
+  background:#078fa3 !important;border-color:#078fa3 !important;
+}
+/* Restrict upload image size and keep actual contained image centered. */
+.st-key-setup_logo_preview_current,
+.st-key-setup_logo_preview_pending {
+  width:142px;height:142px;margin: .35rem auto .8rem;
+}
+.st-key-setup_profile_preview_current,
+.st-key-setup_profile_preview_pending {
+  width:154px;height:154px;margin:.2rem auto .75rem;
+}
+.st-key-setup_logo_preview_current [data-testid='stImage'] img,
+.st-key-setup_logo_preview_pending [data-testid='stImage'] img {object-fit:contain !important;}
+.st-key-setup_profile_preview_current [data-testid='stImage'] img,
+.st-key-setup_profile_preview_pending [data-testid='stImage'] img {object-fit:cover !important;}
+.st-key-setup_wizard .ls-admin-mini-name {display:flex;flex-direction:column;align-items:center;margin:.4rem 0 1rem;gap:.3rem;}
+.st-key-setup_wizard .ls-admin-mini-name strong {color:#0d2a47;font-size:.95rem;}
+.st-key-setup_wizard .ls-admin-mini-name span {color:#008b92;background:#ddf7f2;border-radius:100px;font-size:.72rem;padding:.25rem .7rem;font-weight:700;}
+/* Summary rows for final review; constrain long email/address strings. */
+.st-key-setup_wizard .ls-info-list {display:flex;flex-direction:column;margin:.1rem 0;}
+.st-key-setup_wizard .ls-info-line {
+  display:grid;grid-template-columns:minmax(0,40%) minmax(0,60%);
+  column-gap:.55rem;padding:.56rem 0;border-bottom:1px solid #e3edf2;
+}
+.st-key-setup_wizard .ls-info-line:last-child {border-bottom:0;}
+.st-key-setup_wizard .ls-info-line span {color:#62798b;font-size:.72rem;overflow-wrap:anywhere;}
+.st-key-setup_wizard .ls-info-line strong {font-size:.72rem;color:#0e2b46;text-align:right;font-weight:700;overflow-wrap:anywhere;}
+.st-key-setup_wizard [class*='st-key-setup_review_avatar_'] {height:58px;width:58px;padding:2px;overflow:hidden;border-radius:12px;}
+.st-key-setup_review_avatar_administrator {border-radius:50% !important;}
+.st-key-setup_wizard [class*='st-key-setup_review_avatar_'] [data-testid='stImage'] img {object-fit:cover;}
+.st-key-setup_wizard .ls-empty-review-avatar {display:flex;align-items:center;justify-content:center;height:48px;background:#ecf7fb;color:#008b99;}
+/* PSGC address is an intentionally separate visual card. */
+.st-key-setup_wizard .ls-address-preview {
+  background:#e9f8fa;border:1px solid #cce6ed;border-left:3px solid #00969c;
+  border-radius:11px;display:flex;align-items:flex-start;gap:.6rem;
+  font-size:.78rem;color:#2a4d5e;padding:.75rem .9rem;margin:.75rem 0 .15rem;
+}
+.st-key-setup_wizard .ls-address-preview .material-symbols-rounded {color:#008f9c;}
+/* Map and confirmation remain real and interactive (no screenshots). */
+.st-key-setup_hospital_map_card [data-testid='stIFrame'] {border-radius:11px;overflow:hidden;}
+.st-key-setup_wizard .ls-map-card {padding:.6rem .75rem;margin:0 0 .5rem;}
+.st-key-setup_wizard .ls-map-caption {font-size:.72rem;}
+.st-key-setup_wizard .ls-confirm-prompt {font-size:.76rem;}
+/* Subscription reference: navy panel with prominent 3 usage columns. */
+.st-key-setup_plan {
+  background:linear-gradient(120deg,#036574 0%,#102b48 29%,#102840 100%) !important;
+  color:#fff;border-radius:16px;padding:1.4rem 1.7rem;
+  border:0 !important;box-shadow:0 12px 26px rgba(15,47,74,.16);
+}
+.st-key-setup_plan .ls-plan-name {font-family:'Manrope',sans-serif;font-size:1.48rem;font-weight:800;}
+.st-key-setup_plan .ls-plan-price {font-size:1.6rem;font-weight:800;}
+.st-key-setup_plan .ls-limits {grid-template-columns:repeat(3,minmax(0,1fr));}
+/* Consent panel */
+.st-key-setup_wizard [data-testid='stCheckbox'] {padding:.12rem 0;}
+.st-key-setup_wizard [data-testid='stCheckbox'] label p {font-size:.75rem;}
+.st-key-setup_wizard [data-testid^='stBaseButton-primary'] {
+  background:linear-gradient(100deg,#0799ba,#007e84) !important;
+  border:1px solid #078e9d !important;border-radius:8px !important;
+}
+.st-key-setup_wizard [data-testid^='stBaseButton-primary']:hover {
+  background:#046879 !important;border-color:#046879 !important;
+}
+@media(max-width:900px) {
+  .st-key-setup_hospital_logo_card,
+  .st-key-setup_hospital_info_card,
+  .st-key-setup_admin_photo_card,
+  .st-key-setup_admin_personal_card {min-height:0;}
+  .st-key-setup_wizard .ls-step-caption {font-size:.75rem;}
+}
+@media(max-width:640px) {
+  .st-key-setup_wizard .ls-page-title h1 {font-size:1.4rem;}
+  .st-key-setup_wizard .ls-info-line {grid-template-columns:42% 58%;}
+  .st-key-setup_wizard .ls-steps .ls-step-name {display:none;}
 }

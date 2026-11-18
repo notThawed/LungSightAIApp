@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from backend.supabase_client import admin_supabase
 from backend.fetches import generate_patient_id
 from backend import audit
+from backend.backend_utils.auth_redirect_config import get_auth_redirect_url
+from backend.backend_utils.password_policy import validate_strong_password
 
 
 def _audit_previous(table, key, value, columns):
@@ -61,10 +63,7 @@ def create_user(
             .invite_user_by_email(
                 email,
                 options={
-                    "redirect_to": (
-                        "https://notthawed.github.io/"
-                        "LungSightAuthRedirect/"
-                    ),
+                    "redirect_to": get_auth_redirect_url(),
                     "data": {
                         "first_name": first_name,
                         "last_name": last_name,
@@ -210,6 +209,11 @@ def update_user(
         # ------------------------------------------
         # UPDATE AUTH ACCOUNT
         # ------------------------------------------
+
+        if password:
+            password_ok, password_error = validate_strong_password(password)
+            if not password_ok:
+                return {"success": False, "message": password_error}
 
         auth_updates = {}
 

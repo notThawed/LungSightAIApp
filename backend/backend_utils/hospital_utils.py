@@ -17,6 +17,7 @@ from backend.fetches import (
 )
 
 from backend import audit
+from backend.backend_utils.auth_redirect_config import get_auth_redirect_url
 
 import time
 
@@ -25,10 +26,9 @@ import time
 # CONFIGURATION
 # ============================================================
 
-REDIRECT_URL = os.getenv(
-    "INVITE_REDIRECT_URL",
-    "https://notthawed.github.io/LungSightAuthRedirect/",
-)
+# Invitation links are resolved when sending so local and production
+# use the same strict configuration.
+
 
 
 EMAIL_REGEX = re.compile(
@@ -825,7 +825,7 @@ def create_hospital_admin(
             .invite_user_by_email(
                 email,
                 options={
-                    "redirect_to": REDIRECT_URL,
+                    "redirect_to": get_auth_redirect_url(),
                     "data": {
                         "first_name":
                             first_name,

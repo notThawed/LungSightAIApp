@@ -25,6 +25,11 @@ from streamlit_app.components.ui import refresh_button
 
 from datetime import datetime, timezone
 import time
+import html
+import calendar
+import re
+import requests
+from datetime import date
 
 from backend.supabase_client import admin_supabase
 
@@ -89,7 +94,7 @@ HOSPITAL_TYPES = [
 # ============================================================
 
 def safe(value):
-    return str(value).strip() if value else "—"
+    return html.escape(str(value).strip()) if value is not None and str(value).strip() else "—"
 
 
 def peso(amount):
@@ -99,14 +104,14 @@ def peso(amount):
 def limit_text(value):
     if value is None:
         return "Unlimited"
-    return f"{value:,}"
+    return f"{int(value):,}" if str(value).isdigit() else safe(value)
 
 
 def full_name_of(person):
     parts = [
-        person.get("first_name"),
-        person.get("middle_name"),
-        person.get("last_name"),
+        person.get("first_name") or person.get("user_fname"),
+        person.get("middle_name") or person.get("user_mname"),
+        person.get("last_name") or person.get("user_lname"),
     ]
     return " ".join(part for part in parts if part) or person.get("name") or "—"
 
@@ -150,6 +155,312 @@ def initials_for(name):
     if len(words) == 1:
         return words[0][0].upper()
     return (words[0][0] + words[-1][0]).upper()
+
+
+# ============================================================
+# ADMINISTRATOR PROFILE AND PSGC ADDRESS HELPERS
+# ============================================================
+
+PSGC_API = "https://psgc.cloud/api/v2"
+
+
+def _profile_value(profile, *names):
+    for name in names:
+        value = profile.get(name)
+        if value is not None and str(value).strip():
+            return value
+    return ""
+
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def _psgc_fetch(resource):
+    """Public PSGC service; no local geographic tables required."""
+    try:
+        response = requests.get(f"{PSGC_API}/{resource}", timeout=12)
+        response.raise_for_status()
+        payload = response.json()
+        if isinstance(payload, list):
+            return payload
+        return payload.get("data", []) if isinstance(payload, dict) else []
+    except (requests.RequestException, ValueError):
+        return []
+
+
+def _psgc_options(items):
+    options = {}
+
+    for item in items:
+        name = item.get("name")
+        code = item.get("code")
+        if name and code:
+            options[f"{name} ({code})"] = item
+
+    return options
+
+
+def _psgc_select(label, items, selected_code, key):
+    options = _psgc_options(items)
+    labels = ["Select a location..."] + list(options)
+
+    index = next(
+        (
+            i
+            for i, text in enumerate(labels)
+            if selected_code and text.endswith(f"({selected_code})")
+        ),
+        0,
+    )
+
+    choice = st.selectbox(label, labels, index=index, key=key)
+    return options.get(choice, {})
+
+
+def _date_value(raw):
+    try:
+        return date.fromisoformat(str(raw)[:10])
+    except (ValueError, TypeError):
+        return date(1990, 1, 1)
+
+
+def _save_administrator_profile(user_id, values):
+    """Update only columns actually present in user_profiles."""
+    try:
+        current = (admin_supabase.table("user_profiles")
+                   .select("*").eq("user_id", user_id).single().execute().data or {})
+        mapping = {
+            "employee_id": ("employee_id",),
+            "first_name": ("user_fname", "first_name"),
+            "middle_name": ("user_mname", "middle_name"),
+            "last_name": ("user_lname", "last_name"),
+            "date_of_birth": ("date_of_birth", "birthdate", "user_birthdate"),
+            "sex": ("sex", "user_sex"),
+            "contact_number": ("user_contact_number", "contact_number"),
+            "address": ("user_address", "address", "residential_address"),
+            "region": ("user_region", "region"),
+            "province": ("user_province", "province"),
+            "city": ("user_city", "city"),
+            "barangay": ("user_barangay", "barangay"),
+            "purok": ("user_purok", "purok"),
+            "street": ("user_street", "street"),
+            "address_details": ("user_address_details", "address_details"),
+            "psgc_region_code": ("user_psgc_region_code", "psgc_region_code"),
+            "psgc_province_code": ("user_psgc_province_code", "psgc_province_code"),
+            "psgc_city_code": ("user_psgc_city_code", "psgc_city_code"),
+            "psgc_barangay_code": ("user_psgc_barangay_code", "psgc_barangay_code"),
+        }
+        payload = {}
+        for source, candidates in mapping.items():
+            for column in candidates:
+                if column in current:
+                    payload[column] = values.get(source) if values.get(source) is not None else None
+                    break
+        if not payload:
+            return False, "No supported administrator profile columns were found."
+        (admin_supabase.table("user_profiles").update(payload)
+         .eq("user_id", user_id).execute())
+        return True, "Administrator profile saved."
+    except Exception as exc:
+        return False, f"Unable to save administrator details: {exc}"
+
+
+def _administrator_address_form(profile):
+    """Use the same PSGC Cloud v2 hierarchy as Manage Users.
+
+    The address selections are shown in a compact grid. Parent selections
+    automatically reset invalid child selections when changed.
+    """
+    section_heading("location_on", "Residential Address", "Philippine Standard Geographic Code (PSGC)")
+
+    old_address = _profile_value(profile, "user_address", "address", "residential_address")
+    if old_address:
+        st.caption(f"Previously saved: {old_address}")
+
+    try:
+        regions = _psgc_fetch("regions")
+    except Exception:
+        regions = []
+
+    if not regions:
+        st.warning("The PSGC service is unavailable. Your saved address remains unchanged.")
+        return {"address": old_address} if old_address else None
+
+    def select_place(label, rows, key, previous_code="", disabled=False):
+        choices = [None] + rows
+        valid = {str(r.get("code")) for r in rows}
+        if key in st.session_state:
+            previous = st.session_state[key]
+            if previous is not None and str(previous.get("code")) not in valid:
+                del st.session_state[key]
+        index = next(
+            (idx for idx, item in enumerate(choices) if item and
+             str(item.get("code")) == str(previous_code)), 0
+        )
+        return st.selectbox(
+            label,
+            choices,
+            key=key,
+            index=index,
+            disabled=disabled,
+            format_func=lambda item: item.get("name", "") if item else "Select a location...",
+        )
+
+    r_col, p_col = st.columns(2, gap="small")
+    with r_col:
+        region = select_place(
+            "Region *", regions, "setup_admin_region",
+            _profile_value(profile, "user_psgc_region_code", "psgc_region_code"),
+        )
+
+    region_code = region["code"] if region else None
+    provinces = _psgc_fetch(f"regions/{region_code}/provinces") if region else []
+    independent = {"code": "__independent__", "name": "Independent city / NCR (no province)"}
+
+    with p_col:
+        province = select_place(
+            "Province / Administrative area *",
+            [*provinces, independent] if region else [],
+            "setup_admin_province",
+            _profile_value(profile, "user_psgc_province_code", "psgc_province_code")
+            or ("__independent__" if region and not provinces else ""),
+            disabled=not bool(region),
+        )
+
+    cities = []
+    if region and province:
+        if province["code"] == "__independent__":
+            cities = _psgc_fetch(f"regions/{region_code}/cities-municipalities")
+        else:
+            cities = _psgc_fetch(f"provinces/{province['code']}/cities-municipalities")
+
+    c_col, b_col = st.columns(2, gap="small")
+    with c_col:
+        city = select_place(
+            "City / Municipality *", cities, "setup_admin_city",
+            _profile_value(profile, "user_psgc_city_code", "psgc_city_code"),
+            disabled=not bool(province),
+        )
+
+    barangays = _psgc_fetch(f"cities-municipalities/{city['code']}/barangays") if city else []
+    with b_col:
+        barangay = select_place(
+            "Barangay *", barangays, "setup_admin_barangay",
+            _profile_value(profile, "user_psgc_barangay_code", "psgc_barangay_code"),
+            disabled=not bool(city),
+        )
+
+    a, b, c = st.columns(3, gap="small")
+    with a:
+        purok = st.text_input(
+            "Purok / Sitio", value=_profile_value(profile, "user_purok", "purok"),
+            key="setup_admin_purok", placeholder="Optional",
+        ).strip()
+    with b:
+        street = st.text_input(
+            "Street", value=_profile_value(profile, "user_street", "street"),
+            key="setup_admin_street", placeholder="Optional",
+        ).strip()
+    with c:
+        details = st.text_input(
+            "House No. / Landmark",
+            value=_profile_value(profile, "user_address_details", "address_details"),
+            key="setup_admin_details", placeholder="Optional",
+        ).strip()
+
+    if not all((region, province, city, barangay)):
+        st.caption("Complete all four location selections to preview your address.")
+        return None
+
+    province_name = "" if province["code"] == "__independent__" else province["name"]
+    parts = [details, street, purok, barangay["name"], city["name"],
+             province_name, region["name"], "Philippines"]
+    address = ", ".join(part for part in parts if part)
+    st.markdown(
+        "<div class='ls-address-preview'>"
+        "<span class='material-symbols-rounded'>location_on</span>"
+        f"<span>{html.escape(address)}</span></div>",
+        unsafe_allow_html=True,
+    )
+
+    return {
+        "address": address,
+        "region": region["name"],
+        "province": province_name,
+        "city": city["name"],
+        "barangay": barangay["name"],
+        "purok": purok or None,
+        "street": street or None,
+        "address_details": details or None,
+        "psgc_region_code": str(region["code"]),
+        "psgc_province_code": (
+            str(province["code"]) if province["code"] != "__independent__" else None
+        ),
+        "psgc_city_code": str(city["code"]),
+        "psgc_barangay_code": str(barangay["code"]),
+    }
+
+def section_heading(icon, title, subtitle=""):
+    """Render one line of HTML; never indent the string in Markdown."""
+    st.markdown(
+        "<div class='ls-ui-section'>"
+        f"<span class='material-symbols-rounded'>{html.escape(icon)}</span>"
+        "<div class='ls-ui-section-copy'>"
+        f"<strong>{html.escape(title)}</strong>"
+        f"<small>{html.escape(subtitle)}</small>"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def information_rows_html(rows):
+    parts = []
+    for label, value in rows:
+        parts.append(
+            "<div class='ls-info-line'>"
+            f"<span>{html.escape(str(label))}</span>"
+            f"<strong>{safe(value)}</strong>"
+            "</div>"
+        )
+    return "<div class='ls-info-list'>" + "".join(parts) + "</div>"
+
+
+def wizard_date_parts(value, prefix="setup_admin_birth"):
+    """Birthdate selectors cover 1900-current year without a limited picker."""
+    initial = _date_value(value)
+    today = date.today()
+    if initial > today or initial.year < 1900:
+        initial = date(1990, 1, 1)
+
+    months = list(range(1, 13))
+    years = list(range(today.year, 1899, -1))
+    cols = st.columns([1.3, 0.8, 1], gap="small")
+
+    with cols[0]:
+        month = st.selectbox(
+            "Birth month *", months,
+            index=initial.month - 1,
+            format_func=lambda m: calendar.month_name[m],
+            key=f"{prefix}_month",
+        )
+    with cols[2]:
+        year = st.selectbox(
+            "Birth year *", years,
+            index=years.index(initial.year),
+            key=f"{prefix}_year",
+        )
+
+    days = calendar.monthrange(year, month)[1]
+    with cols[1]:
+        day = st.selectbox(
+            "Day *", list(range(1, days + 1)),
+            index=min(initial.day, days) - 1,
+            key=f"{prefix}_day",
+        )
+
+    birthday = date(year, month, day)
+    if birthday > today:
+        st.warning("Birthdate cannot be in the future.")
+        return None
+    return birthday
 
 
 # ============================================================
@@ -210,20 +521,16 @@ def render_uploaded_preview(key, uploaded_file, shape="square", caption=None):
 
 
 def render_review_avatar(key, image_url, shape="square"):
-    shape_class = (
-        "ls-review-avatar--circle"
-        if shape == "circle"
-        else "ls-review-avatar--square"
-    )
-
     with st.container(key=key):
-        st.markdown(
-            f"<div class='ls-review-avatar-inner {shape_class}'>",
-            unsafe_allow_html=True,
-        )
-        st.image(image_url, use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
+        if image_url:
+            st.image(image_url, use_container_width=True)
+        else:
+            st.markdown(
+                "<div class='ls-empty-review-avatar'>"
+                "<span class='material-symbols-rounded'>account_circle</span>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
 
 # ============================================================
 # GEOCODING
@@ -853,89 +1160,84 @@ def render_hospital_profile(hospital):
     step_header(*SETUP_STEPS[0][1:])
 
     current_logo_url = hospital.get("hospital_logo_url")
+    logo_col, info_col = st.columns([1, 1.75], gap="medium")
 
-    st.markdown(
-        "<p class='ls-upload-label'>Hospital logo</p>"
-        "<p class='ls-upload-caption'>"
-        "This is the logo shown across your LungSight workspace."
-        "</p>",
-        unsafe_allow_html=True,
-    )
+    with logo_col:
+        with st.container(key="setup_hospital_logo_card", border=True):
+            section_heading("add_photo_alternate", "Hospital Logo", "Shown across LungSight")
+            render_image_preview(
+                key="setup_logo_preview_current",
+                image_url=current_logo_url,
+                shape="square",
+                placeholder_icon="local_hospital",
+            )
+            hospital_logo = st.file_uploader(
+                "Upload hospital logo",
+                type=["png", "jpg", "jpeg", "webp"],
+                key="setup_hospital_logo",
+                help="PNG, JPG or WEBP, maximum 5 MB.",
+            )
+            if hospital_logo:
+                render_uploaded_preview(
+                    key="setup_logo_preview_pending",
+                    uploaded_file=hospital_logo,
+                    shape="square",
+                    caption="New hospital logo (saved when you continue)",
+                )
 
-    render_image_preview(
-        key="setup_logo_preview_current",
-        image_url=current_logo_url,
-        shape="square",
-        placeholder_icon="local_hospital",
-    )
+    with info_col:
+        with st.container(key="setup_hospital_info_card", border=True):
+            section_heading("local_hospital", "Hospital Information", "Verify facility details")
+            hospital_name = st.text_input(
+                "Hospital name *",
+                value=hospital.get("hospital_name", ""),
+                key="setup_hospital_name",
+            )
+            current_type = hospital.get("hospital_type")
+            if current_type not in HOSPITAL_TYPES:
+                current_type = HOSPITAL_TYPES[0]
 
-    hospital_logo = st.file_uploader(
-        "Replace hospital logo",
-        type=["png", "jpg", "jpeg", "webp"],
-        help="Maximum file size: 5 MB.",
-        key="setup_hospital_logo",
-        label_visibility="collapsed",
-    )
+            hospital_type = st.selectbox(
+                "Hospital type *",
+                HOSPITAL_TYPES,
+                index=HOSPITAL_TYPES.index(current_type),
+                key="setup_hospital_type",
+            )
+            contact_number = st.text_input(
+                "Contact number",
+                value=hospital.get("contact_number", "") or "",
+                key="setup_hospital_contact",
+            )
+            email = st.text_input(
+                "Hospital email",
+                value=hospital.get("email", "") or "",
+                key="setup_hospital_email",
+            )
+            website = st.text_input(
+                "Website (optional)",
+                value=hospital.get("website", "") or "",
+                key="setup_hospital_website",
+            )
 
-    if hospital_logo:
-        render_uploaded_preview(
-            key="setup_logo_preview_pending",
-            uploaded_file=hospital_logo,
-            shape="square",
-            caption="New hospital logo — saved when you continue.",
-        )
+    address_col, map_col = st.columns([1, 1.2], gap="medium")
+    with address_col:
+        with st.container(key="setup_hospital_address_card", border=True):
+            section_heading("location_on", "Hospital Address", "Verify the address for your facility")
+            address = st.text_area(
+                "Complete address *",
+                value=hospital.get("address", "") or "",
+                key="setup_hospital_address",
+                height=110,
+                help="Include street, barangay, city, province, and Philippines for more accurate mapping.",
+            )
+            st.caption("Confirm the location on the map before continuing.")
 
-    st.divider()
+    with map_col:
+        with st.container(key="setup_hospital_map_card", border=True):
+            section_heading("map", "Location Preview", "Check the exact hospital pin")
+            render_address_map_preview(hospital, address)
 
-    hospital_name = st.text_input(
-        "Hospital name *",
-        value=hospital.get("hospital_name", ""),
-        key="setup_hospital_name",
-    )
-
-    type_col, contact_col = st.columns(2)
-
-    current_type = hospital.get("hospital_type")
-    if current_type not in HOSPITAL_TYPES:
-        current_type = HOSPITAL_TYPES[0]
-
-    hospital_type = type_col.selectbox(
-        "Hospital type *",
-        HOSPITAL_TYPES,
-        index=HOSPITAL_TYPES.index(current_type),
-        key="setup_hospital_type",
-    )
-
-    contact_number = contact_col.text_input(
-        "Contact number",
-        value=hospital.get("contact_number", "") or "",
-        key="setup_hospital_contact",
-    )
-
-    address = st.text_area(
-        "Complete address *",
-        value=hospital.get("address", ""),
-        key="setup_hospital_address",
-        height=80,
-    )
-
-    render_address_map_preview(hospital, address)
-
-    email_col, website_col = st.columns(2)
-
-    email = email_col.text_input(
-        "Hospital email",
-        value=hospital.get("email", "") or "",
-        key="setup_hospital_email",
-    )
-
-    website = website_col.text_input(
-        "Hospital website",
-        value=hospital.get("website", "") or "",
-        key="setup_hospital_website",
-    )
-
-    st.divider()
+    note("Please verify the hospital details and map location before continuing.")
 
     _, next_clicked = nav_buttons(
         "hospital",
@@ -1052,121 +1354,192 @@ def render_hospital_profile(hospital):
 
 def render_administrator_profile():
     user = refresh_current_user()
-
     step_header(*SETUP_STEPS[1][1:])
 
-    if not user:
+    if not user or not user.get("user_id"):
         st.error("Administrator information could not be found.")
         return
 
-    user_id = user.get("user_id")
-    if not user_id:
-        st.error("Your user ID could not be found.")
+    user_id = user["user_id"]
+    try:
+        response = (
+            admin_supabase.table("user_profiles")
+            .select("*").eq("user_id", user_id).single().execute()
+        )
+        profile = response.data or {}
+    except Exception as exc:
+        st.error(f"Unable to fetch administrator profile: {exc}")
         return
 
-    current_profile_picture = (
-        user.get("profile_picture_url")
-        or user.get("profile_picture")
-        or user.get("avatar_url")
+    merged = {**user, **profile}
+    picture = _profile_value(
+        merged, "profile_picture_url", "profile_picture", "avatar_url"
     )
+    hospital = get_current_hospital() or {}
 
-    st.markdown(
-        "<p class='ls-upload-label'>Profile picture</p>"
-        "<p class='ls-upload-caption'>"
-        "This is the picture shown next to your name."
-        "</p>",
-        unsafe_allow_html=True,
+    photo_col, details_col = st.columns([1, 1.75], gap="medium")
+
+    with photo_col:
+        with st.container(key="setup_admin_photo_card", border=True):
+            section_heading("account_circle", "Profile Picture", "Your hospital administrator profile")
+            render_image_preview(
+                key="setup_profile_preview_current",
+                image_url=picture,
+                shape="circle",
+                placeholder_initials=initials_for(full_name_of(merged)),
+            )
+            st.markdown(
+                "<div class='ls-admin-mini-name'>"
+                f"<strong>{safe(full_name_of(merged))}</strong>"
+                "<span>Hospital Administrator</span></div>",
+                unsafe_allow_html=True,
+            )
+            profile_picture = st.file_uploader(
+                "Upload profile picture",
+                type=["png", "jpg", "jpeg", "webp"],
+                key="setup_profile_picture",
+                help="PNG, JPG or WEBP; maximum 5 MB.",
+            )
+            if profile_picture:
+                render_uploaded_preview(
+                    key="setup_profile_preview_pending",
+                    uploaded_file=profile_picture,
+                    shape="circle",
+                    caption="New photo (saved when you continue)",
+                )
+
+    with details_col:
+        with st.container(key="setup_admin_personal_card", border=True):
+            section_heading("badge", "Personal Information", "Complete your account details")
+
+            account_left, account_right = st.columns(2, gap="small")
+            with account_left:
+                employee_id = st.text_input(
+                    "Employee ID",
+                    value=str(_profile_value(merged, "employee_id")),
+                    key="setup_admin_employee",
+                )
+            with account_right:
+                st.text_input(
+                    "Email address",
+                    value=str(_profile_value(merged, "email")),
+                    disabled=True,
+                    key="setup_admin_email_readonly",
+                )
+
+            name_a, name_b, name_c = st.columns(3, gap="small")
+            with name_a:
+                first = st.text_input(
+                    "First name *",
+                    value=str(_profile_value(merged, "user_fname", "first_name")),
+                    key="setup_admin_first",
+                )
+            with name_b:
+                middle = st.text_input(
+                    "Middle name",
+                    value=str(_profile_value(merged, "user_mname", "middle_name")),
+                    key="setup_admin_middle",
+                )
+            with name_c:
+                last = st.text_input(
+                    "Last name *",
+                    value=str(_profile_value(merged, "user_lname", "last_name")),
+                    key="setup_admin_last",
+                )
+
+            section_heading("cake", "Date of Birth", "Select any birth year from 1900 onward")
+            birth = wizard_date_parts(
+                _profile_value(merged, "user_birthdate", "date_of_birth", "birthdate")
+            )
+
+            sex_col, contact_col = st.columns(2, gap="small")
+            with sex_col:
+                sex_options = ["Select sex", "Male", "Female"]
+                old_sex = str(_profile_value(merged, "user_sex", "sex"))
+                sex = st.selectbox(
+                    "Sex *", sex_options,
+                    index=sex_options.index(old_sex) if old_sex in sex_options else 0,
+                    key="setup_admin_sex",
+                )
+            with contact_col:
+                contact = st.text_input(
+                    "Contact number",
+                    value=str(_profile_value(merged, "user_contact_number", "contact_number")),
+                    key="setup_admin_contact",
+                )
+
+            st.markdown(
+                information_rows_html([
+                    ("Role", "Hospital Administrator"),
+                    ("Assigned hospital", hospital.get("hospital_name")),
+                ]),
+                unsafe_allow_html=True,
+            )
+
+    with st.container(key="setup_admin_address_card", border=True):
+        address_values = _administrator_address_form(merged)
+
+    note("Review your personal information and residential address before continuing.")
+    _, next_clicked = nav_buttons(
+        "administrator", back_step=0, next_label="Save & Continue"
     )
-
-    render_image_preview(
-        key="setup_profile_preview_current",
-        image_url=current_profile_picture,
-        shape="circle",
-        placeholder_initials=initials_for(full_name_of(user)),
-    )
-
-    profile_picture = st.file_uploader(
-        "Replace profile picture",
-        type=["png", "jpg", "jpeg", "webp"],
-        help="Maximum file size: 5 MB.",
-        key="setup_profile_picture",
-        label_visibility="collapsed",
-    )
-
-    if profile_picture:
-        render_uploaded_preview(
-            key="setup_profile_preview_pending",
-            uploaded_file=profile_picture,
-            shape="circle",
-            caption="New profile picture — saved when you continue.",
-        )
-
-    st.divider()
-
-    st.markdown(
-        rows_html([
-            ("Name", full_name_of(user)),
-            ("Email", user.get("email")),
-            ("Contact number", user.get("contact_number")),
-        ]),
-        unsafe_allow_html=True,
-    )
-
-    st.caption(
-        "Your account information is managed by the LungSight system. "
-        "Contact your system administrator if any details are incorrect."
-    )
-
-    st.divider()
-
-    back_clicked, next_clicked = nav_buttons(
-        "administrator",
-        back_step=0,
-        next_label="Continue",
-    )
-
     if not next_clicked:
         return
 
+    if not first.strip() or not last.strip():
+        st.error("First name and last name are required.")
+        return
+    if not birth:
+        st.error("Select a valid birthdate that is not in the future.")
+        return
+    if sex == "Select sex":
+        st.error("Please select your sex.")
+        return
+    if not address_values:
+        st.error("Complete the region, province, city, and barangay to continue.")
+        return
+    if profile_picture and len(profile_picture.getvalue()) > 5 * 1024 * 1024:
+        st.error("Profile picture must be 5 MB or smaller.")
+        return
+
+    values = {
+        **address_values,
+        "employee_id": employee_id,
+        "first_name": first.strip(),
+        "middle_name": middle.strip(),
+        "last_name": last.strip(),
+        "date_of_birth": birth.isoformat(),
+        "sex": sex,
+        "contact_number": contact.strip(),
+    }
+    ok, message = _save_administrator_profile(user_id, values)
+    if not ok:
+        st.error(message)
+        return
+
     if profile_picture:
-        upload_result = upload_profile_picture(
+        uploaded = upload_profile_picture(
             user_id=user_id,
             file_bytes=profile_picture.getvalue(),
             file_name=profile_picture.name,
         )
-
-        if not upload_result["success"]:
+        if not uploaded.get("success") or not uploaded.get("url"):
             st.error(
-                f"Profile picture could not be uploaded: "
-                f"{upload_result['message']}"
+                "Profile information saved, but the photo upload failed: "
+                + uploaded.get("message", "No image URL returned")
             )
             return
 
-        profile_url = upload_result.get("url")
-        if not profile_url:
-            st.error(
-                "Profile picture was uploaded, but Supabase "
-                "did not return a public URL."
-            )
-            return
-
-        profile_result = update_profile_picture_url(
+        saved = update_profile_picture_url(
             user_id=user_id,
-            profile_picture_url=profile_url,
+            profile_picture_url=uploaded["url"],
         )
-
-        if not profile_result["success"]:
-            st.error(
-                "The profile picture was uploaded, but its database URL "
-                f"could not be saved: {profile_result['message']}"
-            )
+        if not saved.get("success"):
+            st.error("Photo uploaded, but its URL could not be stored.")
             return
 
-        if refresh_current_user():
-            st.session_state.user["profile_picture_url"] = profile_url
-
+    refresh_current_user()
     go_to_step(2)
-
 
 # ============================================================
 # STEP 3 — SUBSCRIPTION SUMMARY
@@ -1185,11 +1558,8 @@ def render_subscription_summary(hospital):
             "hospital. Please contact support."
         )
         st.divider()
-        nav_buttons(
-            "subscription_missing",
-            back_step=1,
-            next_label="Back to Administrator",
-        )
+        if st.button("Back to Administrator", key="subscription_missing_back", icon=":material/arrow_back:"):
+            go_to_step(1)
         return
 
     billing_cycle = subscription.get("billing_cycle", "Monthly")
@@ -1270,43 +1640,27 @@ def render_subscription_summary(hospital):
 # STEP 4 — REVIEW & CONFIRM
 # ============================================================
 
-def review_section(
-    key,
-    icon_title,
-    rows,
-    avatar_url=None,
-    avatar_shape="square",
-):
-    with st.container(key=f"setup_section_{key}"):
-
+def review_section(key, icon_title, rows, avatar_url=None, avatar_shape="square"):
+    icons = {
+        "hospital": "local_hospital",
+        "administrator": "manage_accounts",
+        "subscription": "workspace_premium",
+    }
+    with st.container(key=f"setup_section_{key}", border=True):
         if avatar_url:
-
-            col_img, col_title = st.columns(
-                [1, 8],
-                vertical_alignment="center",
-            )
-
-            with col_img:
+            picture_col, title_col = st.columns([1, 3.1], vertical_alignment="center")
+            with picture_col:
                 render_review_avatar(
                     key=f"setup_review_avatar_{key}",
                     image_url=avatar_url,
                     shape=avatar_shape,
                 )
-
-            with col_title:
-                st.markdown(
-                    f"<p class='ls-review-title'>{icon_title}</p>",
-                    unsafe_allow_html=True,
-                )
-
+            with title_col:
+                section_heading(icons.get(key, "fact_check"), icon_title)
         else:
-            st.markdown(
-                f"<p class='ls-review-title'>{icon_title}</p>",
-                unsafe_allow_html=True,
-            )
+            section_heading(icons.get(key, "fact_check"), icon_title)
 
-        st.markdown(rows_html(rows), unsafe_allow_html=True)
-
+        st.markdown(information_rows_html(rows), unsafe_allow_html=True)
 
 def render_data_policy():
     st.markdown(
@@ -1350,7 +1704,10 @@ def render_data_policy():
     
     # Render inside a scrollable container
     with st.container(height=300, border=True):
-        st.markdown(policy_text, unsafe_allow_html=True)
+        st.markdown(
+            "".join(line.strip() for line in policy_text.splitlines()),
+            unsafe_allow_html=True,
+        )
 
 
 def render_review(hospital):
@@ -1358,66 +1715,71 @@ def render_review(hospital):
 
     hospital = refresh_current_hospital() or hospital
     user = refresh_current_user() or get_current_user() or {}
+    try:
+        fresh = (
+            admin_supabase.table("user_profiles").select("*")
+            .eq("user_id", user.get("user_id")).single().execute().data or {}
+        )
+        user = {**user, **fresh}
+    except Exception:
+        pass
 
-    # ... [Keep the existing review_section blocks for Hospital, Admin, Subscription exactly as they are] ...
-    review_section(
-        "hospital",
-        "Hospital profile",
-        [
-            ("Hospital name", hospital.get("hospital_name")),
-            ("Hospital type", hospital.get("hospital_type")),
-            ("Address", hospital.get("address")),
-            ("Contact number", hospital.get("contact_number")),
-            ("Email", hospital.get("email")),
-            ("Website", hospital.get("website")),
-        ],
-        avatar_url=hospital.get("hospital_logo_url"),
-        avatar_shape="square",
+    profile_picture_url = _profile_value(
+        user, "profile_picture_url", "profile_picture", "avatar_url"
     )
+    subscription = get_hospital_subscription_details(hospital.get("hospital_id"))
 
-    profile_picture_url = (
-        user.get("profile_picture_url")
-        or user.get("profile_picture")
-        or user.get("avatar_url")
-    )
+    hospital_rows = [
+        ("Hospital name", hospital.get("hospital_name")),
+        ("Hospital type", hospital.get("hospital_type")),
+        ("Address", hospital.get("address")),
+        ("Contact number", hospital.get("contact_number")),
+        ("Email", hospital.get("email")),
+        ("Website", hospital.get("website")),
+    ]
+    administrator_rows = [
+        ("Name", full_name_of(user)),
+        ("Employee ID", _profile_value(user, "employee_id")),
+        ("Date of birth", _profile_value(user, "user_birthdate", "date_of_birth", "birthdate")),
+        ("Sex", _profile_value(user, "user_sex", "sex")),
+        ("Email", _profile_value(user, "email")),
+        ("Contact", _profile_value(user, "user_contact_number", "contact_number")),
+        ("Address", _profile_value(user, "user_address", "address", "residential_address")),
+        ("Role", "Hospital Administrator"),
+    ]
 
-    review_section(
-        "administrator",
-        "Your administrator account",
-        [
-            ("Name", full_name_of(user)),
-            ("Email", user.get("email")),
-            ("Contact number", user.get("contact_number")),
-        ],
-        avatar_url=profile_picture_url,
-        avatar_shape="circle",
-    )
-
-    subscription = get_hospital_subscription_details(
-        hospital.get("hospital_id")
-    )
-
-    if subscription:
-        billing_cycle = subscription.get("billing_cycle")
-        amount = float(
-            (
-                subscription.get("price_yearly")
-                if billing_cycle == "Yearly"
+    c1, c2, c3 = st.columns([1.05, 1.15, 0.95], gap="small")
+    with c1:
+        review_section(
+            "hospital", "Hospital Profile", hospital_rows,
+            avatar_url=hospital.get("hospital_logo_url"),
+            avatar_shape="square",
+        )
+    with c2:
+        review_section(
+            "administrator", "Administrator Account", administrator_rows,
+            avatar_url=profile_picture_url,
+            avatar_shape="circle",
+        )
+    with c3:
+        if subscription:
+            billing_cycle = subscription.get("billing_cycle") or "Monthly"
+            amount = (
+                subscription.get("price_yearly") if billing_cycle == "Yearly"
                 else subscription.get("price_monthly")
             )
-            or 0
-        )
-        review_section(
-            "subscription",
-            "Your subscription",
-            [
-                ("Plan", subscription.get("plan_name")),
-                ("Billing cycle", billing_cycle),
-                ("Price", peso(amount)),
-            ],
-        )
-    else:
-        st.warning("Subscription information not available.")
+            review_section(
+                "subscription", "Subscription", [
+                    ("Plan", subscription.get("plan_name")),
+                    ("Billing cycle", billing_cycle),
+                    ("Price", peso(amount)),
+                    ("Users", limit_text(subscription.get("max_users"))),
+                    ("Patients", limit_text(subscription.get("max_patients"))),
+                    ("X-rays / month", limit_text(subscription.get("max_xrays_per_month"))),
+                ],
+            )
+        else:
+            st.warning("Subscription information not available.")
 
     st.divider()
     
@@ -1435,9 +1797,7 @@ def render_review(hospital):
 
     # Updated based on Section 2.2 of the PDF
     agree_policy = st.checkbox(
-        "I am an authorized representative of this hospital. I have read and agree to the Service and Data Processing Agreement. "
-        "Furthermore, I consent to the use of de-identified clinical data for AI training under a separate anonymization protocol, "
-        "as outlined in Section 2.2.",
+        "I am an authorized representative of this hospital and agree to the Service and Data Processing Agreement.",
         key="setup_policy_agreement",
     )
 
@@ -1521,7 +1881,7 @@ def show():
         st.success("Hospital setup has already been completed.")
         return
 
-    outer_left, outer_center, outer_right = st.columns([1, 6, 1])
+    outer_left, outer_center, outer_right = st.columns([0.35, 11, 0.35])
 
     with outer_center:
         with st.container(key="setup_wizard"):
@@ -1556,7 +1916,7 @@ def show():
 
             st.markdown(
                 "<div class='ls-page-title'>"
-                "<h1>Welcome to LungSight</h1>"
+                "<h1>Complete your hospital setup</h1>"
                 "<p>Let's complete your hospital setup before you "
                 "start using the LungSight system.</p>"
                 "</div>",

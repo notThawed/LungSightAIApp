@@ -1,4 +1,5 @@
 from backend.supabase_client import admin_supabase
+from backend.backend_utils.password_policy import validate_strong_password
 
 
 # ============================================================
@@ -265,8 +266,9 @@ def update_user_preferences(user_id, notifications_enabled, date_format, time_fo
 
 def change_password(user_id, new_password, confirm_password):
 
-    if not new_password or len(new_password) < 8:
-        return {"success": False, "message": "Password must be at least 8 characters."}
+    password_ok, password_error = validate_strong_password(new_password)
+    if not password_ok:
+        return {"success": False, "message": password_error}
 
     if new_password != confirm_password:
         return {"success": False, "message": "Passwords do not match."}

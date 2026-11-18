@@ -52,18 +52,21 @@ def login_user(email, password):
 
         code = str(getattr(exc, "code", "") or "")
 
-        audit.record_event(
-            "auth.login_failed",
-            "failure",
-            metadata={
-                "reason": (
-                    "invalid_credentials"
-                    if code == "invalid_credentials"
-                    else "auth_error"
-                ),
-                "error_class": audit.error_class(exc),
-            },
-        )
+        try:
+            audit.record_event(
+                "auth.login_failed",
+                "failure",
+                metadata={
+                    "reason": (
+                        "invalid_credentials"
+                        if code == "invalid_credentials"
+                        else "auth_error"
+                    ),
+                    "error_class": audit.error_class(exc),
+                },
+            )
+        except Exception:
+            pass
 
         raise
 

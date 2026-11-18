@@ -132,19 +132,28 @@ from pages.hospital_administrator import (
 incoming_access = st.query_params.get("access_token")
 incoming_refresh = st.query_params.get("refresh_token")
 incoming_type = (st.query_params.get("type") or "invite").lower()
-if incoming_access or incoming_refresh:
+incoming_auth_error = st.query_params.get("auth_error")
+
+if incoming_access or incoming_refresh or incoming_auth_error:
+    # A new link must invalidate the last invitation's state, success screen,
+    # and any previous Supabase recovery client before it is processed.
     for key in ("invite_access_token", "invite_refresh_token",
                 "invite_session_ready", "ls_recovery_auth_client",
-                "password_set_success", "ls_new_password", "ls_confirm_password"):
+                "password_set_success", "ls_new_password", "ls_confirm_password",
+                "ls_link_error"):
         st.session_state.pop(key, None)
-    if incoming_access and incoming_refresh and incoming_type in ("invite", "recovery"):
+
+    if (incoming_access and incoming_refresh
+            and incoming_type in ("invite", "recovery")
+            and not incoming_auth_error):
         st.session_state["invite_access_token"] = incoming_access
         st.session_state["invite_refresh_token"] = incoming_refresh
         st.session_state["invite_type"] = incoming_type
-        st.session_state["ls_auth_view"] = "login"
     else:
-        st.session_state["invite_type"] = incoming_type
+        # Do not show raw Supabase error_description in the browser.
         st.session_state["ls_link_error"] = True
+        st.session_state["invite_type"] = "recovery"
+
     st.query_params.clear()
 
 if (st.session_state.get("invite_access_token")

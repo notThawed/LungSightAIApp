@@ -7,6 +7,7 @@ import streamlit as st
 from supabase import create_client
 from backend.supabase_client import SUPABASE_URL, SUPABASE_KEY
 from backend import audit
+from backend.backend_utils.password_policy import password_checks
 
 CSS = Path(__file__).resolve().parents[2] / "shared" / "theme" / "css_content" / "set_password.css"
 BAD_PASSWORDS = {
@@ -39,16 +40,7 @@ def _to_login(recover=False):
 
 
 def _checks(password):
-    return {
-        "12 or more characters": len(password) >= 12,
-        "Uppercase and lowercase letters": bool(re.search(r"[A-Z]", password))
-                                          and bool(re.search(r"[a-z]", password)),
-        "At least one number": bool(re.search(r"\d", password)),
-        "At least one symbol": bool(re.search(r"[^A-Za-z0-9\s]", password)),
-        "No spaces": not any(c.isspace() for c in password),
-        "Not a common password": password.casefold() not in BAD_PASSWORDS,
-    }
-
+    return password_checks(password)
 
 def _show_rules(password, confirm):
     checks = _checks(password)

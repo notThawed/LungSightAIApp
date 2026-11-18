@@ -9,16 +9,8 @@ import re
 from supabase import create_client
 from backend.supabase_client import SUPABASE_URL, SUPABASE_KEY, admin_supabase
 from backend import audit
+from backend.backend_utils.auth_redirect_config import get_auth_redirect_url
 
-import os
-
-APP_ENV = os.getenv("LUNGSIGHT_ENV", "production").lower()
-
-REDIRECT_URL = (
-    "https://notthawed.github.io/LungSightAuthRedirect/?env=local"
-    if APP_ENV == "local"
-    else "https://notthawed.github.io/LungSightAuthRedirect/"
-)
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -29,7 +21,7 @@ def request_recovery_email(email: str) -> None:
     client = create_client(SUPABASE_URL, SUPABASE_KEY)
     client.auth.reset_password_for_email(
         email,
-        {"redirect_to": REDIRECT_URL},
+        {"redirect_to": get_auth_redirect_url()},
     )
 
 
