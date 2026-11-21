@@ -15,6 +15,9 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { supabase } from "../lib/supabase";
 import { getCurrentUserProfile, UserProfile } from "../lib/user";
+import { isActiveAppointment, loadDashboardData } from "../lib/dashboard";
+import type { DashboardData, TodayAppointment, TodayExamination } from "../lib/dashboard";
+import { formatManilaTime, formatTimeOfDay } from "../lib/time";
 
 type DashboardRole = "staff" | "radiologist" | "radiologic_technologist";
 
@@ -26,6 +29,8 @@ export default function Dashboard({ role }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [dataError, setDataError] = useState("");
 
   const activeRole = role ?? user?.role;
 
@@ -40,10 +45,11 @@ export default function Dashboard({ role }: DashboardProps) {
     try {
       const profile = await getCurrentUserProfile();
 
-      // Preserve the mobile role restriction.
+      // Mobile is for clinical staff roles only.
       if (
         profile.role !== "radiologist" &&
-        profile.role !== "radiologic_technologist"
+        profile.role !== "radiologic_technologist" &&
+        profile.role !== "staff"
       ) {
         await supabase.auth.signOut();
         router.replace("/login");
@@ -51,6 +57,19 @@ export default function Dashboard({ role }: DashboardProps) {
       }
 
       setUser(profile);
+
+      if (profile.hospitalId) {
+        try {
+          setData(await loadDashboardData(profile.role, profile.hospitalId));
+          setDataError("");
+        } catch (error) {
+          console.error("Dashboard data error:", error);
+          setDataError("Some dashboard information could not be loaded. Pull down to try again.");
+        }
+      } else {
+        setData(null);
+        setDataError("");
+      }
     } catch (error) {
       console.error("Dashboard error:", error);
 
@@ -78,12 +97,14 @@ export default function Dashboard({ role }: DashboardProps) {
   }, [loadDashboard]);
 
   const handleNotifications = () => {
-    const isPhysician = (activeRole ?? "radiologist") === "radiologist";
+    const current = activeRole ?? "radiologist";
 
     router.push(
-      isPhysician
+      current === "radiologist"
         ? "/physician/notifications"
-        : "/rad_tech/notifications"
+        : current === "staff"
+          ? "/staff/notifications"
+          : "/rad_tech/notifications"
     );
   };
 
@@ -100,6 +121,14 @@ export default function Dashboard({ role }: DashboardProps) {
   const displayName = isPhysician
     ? `Dr. ${user.fullName}`
     : user.fullName;
+  const roleLabel = isPhysician
+    ? "Radiologist / Physician"
+    : user.role === "staff"
+      ? "Staff"
+      : "Radiologic Technologist";
+  const hospitalLabel =
+    user.hospitalName ||
+    (user.hospitalId ? "Hospital name unavailable" : "Hospital not assigned");
 
   return (
     <ScrollView
@@ -161,63 +190,81 @@ export default function Dashboard({ role }: DashboardProps) {
             color="#64748b"
           />
           <Text style={styles.hospital}>
-            {user.hospitalName || "Hospital not assigned"}
+            {hospitalLabel}
           </Text>
         </View>
       </View>
 
       <View style={styles.roleBadge}>
         <Ionicons
-          name={isPhysician ? "medkit-outline" : "scan-outline"}
+          name={isPhysician ? "medkit-outline" : user.role === "staff" ? "people-outline" : "scan-outline"}
           size={15}
           color="#1d4ed8"
         />
         <Text style={styles.roleText}>
-          {isPhysician
-            ? "Radiologist / Physician"
-            : "Radiologic Technologist"}
+          {roleLabel}
         </Text>
       </View>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Overview</Text>
-        <Text style={styles.demoLabel}>PLACEHOLDER</Text>
+        <Text style={styles.sectionTitle}>Today</Text>
+        {data ? <Text style={styles.demoLabel}>{data.day}</Text> : null}
       </View>
 
       <Text style={styles.sectionSubtitle}>
-        Your clinical activity at a glance.
+        Your hospital's activity for today (Philippine time).
       </Text>
 
-      <View style={styles.statsGrid}>
-        <StatCard
-          icon="calendar-outline"
-          label={
-            isPhysician ? "Today's Cases" : "Today's Examinations"
-          }
-          value="—"
-          hint="Not connected yet"
-        />
-        <StatCard
-          icon="time-outline"
-          label={
-            isPhysician ? "Pending Results" : "Pending Uploads"
-          }
-          value="—"
-          hint="Not connected yet"
-        />
-        <StatCard
-          icon="checkmark-circle-outline"
-          label={isPhysician ? "Reviewed" : "Processing"}
-          value="—"
-          hint="Not connected yet"
-        />
-        <StatCard
-          icon="alert-circle-outline"
-          label={isPhysician ? "High Risk" : "Completed"}
-          value="—"
-          hint="Not connected yet"
-        />
-      </View>
+      {dataError ? (
+        <View style={styles.errorBanner}>
+          <Ionicons name="warning-outline" size={18} color="#b45309" />
+          <Text style={styles.errorBannerText}>{dataError}</Text>
+        </View>
+      ) : null}
+
+      {!user.hospitalId ? (
+        <EmptyState text="Your account is not assigned to a hospital. Contact your administrator." />
+      ) : (
+        <>
+          <View style={styles.statsGrid}>
+            {(data?.stats ?? []).map((stat) => (
+              <StatCard
+                key={stat.key}
+                icon={stat.icon as React.ComponentProps<typeof Ionicons>["name"]}
+                label={stat.label}
+                value={String(stat.value)}
+                hint={stat.hint}
+              />
+            ))}
+          </View>
+
+          <SectionTitle
+            title="Today's Appointments"
+            subtitle="Follow-up visits scheduled for today"
+            count={data?.appointments.length ?? 0}
+          />
+          {data && data.appointments.length > 0 ? (
+            data.appointments.map((appointment) => (
+              <AppointmentRow key={appointment.id} appointment={appointment} />
+            ))
+          ) : (
+            <EmptyState text="No appointments scheduled for today." />
+          )}
+
+          <SectionTitle
+            title="Today's Examinations"
+            subtitle="Examinations registered today"
+            count={data?.examinations.length ?? 0}
+          />
+          {data && data.examinations.length > 0 ? (
+            data.examinations.map((examination) => (
+              <ExaminationRow key={examination.id} examination={examination} />
+            ))
+          ) : (
+            <EmptyState text="No examinations registered today yet." />
+          )}
+        </>
+      )}
 
       <View style={styles.infoCard}>
         <View style={styles.infoIcon}>
@@ -239,6 +286,88 @@ export default function Dashboard({ role }: DashboardProps) {
         </View>
       </View>
     </ScrollView>
+  );
+}
+
+const STATUS_TONES: Record<string, { bg: string; fg: string }> = {
+  Scheduled: { bg: "#dbeafe", fg: "#1d4ed8" },
+  Rescheduled: { bg: "#ede9fe", fg: "#6d28d9" },
+  Arrived: { bg: "#ccfbf1", fg: "#0f766e" },
+  Completed: { bg: "#dcfce7", fg: "#15803d" },
+  Cancelled: { bg: "#f1f5f9", fg: "#475569" },
+  Missed: { bg: "#fee2e2", fg: "#b91c1c" },
+  Pending: { bg: "#fef3c7", fg: "#b45309" },
+  "Awaiting X-Ray": { bg: "#e0f2fe", fg: "#0369a1" },
+  "X-Ray Ready": { bg: "#dbeafe", fg: "#1d4ed8" },
+  Admitted: { bg: "#fce7f3", fg: "#be185d" },
+  Discharged: { bg: "#dcfce7", fg: "#15803d" },
+};
+
+function StatusPill({ status }: { status: string }) {
+  const tone = STATUS_TONES[status] ?? { bg: "#f1f5f9", fg: "#475569" };
+  return (
+    <View style={[styles.pill, { backgroundColor: tone.bg }]}>
+      <Text style={[styles.pillText, { color: tone.fg }]}>{status}</Text>
+    </View>
+  );
+}
+
+function SectionTitle({ title, subtitle, count }: { title: string; subtitle: string; count: number }) {
+  return (
+    <View style={styles.listHeader}>
+      <View style={styles.listHeaderText}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionSubtitleTight}>{subtitle}</Text>
+      </View>
+      <View style={styles.countBadge}>
+        <Text style={styles.countText}>{count}</Text>
+      </View>
+    </View>
+  );
+}
+
+function AppointmentRow({ appointment }: { appointment: TodayAppointment }) {
+  const active = isActiveAppointment(appointment.status);
+  return (
+    <View style={[styles.rowCard, !active && styles.rowCardMuted]}>
+      <View style={styles.timeBox}>
+        <Ionicons name="time-outline" size={15} color="#2563eb" />
+        <Text style={styles.timeText}>{formatTimeOfDay(appointment.time)}</Text>
+      </View>
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle} numberOfLines={1}>{appointment.patientName}</Text>
+        <Text style={styles.rowMeta} numberOfLines={1}>
+          {[appointment.patientCode, appointment.code].filter(Boolean).join(" · ") || "Follow-up appointment"}
+        </Text>
+      </View>
+      <StatusPill status={appointment.status} />
+    </View>
+  );
+}
+
+function ExaminationRow({ examination }: { examination: TodayExamination }) {
+  return (
+    <View style={styles.rowCard}>
+      <View style={styles.timeBox}>
+        <Ionicons name="document-text-outline" size={15} color="#2563eb" />
+        <Text style={styles.timeText}>{formatManilaTime(examination.time)}</Text>
+      </View>
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle} numberOfLines={1}>{examination.patientName}</Text>
+        <Text style={styles.rowMeta} numberOfLines={1}>
+          {[examination.patientCode, examination.type].filter(Boolean).join(" · ")}
+        </Text>
+      </View>
+      <StatusPill status={examination.status} />
+    </View>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <View style={styles.emptyCard}>
+      <Text style={styles.emptyText}>{text}</Text>
+    </View>
   );
 }
 
@@ -438,6 +567,116 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
     marginTop: 3,
   },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fffbeb",
+    borderColor: "#fde68a",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: "#92400e",
+  },
+  listHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 22,
+    marginBottom: 10,
+  },
+  listHeaderText: {
+    flex: 1,
+  },
+  sectionSubtitleTight: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 3,
+  },
+  countBadge: {
+    minWidth: 30,
+    height: 30,
+    borderRadius: 15,
+    paddingHorizontal: 8,
+    backgroundColor: "#dbeafe",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  countText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#1d4ed8",
+  },
+  rowCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#edf2f7",
+    padding: 12,
+    marginBottom: 8,
+  },
+  rowCardMuted: {
+    opacity: 0.6,
+  },
+  timeBox: {
+    width: 78,
+    alignItems: "center",
+    gap: 3,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "#eff6ff",
+  },
+  timeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#1e3a8a",
+    textAlign: "center",
+  },
+  rowBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  rowTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  rowMeta: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  pill: {
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  pillText: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  emptyCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#cbd5e1",
+    padding: 16,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: "#64748b",
+    textAlign: "center",
+  },
   infoCard: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -445,7 +684,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#eff6ff",
     borderRadius: 16,
     padding: 16,
-    marginTop: 9,
+    marginTop: 22,
   },
   infoIcon: {
     width: 38,
