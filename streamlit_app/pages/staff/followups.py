@@ -716,7 +716,7 @@ def render_landing():
             scheduled_time,
         )
 
-    for group in groups:
+    for index, group in enumerate(groups):
         group["appointments"].sort(
             key=appointment_sort_key
         )
@@ -774,8 +774,9 @@ def render_landing():
             else appointments[0]
         )
 
-        with st.container(border=True):
+        position = "odd" if index % 2 == 0 else "even"
 
+        with st.container(key=f"sf_patient_group_{position}_{patient_id}", border=True):
             col_patient, col_summary, col_action = (
                 st.columns(
                     [2.5, 2, 1],

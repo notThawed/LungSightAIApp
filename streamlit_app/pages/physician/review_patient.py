@@ -101,6 +101,8 @@ CONFIRMED_LABEL_OPTIONS = [
     ("normal",              "Normal (No pneumonia)"),
     ("bacterial_pneumonia", "Bacterial Pneumonia"),
     ("viral_pneumonia",     "Viral Pneumonia"),
+    ("covid19_pneumonia", "COVID-19 Pneumonia"),
+    ("pneumonia_unspecified", "Pneumonia – Unspecified Etiology"),
     ("other_uncertain",     "Other / Uncertain"),
 ]
 
@@ -272,7 +274,7 @@ def ai_findings_narrative(ai_findings, pneumonia_type):
 
 def _ai_predicted_key(ai):
     """
-    Map the AI result to one of the four confirmed_label keys.
+    Map the AI result to an existing model-supported label.
     Returns None if the AI result is missing or unclear.
     """
     if not ai:
@@ -1074,7 +1076,8 @@ def render_ai_result_card(ai):
 # REPORT — CONFIRMED DIAGNOSIS
 # ============================================================
 
-def render_confirmed_diagnosis(ai):
+def render_confirmed_diagnosis(ai, historical=False, exam_id=None,
+                               previous_diagnosis=None, previous_diagnosis_date=None, show_history=True):
     """
     Render the confirmed diagnosis section.
     Returns a dict with label, notes, overrode_ai, ai_predicted.
@@ -1083,28 +1086,44 @@ def render_confirmed_diagnosis(ai):
     ai_findings = (ai or {}).get("ai_findings")
     ai_predicted_key = _ai_predicted_key(ai)
 
-    if ai_predicted_key:
-        ai_label_text = dict(CONFIRMED_LABEL_OPTIONS)[ai_predicted_key]
-        risk_label, risk_tone = finding_label_from_ai(ai_findings)
+    if show_history:
+        if ai_predicted_key:
+            ai_label_text = dict(CONFIRMED_LABEL_OPTIONS)[ai_predicted_key]
+            risk_label, risk_tone = finding_label_from_ai(ai_findings)
 
-        st.markdown(
-            "<div class='rx-training-ai-preview'>"
-            "<span class='rx-training-ai-label'>"
-            "AI predicted: </span>"
-            f"<b>{ai_label_text}</b> "
-            f"<div>{pill(risk_label, risk_tone)}</div>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            "<div class='rx-training-ai-preview rx-training-ai-preview--empty'>"
-            "<span class='rx-training-ai-label'>"
-            "AI prediction</span>"
-            "<b>Not available for this image</b>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
+            st.markdown(
+                "<div class='rx-training-ai-preview'>"
+                "<span class='rx-training-ai-label'>" +
+                ("Previous AI prediction: </span>" if historical else "AI predicted: </span>") +
+                f"<b>{ai_label_text}</b> "
+                f"<div>{pill(risk_label, risk_tone)}</div>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        elif historical:
+            st.info("No current AI prediction. Base the diagnosis on clinical findings and available investigations.")
+        else:
+            st.markdown(
+                "<div class='rx-training-ai-preview rx-training-ai-preview--empty'>"
+                "<span class='rx-training-ai-label'>"
+                "AI prediction</span>"
+                "<b>No saved AI prediction available</b>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+        if historical:
+            with st.container(border=True):
+                st.caption("PREVIOUS PHYSICIAN DIAGNOSIS")
+                previous_label = dict(CONFIRMED_LABEL_OPTIONS).get(
+                    (previous_diagnosis or {}).get("confirmed_label")
+                )
+                if previous_label:
+                    st.write(previous_label)
+                    st.caption(" · ".join(filter(None, [previous_diagnosis_date,
+                        (previous_diagnosis or {}).get("examination_type")])))
+                else:
+                    st.caption("No previous confirmed physician diagnosis available.")
 
     label_keys = [key for key, _ in CONFIRMED_LABEL_OPTIONS]
     label_names = [name for _, name in CONFIRMED_LABEL_OPTIONS]
@@ -1119,18 +1138,21 @@ def render_confirmed_diagnosis(ai):
         "Your confirmed diagnosis *",
         options=range(len(label_keys)),
         format_func=lambda i: label_names[i],
-        index=default_index,
-        key="review_training_label",
+        index=None,
+        key=f"pq_exam_{exam_id}_confirmed_label" if historical else "review_training_label",
     )
 
-    confirmed_key = label_keys[confirmed_index]
+    confirmed_key = label_keys[confirmed_index] if confirmed_index is not None else None
 
     overrode_ai = (
-        ai_predicted_key is not None
-        and confirmed_key != ai_predicted_key
+        not historical and ai_predicted_key is not None
+        and confirmed_key is not None and confirmed_key != ai_predicted_key
     )
 
-    if overrode_ai:
+    if confirmed_key in ("covid19_pneumonia", "pneumonia_unspecified"):
+        st.caption("Clinical diagnosis only: this label is not a separate class of the current AI model and will not be submitted for model training.")
+
+    if overrode_ai and confirmed_key and not historical and confirmed_key not in ("covid19_pneumonia", "pneumonia_unspecified"):
         ai_text = dict(CONFIRMED_LABEL_OPTIONS)[ai_predicted_key]
         chosen_text = dict(CONFIRMED_LABEL_OPTIONS)[confirmed_key]
 
@@ -1145,10 +1167,10 @@ def render_confirmed_diagnosis(ai):
         "Notes (optional)",
         value="",
         height=80,
-        key="review_training_notes",
+        key=f"pq_exam_{exam_id}_confirmed_notes" if historical else "review_training_notes",
         placeholder=(
-            "Why did you choose this label? "
-            "Especially helpful if you overrode the AI."
+            "Explain your current clinical diagnosis." if historical else
+            "Why did you choose this label? Especially helpful if you overrode the AI."
         ),
     )
 
@@ -1164,26 +1186,30 @@ def render_confirmed_diagnosis(ai):
 # REPORT — PHYSICIAN FORM
 # ============================================================
 
-def render_physician_form(examination, ai):
+def render_physician_form(examination, ai, historical=False, has_image=True,
+                          previous_diagnosis=None, previous_diagnosis_date=None, show_history=True):
     exam_id = examination.get("examination_id")
+    prefix = f"pq_exam_{exam_id}" if historical else f"review_{exam_id}"
 
-    section_title("Physician X-Ray Interpretation")
+    findings = impression = ""
+    if has_image:
+        section_title("Physician X-Ray Interpretation")
 
-    findings = st.text_area(
-        "X-Ray Findings *",
-        value="",
-        height=110,
-        key=f"review_{exam_id}_findings",
-        help="Describe relevant findings on the chest X-ray.",
-    )
+        findings = st.text_area(
+            "Previous X-Ray Findings (optional)" if historical else "X-Ray Findings *",
+            value="",
+            height=110,
+            key=f"{prefix}_findings",
+            help="Describe relevant findings on the chest X-ray.",
+        )
 
-    impression = st.text_area(
-        "Impression",
-        value="",
-        height=100,
-        key=f"review_{exam_id}_impression",
-        help="Provide your clinical interpretation.",
-    )
+        impression = st.text_area(
+            "Previous X-Ray Impression (optional)" if historical else "Impression",
+            value="",
+            height=100,
+            key=f"{prefix}_impression",
+            help="Provide your clinical interpretation.",
+        )
 
     st.markdown("<p class='rx-form-divider'></p>", unsafe_allow_html=True)
 
@@ -1193,18 +1219,18 @@ def render_physician_form(examination, ai):
         "Diagnosis / Assessment *",
         value=examination.get("diagnosis") or "",
         height=100,
-        key=f"review_{exam_id}_diagnosis",
+        key=f"{prefix}_diagnosis",
     )
 
     plans = st.text_area(
         "Plans / Orders",
         value=examination.get("plans_orders") or "",
         height=100,
-        key=f"review_{exam_id}_plans",
+        key=f"{prefix}_plans",
     )
 
     lab_requests = lab_request_selector(
-        exam_id, current_user_id(), f"review_{exam_id}"
+        exam_id, current_user_id(), prefix
     )
 
     st.markdown("<p class='rx-form-divider'></p>", unsafe_allow_html=True)
@@ -1213,7 +1239,12 @@ def render_physician_form(examination, ai):
     # CONFIRMED DIAGNOSIS
     # ==========================================
     section_title("Confirmed Diagnosis")
-    training_values = render_confirmed_diagnosis(ai)
+    training_values = render_confirmed_diagnosis(
+        ai, historical=historical, exam_id=exam_id,
+        previous_diagnosis=previous_diagnosis,
+        previous_diagnosis_date=previous_diagnosis_date,
+        show_history=show_history,
+    )
 
     st.markdown("<p class='rx-form-divider'></p>", unsafe_allow_html=True)
 
@@ -1223,17 +1254,31 @@ def render_physician_form(examination, ai):
     section_title("Severity Assessment")
     
     ai_findings = (ai or {}).get("ai_findings")
-    is_negative = str(ai_findings).strip().lower() == "negative"
+    is_negative = training_values["label"] == "normal"
 
     col_curb, col_phys = st.columns(2)
 
     with col_curb:
-        if not is_negative:
+        curb_score = curb_severity = None
+        if historical:
+            if training_values["label"] in ("bacterial_pneumonia", "viral_pneumonia", "covid19_pneumonia", "pneumonia_unspecified"):
+                st.caption("Use only when appropriate for adult community-acquired pneumonia.")
+                applicable = st.checkbox("Adult CAP assessment applicable", key=f"{prefix}_curb_applicable")
+                if applicable:
+                    criteria = ["New confusion", "Urea > 7 mmol/L", "Respiratory rate ≥ 30/min", "Systolic BP < 90 or diastolic BP ≤ 60", "Age ≥ 65 years"]
+                    answers = [st.selectbox(label, ["Unknown", "No", "Yes"], key=f"{prefix}_curb_{i}") for i, label in enumerate(criteria)]
+                    if "Unknown" not in answers:
+                        curb_score = answers.count("Yes")
+                        curb_severity = "Low Risk" if curb_score < 2 else "Moderate Risk" if curb_score == 2 else "High Risk"
+                        st.write(f"CURB-65: {curb_score}/5 — {curb_severity}")
+                    else:
+                        st.caption("Assessment incomplete; no score recorded.")
+            else:
+                st.caption("Select a current pneumonia diagnosis to assess CURB-65 if applicable.")
+        elif not is_negative:
             curb_score, curb_severity = render_curb65()
         else:
-            curb_score = None
-            curb_severity = None
-            st.info("ℹ️ CURB-65 not applicable (No pneumonia detected).")
+            st.info("CURB-65 not applicable.")
 
     with col_phys:
         st.markdown("**Physician Manual Severity**")
@@ -1248,7 +1293,7 @@ def render_physician_form(examination, ai):
             "Manual Severity",
             severity_options,
             index=sev_index,
-            key=f"review_{exam_id}_severity",
+            key=f"{prefix}_severity",
             label_visibility="collapsed"
         )
 
@@ -1267,7 +1312,7 @@ def render_physician_form(examination, ai):
         "Disposition",
         DISPOSITION_OPTIONS,
         index=disposition_index,
-        key=f"review_{exam_id}_disposition",
+        key=f"{prefix}_disposition",
     )
 
     if disposition == "Admission":
@@ -1287,7 +1332,7 @@ def render_physician_form(examination, ai):
         "Disposition Notes",
         value=examination.get("disposition_notes") or "",
         height=80,
-        key=f"review_{exam_id}_disposition_notes",
+        key=f"{prefix}_disposition_notes",
         placeholder="Admit to Ward 4B. Start IV Ceftriaxone 1g q12h." if disposition == "Admission" else "",
     )
 
@@ -1542,7 +1587,7 @@ def render_report_actions(
             st.error("Failed to save the examination and confirmed classification. Please retry.")
             return
 
-        if image_id:
+        if image_id and training_values["label"] not in ("covid19_pneumonia", "pneumonia_unspecified"):
             consented = patient.get("ai_consent_granted", False)
             if consented:
                 ai_payload = ai or {}

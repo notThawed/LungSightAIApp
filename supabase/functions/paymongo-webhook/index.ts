@@ -19,16 +19,6 @@ const supabase = createClient(
 
 
 // ============================================================
-// CONSTANTS
-// ============================================================
-
-const CYCLE_DAYS: Record<string, number> = {
-  "Monthly": 30,
-  "Yearly": 365,
-};
-
-
-// ============================================================
 // SIGNATURE VERIFICATION
 // ============================================================
 
@@ -48,12 +38,18 @@ async function verifySignature(
 
   const timestamp = parts["t"];
   if (!timestamp) return false;
+  const unixSeconds = Number(timestamp);
+  if (!Number.isSafeInteger(unixSeconds) || Math.abs(Math.floor(Date.now() / 1000) - unixSeconds) > 300) {
+    return false;
+  }
 
   // The signed payload is "<timestamp>.<rawBody>"
   const signedPayload = `${timestamp}.${rawBody}`;
 
   // The signature to compare: prefer "li" (live), fall back to "te" (test)
-  const providedSig = parts["li"] || parts["te"];
+  const webhookMode = Deno.env.get("PAYMONGO_WEBHOOK_MODE");
+  if (webhookMode !== "test" && webhookMode !== "live") return false;
+  const providedSig = webhookMode === "live" ? parts["li"] : parts["te"];
   if (!providedSig) return false;
 
   // HMAC-SHA256 the signed payload with the webhook secret
@@ -115,121 +111,49 @@ async function recordAudit(row: {
 
 
 // ============================================================
-// EXTEND SUBSCRIPTION
-// ============================================================
-
-async function extendSubscription(
-  hospitalSubscriptionId: string,
-  billingCycle: string,
-): Promise<{ success: boolean; message: string; new_end_date?: string }> {
-
-  try {
-
-    // ------------------------------------------
-    // 1. Validate billing cycle
-    // ------------------------------------------
-
-    const cycleDays = CYCLE_DAYS[billingCycle];
-
-    if (!cycleDays) {
-      return {
-        success: false,
-        message: `Unknown billing cycle: ${billingCycle}`,
-      };
-    }
-
-    // ------------------------------------------
-    // 2. Fetch the subscription
-    // ------------------------------------------
-
-    const { data: subscription, error: subErr } = await supabase
-      .from("hospital_subscriptions")
-      .select("hospital_subscription_id, end_date, billing_cycle")
-      .eq("hospital_subscription_id", hospitalSubscriptionId)
-      .single();
-
-    if (subErr || !subscription) {
-      return {
-        success: false,
-        message: `Subscription not found: ${subErr?.message ?? "no data"}`,
-      };
-    }
-
-    // ------------------------------------------
-    // 3. Compute the new end_date
-    //    UTC-based, matching the Postgres date column
-    // ------------------------------------------
-
-    const now = new Date();
-    const todayUTC = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-    );
-
-    const oldEndDateStr = subscription.end_date;
-    let baseDate: Date;
-
-    if (oldEndDateStr) {
-
-      // Parse "YYYY-MM-DD" as UTC midnight
-      const [y, m, d] = oldEndDateStr.split("-").map(Number);
-      const oldEndDate = new Date(Date.UTC(y, m - 1, d));
-
-      // If end_date >= today (UTC) -> extend from end_date
-      // Else -> extend from today
-      baseDate = oldEndDate >= todayUTC ? oldEndDate : todayUTC;
-
-    } else {
-
-      baseDate = todayUTC;
-    }
-
-    const newEndDate = new Date(
-      baseDate.getTime() + cycleDays * 24 * 60 * 60 * 1000
-    );
-
-    const newEndDateStr = newEndDate.toISOString().slice(0, 10);
-    const nowISO = new Date().toISOString();
-
-    // ------------------------------------------
-    // 4. Update the subscription
-    // ------------------------------------------
-
-    const { error: updateErr } = await supabase
-      .from("hospital_subscriptions")
-      .update({
-        end_date:        newEndDateStr,
-        status:          "Active",
-        last_renewed_at: nowISO,
-        updated_at:      nowISO,
-      })
-      .eq("hospital_subscription_id", hospitalSubscriptionId);
-
-    if (updateErr) {
-      return {
-        success: false,
-        message: `Failed to extend subscription: ${updateErr.message}`,
-      };
-    }
-
-    return {
-      success: true,
-      message: "Subscription extended.",
-      new_end_date: newEndDateStr,
-    };
-
-  } catch (err) {
-
-    return {
-      success: false,
-      message: `Exception: ${String(err)}`,
-    };
-  }
-}
-
-
-// ============================================================
 // MAIN HANDLER
 // ============================================================
+
+
+// Phase 2E: independently verify the paid checkout with PayMongo.
+// Fail closed if PayMongo's checkout response does not expose payment evidence.
+async function verifyPayMongoCheckout(checkoutId: string, expectedAmount: unknown, expectedCurrency: unknown, expectedPaymentId: string): Promise<boolean> {
+  const key = Deno.env.get("PAYMONGO_SECRET_KEY");
+  const mode = Deno.env.get("PAYMONGO_WEBHOOK_MODE");
+  if (!key || (mode !== "test" && mode !== "live")) return false;
+  if (mode === "test" && !key.startsWith("sk_test_")) return false;
+  if (mode === "live" && !key.startsWith("sk_live_")) return false;
+  if (!/^cs_[A-Za-z0-9_-]+$/.test(checkoutId)) return false;
+
+  const amount = Number(expectedAmount);
+  if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(Math.round(amount * 100))) return false;
+  if (String(expectedCurrency).toUpperCase() !== "PHP") return false;
+
+  const auth = btoa(`${key}:`);
+  const response = await fetch(`https://api.paymongo.com/v1/checkout_sessions/${encodeURIComponent(checkoutId)}`, {
+    method: "GET",
+    headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) return false;
+  const doc = await response.json();
+  if (doc?.data?.id !== checkoutId) return false;
+  const attrs = doc?.data?.attributes;
+  if (!attrs || typeof attrs !== "object") return false;
+  const metadata = attrs.metadata;
+  if (!metadata || String(metadata.payment_id) !== expectedPaymentId) return false;
+
+  // PayMongo's checkout session may include payment resources. Require one
+  // unambiguously paid payment whose amount is expressed in centavos.
+  const payments = attrs.payments;
+  if (!Array.isArray(payments) || payments.length !== 1) return false;
+  const payment = payments[0];
+  const paid = payment?.attributes ?? payment;
+  if (paid?.status !== "paid") return false;
+  if (String(paid.currency).toUpperCase() !== "PHP") return false;
+  if (!Number.isSafeInteger(paid.amount)) return false;
+  return paid.amount === Math.round(amount * 100);
+}
 
 serve(async (req) => {
 
@@ -280,137 +204,101 @@ serve(async (req) => {
 
   console.log(`Processing paid event for checkout: ${checkoutId}`);
 
-  // ------------------------------------------
-  // 3. Find payment row and update
-  //    (idempotent - only flips from 'pending')
-  // ------------------------------------------
-
-  const { data: payment, error: updateErr } = await supabase
+  // Phase 2E: paid renewal/upgrade is finalized atomically in Postgres.
+  // A paid payment row must NEVER be committed before its subscription change.
+  const { data: classified, error: classifyError } = await supabase
     .from("payments")
-    .update({
-      status: "paid",
-      paid_at: new Date().toISOString(),
-      payment_method: paymentData?.attributes?.payment_method_used ?? null,
-      provider_payment_id: paymentData?.attributes?.payment_intent?.id ?? null,
-      raw_payload: event,
-      updated_at: new Date().toISOString(),
-    })
+    .select("payment_type,payment_id,amount,currency")
     .eq("provider_reference", checkoutId)
-    .eq("status", "pending")
-    .select()
-    .single();
+    .maybeSingle();
 
-  if (updateErr || !payment) {
-    console.error("Payment not found or already processed:", updateErr);
-    // Return 200 so PayMongo doesn't keep retrying - the row either
-    // doesn't exist or was already handled
-    return new Response("noop", { status: 200 });
+  if (classifyError) {
+    console.error("Payment lookup failed:", classifyError.code);
+    return new Response("payment lookup failed", { status: 500 });
+  }
+  if (!classified) {
+    // Unknown checkout: retry in case payment row is not yet committed.
+    return new Response("unknown checkout", { status: 500 });
   }
 
-  // ------------------------------------------
-  // 4. Branch on payment type
-  // ------------------------------------------
-
-  if (
-    payment.payment_type === "renewal" &&
-    payment.hospital_subscription_id
-  ) {
-
-    // ------------------------------------------
-    // Renewal path
-    // ------------------------------------------
-
-    console.log(
-      `Processing renewal for subscription ${payment.hospital_subscription_id}`
+  // Independent provider verification applies to ALL payment types.
+  // Do not mark a payment paid or update a subscription/application on failure.
+  let verified = false;
+  try {
+    verified = await verifyPayMongoCheckout(
+      checkoutId, classified.amount, classified.currency, String(classified.payment_id),
     );
+  } catch (err) {
+    console.error("PayMongo checkout verification unavailable", err instanceof Error ? err.name : "unknown");
+  }
+  if (!verified) {
+    console.error("PayMongo checkout verification failed for checkout", checkoutId);
+    return new Response("provider verification failed", { status: 500 });
+  }
 
-    const extendResult = await extendSubscription(
-      payment.hospital_subscription_id,
-      payment.billing_cycle,
-    );
-
-    if (!extendResult.success) {
-      console.error("Failed to extend subscription:", extendResult.message);
-      await recordAudit({
-        event_type: "subscription.renewed",
-        outcome: "failure",
-        hospital_id: payment.hospital_id ?? null,
-        target_type: "hospital_subscription",
-        target_id: payment.hospital_subscription_id,
-        metadata: { payment_id: payment.payment_id, reason: "extension_failed" },
-        idempotency_key: `subscription.renewed:payment:${payment.payment_id}:failure`,
-      });
-      // Return 500 so PayMongo retries the webhook
-      return new Response("extension failed", { status: 500 });
-    }
-
-    console.log(`✅ Subscription extended to ${extendResult.new_end_date}`);
-
-    await recordAudit({
-      event_type: "subscription.renewed",
-      outcome: "success",
-      hospital_id: payment.hospital_id ?? null,
-      target_type: "hospital_subscription",
-      target_id: payment.hospital_subscription_id,
-      metadata: {
-        payment_id: payment.payment_id,
-        end_date: extendResult.new_end_date ?? "",
+  if (classified.payment_type === "renewal" || classified.payment_type === "upgrade") {
+    const { data: result, error: finalizeError } = await supabase.rpc(
+      "ls_finalize_subscription_payment_v2",
+      {
+        p_checkout_id: checkoutId,
+        p_payload: event,
+        p_payment_method: paymentData?.attributes?.payment_method_used ?? null,
+        p_provider_payment_id: paymentData?.attributes?.payment_intent?.id ?? null,
       },
-      idempotency_key: `subscription.renewed:payment:${payment.payment_id}`,
-    });
-
-  } else {
-
-    // ------------------------------------------
-    // Application payment path (existing behavior)
-    // ------------------------------------------
-
-    const applicationId = payment.application_id;
-
-    const { error: appErr } = await supabase
-      .from("hospital_applications")
-      .update({
-        application_status: "Pending",
-        payment_status: "paid",
-      })
-      .eq("application_id", applicationId);
-
-    if (appErr) {
-      console.error("Failed to update application:", appErr);
-      // Payment is recorded; app update can be retried manually
+    );
+    if (finalizeError) {
+      console.error("Atomic subscription payment failed:", finalizeError.code);
+      return new Response("finalization failed", { status: 500 });
     }
-
-    if (applicationId) {
-      await recordAudit({
-        event_type: "hospital_application.payment_received",
-        outcome: appErr ? "failure" : "success",
-        hospital_id: payment.hospital_id ?? null,
-        target_type: "hospital_application",
-        target_id: applicationId,
-        metadata: appErr
-          ? { payment_id: payment.payment_id, reason: "application_update_failed" }
-          : { payment_id: payment.payment_id },
-        idempotency_key: `hospital_application.payment_received:payment:${payment.payment_id}`,
-      });
-    } else {
-      // Not an application payment (e.g. payment_type "upgrade"): this branch
-      // does not apply it. Recorded so the gap is visible; behaviour unchanged.
-      await recordAudit({
-        event_type: "payment.unhandled",
-        outcome: "failure",
-        hospital_id: payment.hospital_id ?? null,
-        target_type: "payment",
-        target_id: payment.payment_id,
-        metadata: {
-          payment_id: payment.payment_id,
-          payment_type: String(payment.payment_type ?? "unknown").slice(0, 32),
-        },
-        idempotency_key: `payment.unhandled:payment:${payment.payment_id}`,
-      });
+    if (!result || result.success !== true) {
+      console.error("Atomic payment requires reconciliation or failed", result);
+      return new Response("manual reconciliation required", { status: 500 });
     }
-
-    console.log(`✅ Payment processed for application ${applicationId}`);
+    console.log("Atomic subscription payment completed");
+    return new Response("ok", { status: 200 });
   }
 
+  if (classified.payment_type !== "application") {
+    console.error("Unknown payment type:", classified.payment_type);
+    return new Response("unsupported payment type", { status: 500 });
+  }
+
+  // Phase 2E: atomic application payment finalization.
+  // Provider verification above MUST have succeeded before calling this RPC.
+  const { data: result, error: finalizeError } = await supabase.rpc(
+    "ls_finalize_application_payment_v1",
+    {
+      p_checkout_id: checkoutId,
+      p_payload: event,
+      p_payment_method: paymentData?.attributes?.payment_method_used ?? null,
+      p_provider_payment_id: paymentData?.attributes?.payment_intent?.id ?? null,
+    },
+  );
+  if (finalizeError) {
+    console.error("Atomic application payment failed:", finalizeError.code);
+    return new Response("application finalization failed", { status: 500 });
+  }
+  if (!result || result.success !== true) {
+    console.error("Application payment needs reconciliation:", result);
+    return new Response("manual reconciliation required", { status: 500 });
+  }
+  // Preserve application payment audit behavior. Failure does not undo a
+  // committed payment; the existing audit helper handles duplicate keys.
+  const { data: applicationPayment, error: applicationLookupError } = await supabase
+    .from("payments")
+    .select("application_id,hospital_id,payment_id")
+    .eq("provider_reference", checkoutId)
+    .single();
+  if (!applicationLookupError && applicationPayment?.application_id) {
+    await recordAudit({
+      event_type: "hospital_application.payment_received",
+      outcome: "success",
+      hospital_id: applicationPayment.hospital_id ?? null,
+      target_type: "hospital_application",
+      target_id: applicationPayment.application_id,
+      metadata: { payment_id: applicationPayment.payment_id },
+      idempotency_key: `hospital_application.payment_received:payment:${applicationPayment.payment_id}`,
+    });
+  }
   return new Response("ok", { status: 200 });
 });

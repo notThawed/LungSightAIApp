@@ -1,3 +1,4 @@
+# Phase 2E renewal-dialog fix
 # streamlit_app/pages/hospital_administrator/subscription_gate.py
 
 """
@@ -243,6 +244,7 @@ def _render_inline_notification(tone, icon, message):
 # RENEWAL CONFIRMATION SCREEN
 # ============================================================
 
+@st.dialog("Renew Subscription", width="small")
 def show_renewal_confirmation_screen(
     hospital_name=None,
     plan_name=None,
@@ -338,6 +340,7 @@ def _create_and_show_checkout():
 # CHECKOUT LINK SCREEN
 # ============================================================
 
+@st.dialog("Complete Your Payment", width="small")
 def show_checkout_link_screen():
 
     from backend.payments import get_renewal_status
@@ -420,6 +423,7 @@ def show_checkout_link_screen():
 # SUCCESS SCREEN
 # ============================================================
 
+@st.dialog("Subscription Renewed", width="small")
 def show_renewal_success_screen():
 
     st.markdown(
@@ -590,6 +594,10 @@ def show_grace_banner(
     can_renew=False,
 ):
 
+    # Renewal dialogs must not intercept upgrade checkouts.
+    if st.session_state.get("ss_upgrade_flow"):
+        return
+
     if st.session_state.get(SESSION_RENEWAL_SUCCESS):
         show_renewal_success_screen()
         return
@@ -656,6 +664,10 @@ def show_pre_expiry_banner(
     hospital_name=None,
     can_renew=False,
 ):
+
+    # Renewal dialogs must not intercept upgrade checkouts.
+    if st.session_state.get("ss_upgrade_flow"):
+        return
 
     # --------------------------------------------------------
     # Renewal sub-flow screens

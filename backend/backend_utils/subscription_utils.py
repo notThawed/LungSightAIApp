@@ -543,135 +543,84 @@ def get_hospital_subscription_details(hospital_id):
 
 
 
-def get_subscription_state(hospital_id):
-    """
-    Returns the current subscription state for a hospital.
+def _ph_today():
+    """Philippine calendar date, independent of the server timezone."""
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo("Asia/Manila")).date()
 
-    Possible return values:
-      "none"           - no subscription row found
-      "setup_pending"  - hospital hasn't finished the wizard yet
-      "active"         - within end_date
-      "grace"          - past end_date, within grace window
-      "expired"        - past grace window
-      "cancelled"      - manually cancelled (future use)
-    """
 
-    if not hospital_id:
-
+def _subscription_state_from_row(subscription, today=None):
+    """Pure state calculation; safe to test without a database connection."""
+    if not subscription:
         return "none"
-
+    status = subscription.get("status")
+    if status == "Pending Setup":
+        return "setup_pending"
+    if status == "Cancelled":
+        return "cancelled"
+    # Only an explicitly Active subscription may enter the paid/grace states.
+    if status != "Active":
+        return "inactive"
+    raw_end = subscription.get("end_date")
+    if not raw_end:
+        return "inactive"
     try:
+        end = date.fromisoformat(str(raw_end)[:10])
+    except (TypeError, ValueError):
+        return "inactive"
+    today = today or _ph_today()
+    if today <= end:
+        return "active"
+    if today <= end + timedelta(days=GRACE_PERIOD_DAYS):
+        return "grace"
+    return "expired"
 
+
+def get_subscription_state(hospital_id):
+    """Return active/grace/expired only for an explicitly Active subscription."""
+    if not hospital_id:
+        return "none"
+    try:
         response = (
-            admin_supabase
-            .table("hospital_subscriptions")
+            admin_supabase.table("hospital_subscriptions")
             .select("status, start_date, end_date")
             .eq("hospital_id", hospital_id)
             .single()
             .execute()
         )
-
-        subscription = response.data
-
-        if not subscription:
-
-            return "none"
-
-        status = subscription.get("status")
-
-        # ------------------------------------------------
-        # Non-date-based statuses pass through as-is
-        # ------------------------------------------------
-
-        if status == "Pending Setup":
-
-            return "setup_pending"
-
-        if status == "Cancelled":
-
-            return "cancelled"
-
-        # ------------------------------------------------
-        # Date-based states
-        # ------------------------------------------------
-
-        end_date_str = subscription.get("end_date")
-
-        if not end_date_str:
-
-            # No end_date means we can't compute grace/expired.
-            # Treat as active (defensive).
-            return "active"
-
-        end_date = date.fromisoformat(end_date_str)
-
-        today = date.today()
-
-        if today <= end_date:
-
-            return "active"
-
-        grace_end = end_date + timedelta(days=GRACE_PERIOD_DAYS)
-
-        if today <= grace_end:
-
-            return "grace"
-
-        return "expired"
-
+        return _subscription_state_from_row(response.data)
     except Exception as e:
-
         print(f"Error getting subscription state: {e}")
-
         return "none"
 
+
 def get_days_until_expiry(hospital_id):
-    """
-    Returns the number of days remaining.
-    During grace period, returns 0 to 7 (days left).
-    """
+    """Days until paid expiry, or remaining grace days (0 on last grace day)."""
     if not hospital_id:
         return None
-
     try:
         response = (
-            admin_supabase
-            .table("hospital_subscriptions")
-            .select("end_date")
+            admin_supabase.table("hospital_subscriptions")
+            .select("status, end_date")
             .eq("hospital_id", hospital_id)
             .single()
             .execute()
         )
         subscription = response.data
-        if not subscription:
+        if not subscription or subscription.get("status") != "Active":
             return None
-
-        end_date_str = subscription.get("end_date")
-        if not end_date_str:
+        raw_end = subscription.get("end_date")
+        if not raw_end:
             return None
-
-        # 1. Force the DB string into a pure date object (ignoring time)
-        end_date = datetime.strptime(str(end_date_str)[:10], "%Y-%m-%d").date()
-        
-        # 2. Force today into a pure date object (ignoring time)
-        today = date.today()
-
-        # 3. Calculate days passed
-        days_passed = (today - end_date).days
-
-        # 4. If we are past expiration, calculate days left in grace period
+        end = date.fromisoformat(str(raw_end)[:10])
+        today = _ph_today()
+        days_passed = (today - end).days
         if days_passed > 0:
-            days_left = GRACE_PERIOD_DAYS - days_passed
-            return max(0, days_left) # Clamp to 0 if fully expired
-            
-        # 5. If we are before expiration, return days remaining
+            return max(0, GRACE_PERIOD_DAYS - days_passed)
         return -days_passed
-
     except Exception as e:
         print(f"Error getting days until expiry: {e}")
         return None
-
-
 
 
 def get_subscription_context(hospital_id):
@@ -983,94 +932,51 @@ def get_hospital_subscription_row(hospital_id):
 
         return None
 
-def schedule_downgrade(
-    hospital_subscription_id,
-    new_plan_id,
-):
-    """
-    Schedule a plan downgrade for the next billing cycle.
-
-    Does NOT touch the current plan_id — the plan only
-    changes when apply_scheduled_changes() runs after
-    end_date.
-
-    Returns:
-        { "success": bool, "message": str }
-    """
-
-    if not hospital_subscription_id:
-
-        return {
-            "success": False,
-            "message": "Subscription ID is required.",
-        }
-
-    if not new_plan_id:
-
-        return {
-            "success": False,
-            "message": "Target plan ID is required.",
-        }
-
+def schedule_downgrade(hospital_subscription_id, new_plan_id):
+    """Schedule a lower-priced plan; never grant a new paid period."""
+    if not hospital_subscription_id or not new_plan_id:
+        return {"success": False, "message": "Subscription and target plan are required."}
     try:
+        result = (admin_supabase.table("hospital_subscriptions")
+                  .select("hospital_subscription_id,plan_id,status,end_date,cancel_at_period_end")
+                  .eq("hospital_subscription_id", hospital_subscription_id)
+                  .single().execute())
+        sub = result.data
+        if not sub or sub.get("status") != "Active" or not sub.get("end_date"):
+            return {"success": False, "message": "Only active paid subscriptions may schedule a downgrade."}
+        if sub.get("cancel_at_period_end"):
+            return {"success": False, "message": "Undo the scheduled cancellation first."}
+        today = datetime.now(timezone(timedelta(hours=8))).date()
+        if today > date.fromisoformat(str(sub["end_date"])[:10]):
+            return {"success": False, "message": "Renew the expired subscription before scheduling a downgrade."}
+        plans = (admin_supabase.table("subscription_plans")
+                 .select("plan_id,is_active,price_monthly,price_yearly")
+                 .in_("plan_id", [sub["plan_id"], new_plan_id]).execute()).data or []
+        by_id = {str(p["plan_id"]): p for p in plans}
+        current, target = by_id.get(str(sub["plan_id"])), by_id.get(str(new_plan_id))
+        if not current or not target or not target.get("is_active"):
+            return {"success": False, "message": "Target plan is unavailable."}
+        # Price is a validation aid only; plan changes must be paid before activation.
+        cycle = (admin_supabase.table("hospital_subscriptions")
+                 .select("billing_cycle").eq("hospital_subscription_id", hospital_subscription_id)
+                 .single().execute()).data.get("billing_cycle")
+        price_field = "price_yearly" if cycle == "Yearly" else "price_monthly"
+        if cycle not in ("Monthly", "Yearly") or float(target[price_field]) >= float(current[price_field]):
+            return {"success": False, "message": "Target must be a lower-priced plan in the same billing cycle."}
+        now = datetime.now(timezone.utc).isoformat()
+        updated = (admin_supabase.table("hospital_subscriptions")
+                   .update({"pending_plan_id": new_plan_id, "updated_at": now})
+                   .eq("hospital_subscription_id", hospital_subscription_id)
+                   .eq("status", "Active").eq("plan_id", sub["plan_id"])
+                   .eq("cancel_at_period_end", False).execute())
+        if not updated.data:
+            return {"success": False, "message": "Subscription changed; refresh and try again."}
+        audit.record_event("subscription.downgrade_scheduled", target_id=hospital_subscription_id,
+                           metadata={"pending_plan_id": new_plan_id})
+        return {"success": True, "message": "Downgrade scheduled; activation requires a verified renewal."}
+    except Exception as exc:
+        return {"success": False, "message": str(exc)}
 
-        now_iso = datetime.now(timezone.utc).isoformat()
-
-        response = (
-            admin_supabase
-            .table("hospital_subscriptions")
-            .update({
-                "pending_plan_id": new_plan_id,
-                "updated_at": now_iso,
-            })
-            .eq(
-                "hospital_subscription_id",
-                hospital_subscription_id,
-            )
-            .execute()
-        )
-
-        if not response.data:
-
-            audit.record_event(
-                "subscription.downgrade_scheduled",
-                "failure",
-                target_id=hospital_subscription_id,
-                metadata={"pending_plan_id": new_plan_id, "reason": "not_updated"},
-            )
-
-            return {
-                "success": False,
-                "message": "Could not schedule downgrade.",
-            }
-
-        audit.record_event(
-            "subscription.downgrade_scheduled",
-            target_id=hospital_subscription_id,
-            metadata={
-                "plan_id": response.data[0].get("plan_id"),
-                "pending_plan_id": new_plan_id,
-            },
-        )
-
-        return {
-            "success": True,
-            "message": "Downgrade scheduled for next cycle.",
-        }
-
-    except Exception as e:
-
-        audit.record_event(
-            "subscription.downgrade_scheduled",
-            "failure",
-            target_id=hospital_subscription_id,
-            metadata={"pending_plan_id": new_plan_id, "error_class": audit.error_class(e)},
-        )
-
-        return {
-            "success": False,
-            "message": str(e),
-        }
 
 def undo_scheduled_downgrade(
     hospital_subscription_id,
@@ -1145,160 +1051,60 @@ def undo_scheduled_downgrade(
             "message": str(e),
         }
 
-def cancel_subscription(
-    hospital_subscription_id,
-):
-    """
-    Schedule a cancellation for the end of the current
-    billing period.
-
-    Access continues until end_date. Use
-    reactivate_subscription() to undo.
-
-    Returns:
-        { "success": bool, "message": str }
-    """
-
+def cancel_subscription(hospital_subscription_id):
+    """Schedule cancellation; preserve paid access through end_date."""
     if not hospital_subscription_id:
-
-        return {
-            "success": False,
-            "message": "Subscription ID is required.",
-        }
-
+        return {"success": False, "message": "Subscription ID required."}
     try:
+        row = (admin_supabase.table("hospital_subscriptions")
+               .select("status,end_date,cancel_at_period_end")
+               .eq("hospital_subscription_id", hospital_subscription_id)
+               .single().execute()).data
+        if not row or row.get("status") != "Active" or not row.get("end_date"):
+            return {"success": False, "message": "Only active subscriptions can schedule cancellation."}
+        if row.get("cancel_at_period_end"):
+            return {"success": True, "message": "Cancellation is already scheduled."}
+        if datetime.now(timezone(timedelta(hours=8))).date() > date.fromisoformat(str(row["end_date"])[:10]):
+            return {"success": False, "message": "Paid period has already ended."}
+        now = datetime.now(timezone.utc).isoformat()
+        result = (admin_supabase.table("hospital_subscriptions")
+                  .update({"cancel_at_period_end": True, "cancelled_at": now,
+                           "pending_plan_id": None, "updated_at": now})
+                  .eq("hospital_subscription_id", hospital_subscription_id)
+                  .eq("status", "Active").eq("cancel_at_period_end", False).execute())
+        if not result.data:
+            return {"success": False, "message": "Cancellation could not be scheduled."}
+        audit.record_event("subscription.cancel_requested", target_id=hospital_subscription_id)
+        return {"success": True, "message": "Cancellation scheduled for the end of the paid period."}
+    except Exception as exc:
+        return {"success": False, "message": str(exc)}
 
-        now_iso = datetime.now(timezone.utc).isoformat()
 
-        response = (
-            admin_supabase
-            .table("hospital_subscriptions")
-            .update({
-                "cancel_at_period_end": True,
-                "cancelled_at": now_iso,
-                "updated_at": now_iso,
-            })
-            .eq(
-                "hospital_subscription_id",
-                hospital_subscription_id,
-            )
-            .execute()
-        )
-
-        if not response.data:
-
-            audit.record_event(
-                "subscription.cancel_requested",
-                "failure",
-                target_id=hospital_subscription_id,
-                metadata={"reason": "not_updated"},
-            )
-
-            return {
-                "success": False,
-                "message": "Could not cancel subscription.",
-            }
-
-        audit.record_event(
-            "subscription.cancel_requested",
-            target_id=hospital_subscription_id,
-        )
-
-        return {
-            "success": True,
-            "message": (
-                "Subscription will be cancelled at the end "
-                "of the current billing period."
-            ),
-        }
-
-    except Exception as e:
-
-        audit.record_event(
-            "subscription.cancel_requested",
-            "failure",
-            target_id=hospital_subscription_id,
-            metadata={"error_class": audit.error_class(e)},
-        )
-
-        return {
-            "success": False,
-            "message": str(e),
-        }
-
-def reactivate_subscription(
-    hospital_subscription_id,
-):
-    """
-    Undo a scheduled cancellation.
-
-    Returns:
-        { "success": bool, "message": str }
-    """
-
+def reactivate_subscription(hospital_subscription_id):
+    """Undo a pending cancellation; never reactivate an expired subscription for free."""
     if not hospital_subscription_id:
-
-        return {
-            "success": False,
-            "message": "Subscription ID is required.",
-        }
-
+        return {"success": False, "message": "Subscription ID required."}
     try:
+        row = (admin_supabase.table("hospital_subscriptions")
+               .select("status,end_date,cancel_at_period_end")
+               .eq("hospital_subscription_id", hospital_subscription_id)
+               .single().execute()).data
+        if not row or row.get("status") != "Active" or not row.get("cancel_at_period_end"):
+            return {"success": False, "message": "No active scheduled cancellation to undo."}
+        if not row.get("end_date") or datetime.now(timezone(timedelta(hours=8))).date() > date.fromisoformat(str(row["end_date"])[:10]):
+            return {"success": False, "message": "Paid period ended; verified renewal is required."}
+        now = datetime.now(timezone.utc).isoformat()
+        result = (admin_supabase.table("hospital_subscriptions")
+                  .update({"cancel_at_period_end": False, "cancelled_at": None, "updated_at": now})
+                  .eq("hospital_subscription_id", hospital_subscription_id)
+                  .eq("status", "Active").eq("cancel_at_period_end", True).execute())
+        if not result.data:
+            return {"success": False, "message": "Cancellation could not be undone."}
+        audit.record_event("subscription.reactivated", target_id=hospital_subscription_id)
+        return {"success": True, "message": "Scheduled cancellation removed."}
+    except Exception as exc:
+        return {"success": False, "message": str(exc)}
 
-        now_iso = datetime.now(timezone.utc).isoformat()
-
-        response = (
-            admin_supabase
-            .table("hospital_subscriptions")
-            .update({
-                "cancel_at_period_end": False,
-                "cancelled_at": None,
-                "updated_at": now_iso,
-            })
-            .eq(
-                "hospital_subscription_id",
-                hospital_subscription_id,
-            )
-            .execute()
-        )
-
-        if not response.data:
-
-            audit.record_event(
-                "subscription.reactivated",
-                "failure",
-                target_id=hospital_subscription_id,
-                metadata={"reason": "not_updated"},
-            )
-
-            return {
-                "success": False,
-                "message": "Could not reactivate subscription.",
-            }
-
-        audit.record_event(
-            "subscription.reactivated",
-            target_id=hospital_subscription_id,
-        )
-
-        return {
-            "success": True,
-            "message": "Subscription reactivated.",
-        }
-
-    except Exception as e:
-
-        audit.record_event(
-            "subscription.reactivated",
-            "failure",
-            target_id=hospital_subscription_id,
-            metadata={"error_class": audit.error_class(e)},
-        )
-
-        return {
-            "success": False,
-            "message": str(e),
-        }
 
 def upgrade_subscription(
     hospital_subscription_id,
@@ -1410,217 +1216,36 @@ def upgrade_subscription(
         }
 
 def apply_scheduled_changes(hospital_id):
-    """
-    Apply any pending scheduled changes for a hospital.
-
-    Called on page load (in subscription_settings.py).
-
-    Handles three scenarios at end_date:
-
-      1. cancel_at_period_end = TRUE
-            -> status = "Cancelled"
-            -> The gate picks this up next and blocks access.
-
-      2. pending_plan_id is set (downgrade)
-            -> plan_id = pending_plan_id
-            -> pending_plan_id = NULL
-            -> previous_plan_id = old plan_id
-            -> status stays "Active" (no payment required)
-            -> end_date extended by one cycle so the new plan
-               immediately has a billing period
-
-      3. Neither
-            -> No change. Return "no_change".
-
-    Returns:
-        {
-            "success": bool,
-            "action":  "cancelled" | "downgraded" | "no_change" | "error",
-            "message": str,
-        }
-    """
-
+    """Apply cancellation after paid period; never activate unpaid downgrades."""
     if not hospital_id:
-
-        return {
-            "success": False,
-            "action": "error",
-            "message": "Hospital ID is required.",
-        }
-
+        return {"success": False, "action": "error", "message": "Hospital ID required."}
     try:
-
-        # ------------------------------------------------
-        # 1. Fetch the subscription row
-        # ------------------------------------------------
-
         row = get_hospital_subscription_row(hospital_id)
-
         if not row:
-
-            return {
-                "success": False,
-                "action": "error",
-                "message": "Subscription not found.",
-            }
-
-        # ------------------------------------------------
-        # 2. Not at end_date yet? Do nothing.
-        # ------------------------------------------------
-
-        end_date_str = row.get("end_date")
-
-        if not end_date_str:
-
-            return {
-                "success": True,
-                "action": "no_change",
-                "message": "No end date set.",
-            }
-
-        end_date = date.fromisoformat(end_date_str)
-        today = date.today()
-
-        # Scheduled changes only apply AFTER the end_date
-        # (not on the last day).
-        if today <= end_date:
-
-            return {
-                "success": True,
-                "action": "no_change",
-                "message": "No scheduled change due yet.",
-            }
-
-        sub_id = row.get("hospital_subscription_id")
-
-        # ------------------------------------------------
-        # 3. Cancellation takes priority over downgrade
-        # ------------------------------------------------
-
+            return {"success": False, "action": "error", "message": "Subscription not found."}
+        if row.get("status") != "Active" or not row.get("end_date"):
+            return {"success": True, "action": "no_change", "message": "No active paid period."}
+        end = date.fromisoformat(str(row["end_date"])[:10])
+        today = datetime.now(timezone(timedelta(hours=8))).date()
+        if today <= end:
+            return {"success": True, "action": "no_change", "message": "Paid period has not ended."}
         if row.get("cancel_at_period_end"):
-
-            response = (
-                admin_supabase
-                .table("hospital_subscriptions")
-                .update({
-                    "status": "Cancelled",
-                    "cancel_at_period_end": False,
-                    "updated_at": datetime.now(
-                        timezone.utc
-                    ).isoformat(),
-                })
-                .eq(
-                    "hospital_subscription_id",
-                    sub_id,
-                )
-                .execute()
-            )
-
+            now = datetime.now(timezone.utc).isoformat()
+            response = (admin_supabase.table("hospital_subscriptions")
+                        .update({"status": "Cancelled", "cancel_at_period_end": False,
+                                 "updated_at": now})
+                        .eq("hospital_subscription_id", row["hospital_subscription_id"])
+                        .eq("status", "Active").eq("end_date", row["end_date"])
+                        .eq("cancel_at_period_end", True).execute())
             if not response.data:
+                return {"success": False, "action": "error", "message": "Cancellation not applied; refresh."}
+            audit.record_event("subscription.cancelled", target_id=row["hospital_subscription_id"],
+                               idempotency_key=f"subscription.cancelled:{row['hospital_subscription_id']}:{row['end_date']}", system=True)
+            return {"success": True, "action": "cancelled", "message": "Cancelled after paid period."}
+        if row.get("pending_plan_id"):
+            return {"success": True, "action": "awaiting_payment",
+                    "message": "Downgrade is scheduled but requires verified renewal payment. No new period granted."}
+        return {"success": True, "action": "no_change", "message": "No scheduled change."}
+    except Exception as exc:
+        return {"success": False, "action": "error", "message": str(exc)}
 
-                return {
-                    "success": False,
-                    "action": "error",
-                    "message": "Could not cancel subscription.",
-                }
-
-            audit.record_event(
-                "subscription.cancelled",
-                target_id=sub_id,
-                idempotency_key=f"subscription.cancelled:{sub_id}:{end_date_str}",
-                system=True,
-            )
-
-            return {
-                "success": True,
-                "action": "cancelled",
-                "message": "Subscription cancelled at period end.",
-            }
-
-        # ------------------------------------------------
-        # 4. Pending downgrade
-        # ------------------------------------------------
-
-        pending_plan_id = row.get("pending_plan_id")
-
-        if pending_plan_id:
-
-            old_plan_id = row.get("plan_id")
-            billing_cycle = row.get("billing_cycle")
-            cycle_days = CYCLE_DAYS.get(billing_cycle, 30)
-
-            # Start the new plan fresh — extend end_date from
-            # today by one cycle
-            new_end_date = (
-                today + timedelta(days=cycle_days)
-            )
-
-            now_iso = datetime.now(
-                timezone.utc
-            ).isoformat()
-
-            response = (
-                admin_supabase
-                .table("hospital_subscriptions")
-                .update({
-                    "previous_plan_id": old_plan_id,
-                    "plan_id": pending_plan_id,
-                    "pending_plan_id": None,
-                    "status": "Active",
-                    "start_date": today.isoformat(),
-                    "end_date": new_end_date.isoformat(),
-                    "last_changed_at": now_iso,
-                    "updated_at": now_iso,
-                })
-                .eq(
-                    "hospital_subscription_id",
-                    sub_id,
-                )
-                .execute()
-            )
-
-            if not response.data:
-
-                return {
-                    "success": False,
-                    "action": "error",
-                    "message": "Could not apply downgrade.",
-                }
-
-            audit.record_event(
-                "subscription.downgraded",
-                target_id=sub_id,
-                metadata={
-                    "plan_id": pending_plan_id,
-                    "previous_plan_id": old_plan_id,
-                },
-                idempotency_key=f"subscription.downgraded:{sub_id}:{end_date_str}",
-                system=True,
-            )
-
-            return {
-                "success": True,
-                "action": "downgraded",
-                "message": (
-                    f"Downgraded to plan "
-                    f"{pending_plan_id}."
-                ),
-            }
-
-        # ------------------------------------------------
-        # 5. Nothing scheduled
-        # ------------------------------------------------
-
-        return {
-            "success": True,
-            "action": "no_change",
-            "message": "No scheduled change.",
-        }
-
-    except Exception as e:
-
-        return {
-            "success": False,
-            "action": "error",
-            "message": str(e),
-        }

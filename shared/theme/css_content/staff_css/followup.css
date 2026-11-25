@@ -357,6 +357,25 @@ div[data-testid="stMainBlockContainer"],
    Container: [class*="st-key-sf_fu_card_"]
    --------------------------------------------------------- */
 
+/* First, third, fifth patient groups */
+[class*="st-key-sf_patient_group_odd_"] {
+    background-color: #ffffff;
+}
+
+/* Second, fourth, sixth patient groups */
+[class*="st-key-sf_patient_group_even_"] {
+    background-color: #ffffff;
+}
+
+/* Even patient group boxes */
+.st-key-staff_followups_root
+div[data-testid="stVerticalBlockBorderWrapper"]:nth-child(
+    even of div[data-testid="stVerticalBlockBorderWrapper"]
+) {
+    background-color: #e0ecff;
+    color: #1f2937;
+}
+
 [class*="st-key-sf_fu_card_"] {
     position: relative;
     background: #FFFFFF;
@@ -481,7 +500,7 @@ div[data-testid="stMainBlockContainer"],
 }
 
 [class*="st-key-sf_fu_card_"] button[kind="primary"] {
-    background: linear-gradient(135deg, #16A34A 0%, #22C55E 100%) !important;
+    background: linear-gradient(135deg, #74035b 0%, #2f005a 100%) !important;
     border: none !important;
     color: #FFFFFF !important;
     box-shadow: 0 3px 10px rgba(22, 163, 74, 0.25) !important;

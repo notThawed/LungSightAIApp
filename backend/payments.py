@@ -1,12 +1,20 @@
 import os
 import requests
 
+from pathlib import Path
+from dotenv import load_dotenv
 from datetime import datetime, timezone, date
+from zoneinfo import ZoneInfo
+
+load_dotenv(
+    dotenv_path=Path(__file__).resolve().parent / ".env",
+    override=False,
+)
+
 from backend.supabase_client import admin_supabase
 
-
 PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY")
-PAYMONGO_API_BASE   = "https://api.paymongo.com/v1"
+PAYMONGO_API_BASE = "https://api.paymongo.com/v1"
 
 APP_BASE_URL = os.getenv(
     "APP_BASE_URL",
@@ -293,6 +301,8 @@ def create_renewal_checkout_session(hospital_subscription_id):
                 "hospital_subscription_id,"
                 "hospital_id,"
                 "plan_id,"
+                "pending_plan_id,"
+                "cancel_at_period_end,"
                 "billing_cycle,"
                 "status"
             )
@@ -314,7 +324,13 @@ def create_renewal_checkout_session(hospital_subscription_id):
             }
 
         hospital_id = subscription["hospital_id"]
-        plan_id     = subscription["plan_id"]
+        # Bill the scheduled downgrade plan, never the old plan.
+        # The database finalizer validates the plan and payment atomically.
+        if subscription.get("cancel_at_period_end"):
+            return {"success": False, "message": "Cancellation is scheduled. Undo cancellation before renewing."}
+        if subscription.get("status") not in ("Active", "Expired"):
+            return {"success": False, "message": "Subscription is not eligible for renewal."}
+        plan_id = subscription.get("pending_plan_id") or subscription["plan_id"]
         billing_cycle = subscription["billing_cycle"]
 
         if billing_cycle not in ["Monthly", "Yearly"]:
@@ -645,7 +661,7 @@ def compute_prorated_amount(
         # ------------------------------------------
 
         end_date = date.fromisoformat(end_date_str)
-        today    = date.today()
+        today    = datetime.now(ZoneInfo("Asia/Manila")).date()
 
         days_left = (end_date - today).days
 
@@ -747,6 +763,9 @@ def compute_prorated_amount(
             "new_plan_name": new_plan.get("plan_name"),
             "old_price": old_price,
             "new_price": new_price,
+            "old_plan_id": current_plan_id,
+            "new_plan_id": new_plan_id,
+            "subscription_end_date": end_date.isoformat(),
             "billing_cycle": billing_cycle,
         }
 
@@ -838,6 +857,20 @@ def create_upgrade_checkout_session(
 
         hospital_id = subscription["hospital_id"]
         old_plan_id = subscription["plan_id"]
+        if str(old_plan_id) != str(proration["old_plan_id"]):
+            return {"success": False, "message": "Subscription changed during quote creation. Retry."}
+        quote_snapshot = {
+            "old_plan_id": old_plan_id,
+            "new_plan_id": new_plan_id,
+            "billing_cycle": billing_cycle,
+            "subscription_end_date": proration["subscription_end_date"],
+            "days_left": proration["days_left"],
+            "cycle_days": proration["cycle_days"],
+            "old_price": proration["old_price"],
+            "new_price": proration["new_price"],
+            "quoted_amount": prorated_amount,
+            "currency": currency,
+        }
 
         # ------------------------------------------
         # 3. Insert a pending upgrade payment
@@ -858,6 +891,7 @@ def create_upgrade_checkout_session(
                 "currency":                 currency,
                 "billing_cycle":            billing_cycle,
                 "payment_type":             "upgrade",
+                "quote_snapshot":           quote_snapshot,
                 "status":                   "pending",
             })
             .execute()

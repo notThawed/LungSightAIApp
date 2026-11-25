@@ -1,3 +1,4 @@
+# Phase 2E renewal-dialog fix
 # streamlit_app/pages/hospital_administrator/subscription_settings.py
 
 """
@@ -205,23 +206,15 @@ def show():
 
     hospital_id = current_hospital_id()
 
-    # PayMongo sub-flow interceptor
-    if st.session_state.get(SESSION_RENEWAL_SUCCESS):
-        _, center, _ = st.columns([1, 6, 1])
-        with center:
-            with st.container(key="ss_page"):
-                if st.session_state.get(SESSION_UPGRADE_FLOW):
-                    show_upgrade_success_screen()
-                else:
-                    show_renewal_success_screen()
-        return
-
-    if st.session_state.get(SESSION_RENEWAL_PAYMENT):
-        _, center, _ = st.columns([1, 6, 1])
-        with center:
-            with st.container(key="ss_page"):
-                show_checkout_link_screen()
-        return
+    # Renewal dialogs are rendered exactly once by subscription_gate's banner.
+    # Preserve the existing upgrade checkout/success route.
+    if st.session_state.get(SESSION_UPGRADE_FLOW):
+        if st.session_state.get(SESSION_RENEWAL_SUCCESS):
+            show_upgrade_success_screen()
+            return
+        if st.session_state.get(SESSION_RENEWAL_PAYMENT):
+            show_checkout_link_screen()
+            return
 
     with st.container(key="ss_page"):
 

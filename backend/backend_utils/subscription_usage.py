@@ -38,49 +38,18 @@ from backend.supabase_client import admin_supabase
 # ============================================================
 
 def _get_current_month_range():
-    """
-    Return the start and end timestamps for the
-    current month in UTC.
-
-    Returns:
-
-        {
-            "start": datetime,
-            "end": datetime,
-        }
-    """
-
-    now = datetime.now(timezone.utc)
-
-    start = datetime(
-        year=now.year,
-        month=now.month,
-        day=1,
-        tzinfo=timezone.utc,
-    )
-
+    """Current Philippine calendar month as UTC-aware bounds."""
+    from zoneinfo import ZoneInfo
+    ph = ZoneInfo("Asia/Manila")
+    now = datetime.now(ph)
+    start = datetime(now.year, now.month, 1, tzinfo=ph)
     if now.month == 12:
-
-        end = datetime(
-            year=now.year + 1,
-            month=1,
-            day=1,
-            tzinfo=timezone.utc,
-        )
-
+        end = datetime(now.year + 1, 1, 1, tzinfo=ph)
     else:
+        end = datetime(now.year, now.month + 1, 1, tzinfo=ph)
+    return {"start": start.astimezone(timezone.utc),
+            "end": end.astimezone(timezone.utc)}
 
-        end = datetime(
-            year=now.year,
-            month=now.month + 1,
-            day=1,
-            tzinfo=timezone.utc,
-        )
-
-    return {
-        "start": start,
-        "end": end,
-    }
 
 
 # ============================================================

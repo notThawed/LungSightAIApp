@@ -1,4 +1,5 @@
 {
+  "deno.enable": true,
   "deno.enablePaths": [
     "supabase/functions"
   ],
@@ -21,5 +22,6 @@
   "[typescript]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
   },
-  "python-envs.defaultEnvManager": "ms-python.python:system"
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "discord.enabled": true
 }

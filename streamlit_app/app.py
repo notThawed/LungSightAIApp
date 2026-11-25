@@ -168,35 +168,26 @@ if (st.session_state.get("invite_access_token")
 
 def get_cached_subscription_context(user):
     """
-    Return the subscription context for the current user.
+    Fetch the current subscription context on every
+    Streamlit script rerun.
 
-    The context is cached in session state and refreshed
-    when the hospital_id changes.
+    Avoid stale subscription states when a hospital
+    expires, renews, or becomes inactive.
     """
 
     if not user:
+        st.session_state.pop("subscription_context", None)
         return None
 
     hospital_id = user.get("hospital_id")
 
     if not hospital_id:
+        st.session_state.pop("subscription_context", None)
         return None
 
-    cached = st.session_state.get(
-        "subscription_context"
-    )
+    context = get_subscription_context(hospital_id)
 
-    if (
-        cached
-        and cached.get("hospital_id") == hospital_id
-    ):
-        return cached
-
-    context = get_subscription_context(
-        hospital_id
-    )
-
-    st.session_state.subscription_context = context
+    st.session_state["subscription_context"] = context
 
     return context
 
@@ -473,10 +464,10 @@ if subscription_context:
     # EXPIRED / NO SUBSCRIPTION
     # --------------------------------------------------
 
-    if sub_state in (
-        "expired",
-        "none",
-        "cancelled",
+    if sub_state not in (
+        "active",
+        "grace",
+        "setup_pending",
     ):
 
         from pages.hospital_administrator import (
@@ -571,6 +562,19 @@ if subscription_context:
 # ==================================================
 # ROLE-BASED DASHBOARD
 # ==================================================
+
+# Phase 2B: block clinical roles until hospital setup is complete.
+# Hospital Admin retains access to the existing setup wizard.
+if (
+    subscription_context
+    and subscription_context.get("state") == "setup_pending"
+    and role != "Hospital Admin"
+):
+    st.warning(
+        "Your hospital setup is not yet complete. "
+        "Please contact your Hospital Administrator."
+    )
+    st.stop()
 
 if role == "Radiologist":
 
