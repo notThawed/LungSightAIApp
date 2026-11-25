@@ -1,0 +1,239 @@
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0');
+/* ============================================================
+   LUNGSIGHT AI - STAFF DASHBOARD
+   ============================================================ */
+
+.staff-db-header {
+    margin: 0 0 0.75rem;
+}
+
+.staff-db-header h1 {
+    margin: 0 !important;
+    color: #10223c;
+    font-size: 1.85rem;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.3;
+}
+
+.staff-db-header p {
+    margin: 0.3rem 0 0 !important;
+    color: #60758d;
+    font-size: 0.85rem;
+}
+
+
+/* ============================================================
+   METRIC CARDS
+   ============================================================ */
+
+.staff-db-metric {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+
+    min-height: 100px;
+    padding: 1rem;
+
+    border: 1px solid;
+    border-left-width: 4px;
+    border-radius: 12px;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.staff-db-metric:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 16px rgba(15, 23, 42, 0.07);
+}
+
+.staff-db-metric-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    width: 46px;
+    height: 46px;
+
+    color: white;
+    border-radius: 11px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.staff-db-metric-icon .material-symbols-rounded {
+    font-size: 25px;
+    line-height: 1;
+}
+
+.staff-db-metric-info {
+    min-width: 0;
+}
+
+.staff-db-metric-label {
+    color: #15324b;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.045em;
+}
+
+.staff-db-metric-value {
+    margin-top: 0.3rem;
+    color: #0b2038;
+    font-size: 1.85rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+
+/* ============================================================
+   TEAL METRIC
+   ============================================================ */
+
+.staff-db-teal {
+    background: #e7f7f8;
+    border-color: #a7e3e7;
+    border-left-color: #078b96;
+}
+
+.staff-db-teal .staff-db-metric-icon {
+    background: #078b96;
+}
+
+
+/* ============================================================
+   GREEN METRIC
+   ============================================================ */
+
+.staff-db-green {
+    background: #e2fbea;
+    border-color: #a2eeb5;
+    border-left-color: #0baa4a;
+}
+
+.staff-db-green .staff-db-metric-icon {
+    background: #0baa4a;
+}
+
+
+/* ============================================================
+   BLUE METRIC
+   ============================================================ */
+
+.staff-db-blue {
+    background: #e5efff;
+    border-color: #a5c5ff;
+    border-left-color: #2563eb;
+}
+
+.staff-db-blue .staff-db-metric-icon {
+    background: #2563eb;
+}
+
+
+/* ============================================================
+   AMBER METRIC
+   ============================================================ */
+
+.staff-db-amber {
+    background: #fff6d9;
+    border-color: #f5d98b;
+    border-left-color: #e17b00;
+}
+
+.staff-db-amber .staff-db-metric-icon {
+    background: #e17b00;
+}
+
+
+/* ============================================================
+   SECTION TITLES
+   ============================================================ */
+
+.staff-db-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+
+    margin-bottom: 0.4rem;
+
+    color: #10223c;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.staff-db-section-title .material-symbols-rounded {
+    color: #078b96;
+    font-size: 1.4rem;
+}
+
+
+/* ============================================================
+   PENDING STATUS
+   ============================================================ */
+
+.staff-db-pending {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0.3rem 0.65rem;
+
+    color: #a75a00;
+    background: #fff3df;
+
+    border: 1px solid #f5d18d;
+    border-radius: 999px;
+
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.staff-db-metric-icon .material-symbols-rounded,
+.staff-db-section-title .material-symbols-rounded {
+    font-family: "Material Symbols Rounded" !important;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-feature-settings: "liga";
+    -webkit-font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 900px) {
+    .staff-db-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .staff-db-metric {
+        min-height: 86px;
+        padding: 0.75rem;
+    }
+
+    .staff-db-metric-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .staff-db-metric-value {
+        font-size: 1.45rem;
+    }
+
+    .staff-db-metric-label {
+        font-size: 0.58rem;
+    }
+}

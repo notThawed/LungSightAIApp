@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="referrer" content="no-referrer">
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <title>LungSight - Completing Setup</title>
+</head>
+
+<body>
+
+    <p>Completing your LungSight account setup...</p>
+
+    <script>
+(function () {
+    "use strict";
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const access = params.get("access_token");
+    const refresh = params.get("refresh_token");
+    const type = params.get("type") || "invite";
+    if (params.has("error") || params.has("error_code") ||
+        !access || !refresh || !["invite", "recovery"].includes(type)) {
+        window.location.replace("/?auth_error=invalid_or_expired_link");
+        return;
+    }
+    const q = new URLSearchParams();
+    q.set("access_token", access);
+    q.set("refresh_token", refresh);
+    q.set("type", type);
+    window.location.replace("/?" + q.toString());
+})();
+</script>
+
+</body>
+</html>

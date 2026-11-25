@@ -1,0 +1,325 @@
+
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+
+/* ============================================================
+   LUNGSIGHT SIDEBAR - TEAL BLUE THEME
+   ============================================================ */
+
+:root {
+    --sb-bg: #087983;
+    --sb-bg-deep: #066872;
+    --sb-text: #f0fcfd;
+    --sb-muted: #c4e8eb;
+    --sb-white: #ffffff;
+    --sb-border: rgba(255, 255, 255, 0.18);
+    --sb-hover: rgba(255, 255, 255, 0.12);
+    --sb-active: #ffffff;
+    --sb-active-text: #073c49;
+    --sb-accent: #a9f1f0;
+    --sb-font: "Manrope", sans-serif;
+}
+
+
+/* ============================================================
+   SIDEBAR FRAME
+   ============================================================ */
+
+[data-testid="stSidebar"] {
+    min-width: 255px !important;
+    max-width: 255px !important;
+    background: var(--sb-bg) !important;
+    border-right: none !important;
+}
+
+[data-testid="stSidebarContent"] {
+    background: linear-gradient(
+        180deg,
+        var(--sb-bg) 0%,
+        var(--sb-bg-deep) 100%
+    ) !important;
+
+    padding: 1.1rem 0.75rem 1.25rem !important;
+    font-family: var(--sb-font);
+}
+
+
+/* ============================================================
+   HIDE DEFAULT STREAMLIT NAVIGATION
+   ============================================================ */
+
+[data-testid="stSidebarNav"],
+[data-testid="stSidebarHeader"],
+[data-testid="stSidebar"] [style*="col-resize"] {
+    display: none !important;
+}
+
+
+/* ============================================================
+   LUNGSIGHT BRANDING
+   ============================================================ */
+
+.st-key-sidebar_branding {
+    padding: 0.6rem 0.35rem 2rem;
+    margin-bottom: 0.65rem;
+    border-bottom: 1px solid var(--sb-border);
+}
+
+.ls-sidebar-brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
+.ls-sidebar-brand-logo {
+    display: block;
+    width: 76px;
+    height: 76px;
+    flex-shrink: 0;
+    object-fit: contain;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 3px;
+}
+
+.ls-sidebar-brand-title {
+    color: var(--sb-white);
+    font-family: var(--sb-font);
+    font-size: 1.18rem;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+
+/* ============================================================
+   NAVIGATION CONTAINER
+   ============================================================ */
+
+.st-key-sidebar_nav {
+    gap: 0.2rem !important;
+    padding: 0 !important;
+}
+
+
+/* ============================================================
+   SECTION HEADINGS
+   ============================================================ */
+
+.st-key-sidebar_nav .ls-sidebar-section-label {
+    display: block;
+    margin: 1.55rem 0 0.65rem;
+    padding: 0 0.7rem;
+
+    color: var(--sb-muted);
+    font-family: var(--sb-font);
+    font-size: 0.63rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
+
+.st-key-sidebar_nav
+[data-testid="stElementContainer"]:first-child
+.ls-sidebar-section-label {
+    margin-top: 0.35rem;
+}
+
+
+/* ============================================================
+   NAVIGATION AND ACCOUNT BUTTONS
+   ============================================================ */
+
+.st-key-sidebar_nav button,
+.st-key-sidebar_account button {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.65rem 0.85rem;
+
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 9px !important;
+    box-shadow: none !important;
+
+    transition:
+        background 0.18s ease,
+        transform 0.18s ease;
+}
+
+
+/* ============================================================
+   BUTTON CONTENT ALIGNMENT
+   ============================================================ */
+
+.st-key-sidebar_nav button > div,
+.st-key-sidebar_nav button > div > span,
+.st-key-sidebar_account button > div,
+.st-key-sidebar_account button > div > span {
+    width: 100%;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+
+/* ============================================================
+   BUTTON TEXT
+   ============================================================ */
+
+.st-key-sidebar_nav button p,
+.st-key-sidebar_account button p {
+    margin: 0;
+    color: var(--sb-text) !important;
+
+    font-family: var(--sb-font);
+    font-size: 0.82rem;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: left;
+
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+
+/* ============================================================
+   BUTTON ICONS
+   ============================================================ */
+
+.st-key-sidebar_nav [data-testid="stIconMaterial"],
+.st-key-sidebar_account [data-testid="stIconMaterial"] {
+    flex-shrink: 0;
+    color: var(--sb-muted) !important;
+    font-size: 1.2rem;
+}
+
+
+/* ============================================================
+   HOVER STATES
+   ============================================================ */
+
+.st-key-sidebar_nav button:hover,
+.st-key-sidebar_account button:hover {
+    background: var(--sb-hover) !important;
+    border-color: transparent !important;
+    transform: translateX(2px);
+}
+
+.st-key-sidebar_nav button:hover p,
+.st-key-sidebar_nav button:hover [data-testid="stIconMaterial"],
+.st-key-sidebar_account button:hover p,
+.st-key-sidebar_account button:hover [data-testid="stIconMaterial"] {
+    color: var(--sb-white) !important;
+}
+
+
+/* ============================================================
+   ACTIVE NAVIGATION
+   ============================================================ */
+
+.st-key-sidebar_nav
+button[data-testid="stBaseButton-primary"],
+.st-key-sidebar_account
+button[data-testid="stBaseButton-primary"] {
+    background: var(--sb-active) !important;
+    border-color: var(--sb-active) !important;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+.st-key-sidebar_nav
+button[data-testid="stBaseButton-primary"] p,
+.st-key-sidebar_account
+button[data-testid="stBaseButton-primary"] p {
+    color: var(--sb-active-text) !important;
+    font-weight: 800;
+}
+
+.st-key-sidebar_nav
+button[data-testid="stBaseButton-primary"]
+[data-testid="stIconMaterial"],
+.st-key-sidebar_account
+button[data-testid="stBaseButton-primary"]
+[data-testid="stIconMaterial"] {
+    color: var(--sb-active-text) !important;
+}
+
+
+/* ============================================================
+   ACCOUNT CONTROLS - MANAGE PROFILE / LOGOUT
+   ============================================================ */
+
+.st-key-sidebar_account {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--sb-border);
+}
+
+
+/* ============================================================
+   LOGOUT HOVER
+   ============================================================ */
+
+[class*="st-key-logout_"] button:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+}
+
+[class*="st-key-logout_"] button:hover p,
+[class*="st-key-logout_"] button:hover
+[data-testid="stIconMaterial"] {
+    color: #ffffff !important;
+}
+
+
+/* ============================================================
+   KEYBOARD FOCUS
+   ============================================================ */
+
+.st-key-sidebar_nav button:focus-visible,
+.st-key-sidebar_account button:focus-visible {
+    outline: 2px solid var(--sb-accent) !important;
+    outline-offset: 3px;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 900px) {
+    [data-testid="stSidebar"] {
+        min-width: 245px !important;
+        max-width: 245px !important;
+    }
+
+    .ls-sidebar-brand-logo {
+        width: 66px;
+        height: 66px;
+    }
+
+    .ls-sidebar-brand-title {
+        font-size: 1.08rem;
+    }
+
+    .st-key-sidebar_nav button p,
+    .st-key-sidebar_account button p {
+        font-size: 0.8rem;
+    }
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .st-key-sidebar_nav button,
+    .st-key-sidebar_account button {
+        transition: none !important;
+    }
+}

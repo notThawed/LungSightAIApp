@@ -1,0 +1,171 @@
+/* ==========================================================
+   SYSTEM ADMIN - HOSPITAL REPORTS
+   shared/theme/css_content/system_admin_css/reports.css
+   Modern, medical-grade report generator, KPI cards, metadata
+   banner, interactive analytics, and export panels.
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   Controls & Filter Card (st-key-sa_report_controls)
+   ---------------------------------------------------------- */
+.st-key-sa_report_controls {
+  background: var(--sa-white, #FFFFFF);
+  border: 1px solid #CBD5E1;
+  border-radius: 16px;
+  padding: 1.4rem 1.5rem 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 10px rgba(18, 40, 58, 0.04);
+}
+
+/* ----------------------------------------------------------
+   Report Overview Metadata Banner
+   ---------------------------------------------------------- */
+.sa-report-banner {
+  background: linear-gradient(135deg, #F0FDFA 0%, #FFFFFF 60%, #F8FAFC 100%);
+  border: 1px solid #BCE5E8;
+  border-left: 5px solid #0F7C88;
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: 0 4px 16px -4px rgba(15, 124, 136, 0.08);
+}
+
+.sa-report-banner-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sa-report-hosp-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sa-report-hosp-chip h3 {
+  margin: 0;
+  font-family: var(--sa-font-display, "Space Grotesk", sans-serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--sa-ink, #0F172A);
+}
+
+.sa-report-meta-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sa-meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #475569;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 0.25rem 0.65rem;
+}
+
+.sa-meta-tag b {
+  color: #0F172A;
+  font-weight: 600;
+}
+
+.sa-meta-tag.code code {
+  font-family: monospace;
+  font-size: 0.78rem;
+  color: #0F7C88;
+  background: #E6F7F8;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.sa-report-banner-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+/* ----------------------------------------------------------
+   Section Cards & Analytics
+   ---------------------------------------------------------- */
+.sa-report-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--sa-font-display, "Space Grotesk", sans-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--sa-ink, #0F172A);
+  margin: 1.25rem 0 0.85rem;
+}
+
+.sa-report-metric-card {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 14px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 2px 8px rgba(18, 40, 58, 0.04);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.sa-report-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(18, 40, 58, 0.08);
+}
+
+.sa-report-metric-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.sa-report-metric-value {
+  font-family: var(--sa-font-display, "Space Grotesk", sans-serif);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--sa-ink, #0F172A);
+  line-height: 1.1;
+}
+
+.sa-report-metric-sub {
+  font-size: 0.78rem;
+  color: #64748B;
+  margin-top: 0.25rem;
+}
+
+/* ----------------------------------------------------------
+   Export Actions Box
+   ---------------------------------------------------------- */
+.sa-report-export-box {
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 14px;
+  padding: 1.15rem 1.35rem;
+  margin: 1.25rem 0;
+}
+
+.sa-report-export-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 0.25rem;
+}
+
+.sa-report-export-desc {
+  font-size: 0.8rem;
+  color: #64748B;
+  margin-bottom: 0.85rem;
+}

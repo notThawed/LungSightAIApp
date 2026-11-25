@@ -1,0 +1,516 @@
+/* =========================================================
+   LUNGSIGHT — PHYSICIAN
+   Patient Records & Clinical Diagnostic Reports
+   shared/theme/css_content/physician_css/patient_records.css
+   Modern, medical-grade patient records and diagnostic report:
+   widescreen canvas, patient list table, dossier hero cards,
+   dark radiographic frames, and clinical AI summary panels.
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+/* ----------------------------------------------------------
+   MATERIAL SYMBOLS
+   ---------------------------------------------------------- */
+
+.material-symbols-rounded,
+.material-symbols-outlined {
+    font-family: 'Material Symbols Rounded' !important;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 19px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    vertical-align: middle;
+}
+
+/* ----------------------------------------------------------
+   DESIGN TOKENS
+   ---------------------------------------------------------- */
+
+:root {
+    --pr-teal:          #0F7C88;
+    --pr-teal-dark:     #0B626C;
+    --pr-teal-soft:     #E6F7F8;
+    --pr-teal-glow:     rgba(15, 124, 136, 0.22);
+
+    --pr-blue:          #2563EB;
+    --pr-blue-soft:     #EFF6FF;
+
+    --pr-cyan:          #38BDF8;
+
+    --pr-green:         #16A34A;
+    --pr-green-soft:    #F0FDF4;
+
+    --pr-amber:         #D97706;
+    --pr-amber-soft:    #FFFDF5;
+
+    --pr-red:           #DC2626;
+    --pr-red-soft:      #FEF2F2;
+
+    --pr-ink:           #0F172A;
+    --pr-slate:         #475569;
+    --pr-muted:         #64748B;
+
+    --pr-border:        #CBD5E1;
+    --pr-border-light:  #E2E8F0;
+
+    --pr-white:         #FFFFFF;
+    --pr-film:          #F8FAFC;
+    --pr-surface:       #F1F5F9;
+
+    --pr-dark-viewport: #0A141D;
+    --pr-dark-frame:    #11202D;
+
+    --pr-radius-sm:     8px;
+    --pr-radius-md:     14px;
+    --pr-radius-lg:     18px;
+
+    --pr-font-display:  'Space Grotesk', 'Fraunces', Georgia, serif;
+    --pr-font-body:     'Manrope', system-ui, -apple-system, sans-serif;
+
+    --pr-shadow-xs:     0 1px 3px rgba(18, 40, 58, 0.04);
+    --pr-shadow-sm:     0 4px 16px -2px rgba(18, 40, 58, 0.06);
+    --pr-shadow-md:     0 10px 28px -4px rgba(18, 40, 58, 0.10);
+    --pr-shadow-lg:     0 18px 38px -8px rgba(18, 40, 58, 0.16);
+}
+
+/* ----------------------------------------------------------
+   WIDESCREEN CANVAS
+   ---------------------------------------------------------- */
+
+div[data-testid="stMainBlockContainer"],
+.main .block-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    padding-top: 1.25rem !important;
+    padding-bottom: 3.5rem !important;
+}
+
+.st-key-physician_patient_records_page {
+    font-family: var(--pr-font-body);
+    color: var(--pr-ink);
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 0 2.5rem 0;
+    animation: prFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes prFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ----------------------------------------------------------
+   PATIENT LIST — TABLE HEADER & ROWS
+   ---------------------------------------------------------- */
+
+.st-key-pr_table_header {
+    padding: 0.8rem 1.4rem;
+    background: var(--pr-surface);
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-sm);
+    margin-bottom: 0.65rem;
+}
+
+.st-key-pr_table_header .pr-header-cell {
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--pr-muted);
+}
+
+[class*="st-key-pr_row_"] {
+    position: relative;
+    padding: 1.1rem 1.4rem;
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-md);
+    background: #FFFFFF;
+    margin-bottom: 0.65rem;
+    box-shadow: var(--pr-shadow-xs);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.22s ease,
+                box-shadow 0.22s ease;
+    overflow: hidden;
+}
+
+[class*="st-key-pr_row_"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--pr-teal) 0%, #38BDF8 100%);
+    border-radius: 4px 0 0 4px;
+}
+
+[class*="st-key-pr_row_"]:hover {
+    transform: translateY(-2px);
+    border-color: #94A3B8;
+    box-shadow: var(--pr-shadow-md);
+}
+
+[class*="st-key-pr_row_"] .pr-cell {
+    font-size: 0.88rem;
+    color: var(--pr-slate);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+[class*="st-key-pr_row_"] .pr-cell-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.82rem;
+    color: var(--pr-teal-dark);
+    font-weight: 750;
+    background: var(--pr-teal-soft);
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(15, 124, 136, 0.2);
+    width: fit-content;
+}
+
+[class*="st-key-pr_row_"] .pr-cell-name {
+    font-family: var(--pr-font-display);
+    font-weight: 800;
+    color: var(--pr-ink);
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+}
+
+/* ----------------------------------------------------------
+   PATIENT REPORT & OVERVIEW HEADERS
+   ---------------------------------------------------------- */
+
+.pr-report-header {
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-md);
+    padding: 1.4rem 1.6rem;
+    margin: 0.5rem 0 1.5rem;
+    box-shadow: var(--pr-shadow-xs);
+    position: relative;
+    overflow: hidden;
+}
+
+.pr-report-header::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--pr-teal) 0%, #20A3B2 45%, #2563EB 100%);
+}
+
+.pr-report-title {
+    margin: 0;
+    font-family: var(--pr-font-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--pr-ink);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.pr-report-sub {
+    margin: 0.35rem 0 0;
+    font-size: 0.84rem;
+    color: var(--pr-slate);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ----------------------------------------------------------
+   HERO & METRIC CARDS (pr-hero-card)
+   ---------------------------------------------------------- */
+
+.pr-hero-card {
+    background: #FFFFFF;
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-md);
+    padding: 1.4rem 1.6rem 1.2rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--pr-shadow-sm);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.pr-hero-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--pr-teal) 0%, #38BDF8 100%);
+}
+
+.pr-hero-card:hover {
+    box-shadow: var(--pr-shadow-md);
+    border-color: #94A3B8;
+}
+
+.pr-hero-eyebrow {
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--pr-teal);
+    margin: 0 0 0.35rem;
+}
+
+.pr-hero-name {
+    font-family: var(--pr-font-display);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--pr-ink);
+    margin: 0 0 0.85rem;
+    letter-spacing: -0.01em;
+}
+
+.pr-hero-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--pr-border-light);
+    font-size: 0.88rem;
+}
+
+.pr-hero-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.pr-hero-row span {
+    color: var(--pr-muted);
+    font-weight: 600;
+}
+
+.pr-hero-row b {
+    color: var(--pr-ink);
+    font-weight: 750;
+}
+
+/* Category cards */
+.pr-cat-card {
+    background: #FFFFFF;
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-md);
+    padding: 1.4rem 1.25rem;
+    text-align: center;
+    box-shadow: var(--pr-shadow-xs);
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.pr-cat-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--pr-teal);
+    box-shadow: var(--pr-shadow-md);
+}
+
+.pr-cat-icon {
+    font-size: 32px !important;
+    color: var(--pr-teal);
+    margin-bottom: 0.5rem;
+}
+
+.pr-cat-title {
+    font-family: var(--pr-font-display);
+    font-size: 1.1rem;
+    font-weight: 750;
+    color: var(--pr-ink);
+    margin: 0 0 0.25rem;
+}
+
+.pr-cat-count {
+    font-size: 0.82rem;
+    color: var(--pr-muted);
+    font-weight: 600;
+    margin: 0;
+}
+
+/* ----------------------------------------------------------
+   DARK RADIOGRAPHIC VIEWPORT (pr-xray-frame)
+   ---------------------------------------------------------- */
+
+.st-key-pr_xray_frame,
+.pr-xray-frame {
+    background: var(--pr-dark-viewport);
+    border: 2px solid var(--pr-dark-frame);
+    border-radius: var(--pr-radius-md);
+    padding: 16px;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 10px 30px rgba(10, 20, 29, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.st-key-pr_xray_frame img,
+.pr-xray-frame img {
+    border-radius: 8px;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.pr-img-label {
+    margin: 0 0 0.5rem;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--pr-slate);
+}
+
+.pr-heatmap-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+    background: var(--pr-dark-frame);
+    border-radius: var(--pr-radius-md);
+    border: 1px dashed #243B4E;
+    text-align: center;
+}
+
+.pr-heatmap-icon {
+    font-size: 38px !important;
+    color: #4A677B;
+    margin-bottom: 0.5rem;
+}
+
+.pr-heatmap-title {
+    color: #E2E8F0;
+    font-size: 1rem;
+    font-weight: 750;
+    margin: 0 0 0.25rem;
+}
+
+.pr-heatmap-text {
+    color: #94A3B8;
+    font-size: 0.82rem;
+    margin: 0;
+}
+
+/* ----------------------------------------------------------
+   AI CLINICAL SUMMARY
+   ---------------------------------------------------------- */
+
+.pr-ai-summary {
+    position: relative;
+    background: #FFFFFF;
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-md);
+    padding: 1.4rem 1.6rem;
+    margin: 1.25rem 0;
+    box-shadow: var(--pr-shadow-sm);
+    overflow: hidden;
+}
+
+.pr-ai-summary-positive {
+    border-left: 5px solid var(--pr-red);
+    background: linear-gradient(180deg, #FFFFFF 0%, #FFF5F5 100%);
+}
+
+.pr-ai-summary-negative {
+    border-left: 5px solid var(--pr-green);
+    background: linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);
+}
+
+.pr-ai-summary-text {
+    font-size: 0.94rem;
+    font-weight: 600;
+    color: var(--pr-ink);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.pr-ai-summary-meta {
+    font-size: 0.82rem;
+    color: var(--pr-slate);
+    font-weight: 600;
+}
+
+.pr-rec-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0;
+}
+
+.pr-rec-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 0.55rem 0;
+    font-size: 0.88rem;
+    color: var(--pr-slate);
+    border-bottom: 1px solid var(--pr-border-light);
+}
+
+.pr-rec-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--pr-teal-soft);
+    color: var(--pr-teal);
+    font-size: 0.76rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pr-disclaimer {
+    background: var(--pr-surface);
+    border: 1px solid var(--pr-border-light);
+    border-radius: var(--pr-radius-sm);
+    padding: 0.85rem 1.15rem;
+    font-size: 0.8rem;
+    color: var(--pr-muted);
+    line-height: 1.5;
+    margin-top: 1rem;
+}
+
+/* ----------------------------------------------------------
+   RESPONSIVE
+   ---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    div[data-testid="stMainBlockContainer"],
+    .main .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    .pr-report-title {
+        font-size: 1.4rem;
+    }
+}
