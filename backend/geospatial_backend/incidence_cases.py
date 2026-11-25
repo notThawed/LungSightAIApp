@@ -15,7 +15,12 @@ from backend.geospatial_backend.patient_location_utils import (
 )
 
 MANILA = ZoneInfo("Asia/Manila")
-POSITIVE_LABELS = frozenset(("bacterial_pneumonia", "viral_pneumonia"))
+POSITIVE_LABELS = frozenset((
+    "bacterial_pneumonia",
+    "viral_pneumonia",
+    "covid19_pneumonia",
+    "pneumonia_unspecified",
+))
 ELIGIBLE_STATUSES = ["Completed", "Admitted", "Discharged"]
 
 

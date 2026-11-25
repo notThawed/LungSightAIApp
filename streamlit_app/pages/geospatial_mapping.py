@@ -209,6 +209,25 @@ def show():
         st.error(f"Could not load confirmed cases from Supabase: {exc}")
         return
     rows, incidence_meta = summary_rows_real(catalog,chosen,current,prior)
+    from collections import Counter
+
+    level_counts = Counter(
+        row["Incidence level"] for row in rows
+    )
+
+    st.caption(
+        "Incidence classification: "
+        + " | ".join(
+            f"{level}: {level_counts.get(level, 0)}"
+            for level in (
+                "Low",
+                "Moderate",
+                "High",
+                "No cases",
+                "Unavailable",
+            )
+        )
+    )
     reference = incidence_meta['reference_incidence']
     reference_label = f'{reference:,.2f}' if reference is not None else 'Unavailable'
     st.caption(

@@ -184,7 +184,7 @@ def real_case_counts(hospital_id, year, month, age="All ages", sex="All"):
                 .range(offset, offset + 999).execute().data or []
             )
             for exam in exams:
-                if exam.get("confirmed_label") in ("bacterial_pneumonia", "viral_pneumonia"):
+                if exam.get("confirmed_label") in ("bacterial_pneumonia", "viral_pneumonia", "covid19_pneumonia", "pneumonia_unspecified"):
                     confirmed.add(str(exam["patient_id"]))
             if len(exams) < 1000:
                 break
