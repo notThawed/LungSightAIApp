@@ -896,10 +896,13 @@ def render_patient_form(patient=None):
             if not can_edit_patients():
                 errors.error("You do not have permission to edit patient records.")
                 return
-            update_patient(
+            saved = update_patient(
                 patient_id=patient["patient_id"],
                 **details,
             )
+            if not saved:
+                errors.error("Patient update failed; no changes were confirmed saved.")
+                return
             remember("Patient updated.")
         else:
             if not can_register_patients():
@@ -931,10 +934,13 @@ def render_patient_form(patient=None):
                 )
                 return
 
-            create_patient(
+            saved = create_patient(
                 created_by=current_user.get("user_id"),
                 **details,
             )
+            if not saved:
+                errors.error("Patient registration failed; please check the server logs.")
+                return
             remember("Patient registered.")
 
         st.rerun()

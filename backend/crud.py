@@ -528,6 +528,10 @@ def create_patient(
             "emergency_contact_relationship": emergency_contact_relationship,
         }
 
+        # Registration: always resolve the barangay reference by PSGC.
+        from backend.geospatial_backend.barangay_geocoding import prepare_patient_coordinates
+        patient_data = prepare_patient_coordinates(patient_data)
+
         response = (
             admin_supabase
             .table("patients")
@@ -643,6 +647,17 @@ def update_patient(
                 timezone.utc
             ).isoformat(),
         }
+
+        # Editing: compare previously saved PSGC before retaining coordinates.
+        from backend.geospatial_backend.barangay_geocoding import prepare_patient_coordinates
+        prior_rows = (
+            admin_supabase.table("patients")
+            .select("psgc_barangay_code,latitude,longitude,location_precision")
+            .eq("patient_id", patient_id).limit(1).execute().data or []
+        )
+        if not prior_rows:
+            raise ValueError("Patient not found; cannot safely reconcile coordinates")
+        patient_data = prepare_patient_coordinates(patient_data, previous=prior_rows[0])
 
         response = (
             admin_supabase

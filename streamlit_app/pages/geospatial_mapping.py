@@ -133,7 +133,7 @@ def make_map(rows, mode, selected, hospital):
 
 
 def png_export(rows, hospital_name, label):
-    """Schematic export using only verified reference barangay centroids."""
+    """Schematic export using approximate barangay reference locations."""
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=(11,7), dpi=160)
     for r in rows:
@@ -144,7 +144,7 @@ def png_export(rows, hospital_name, label):
                    alpha=.78, edgecolors='white', linewidths=1.5)
         ax.annotate(r['Barangay'], (float(r['Longitude (approx.)']), float(r['Latitude (approx.)'])),
                     xytext=(4,5), textcoords='offset points', fontsize=7)
-    ax.set_title(f'{hospital_name} | {label}\nHospital-recorded pneumonia incidence by barangay centroid')
+    ax.set_title(f'{hospital_name} | {label}\nHospital-recorded pneumonia incidence by approximate barangay point')
     ax.set_xlabel('Longitude'); ax.set_ylabel('Latitude'); ax.grid(alpha=.15)
     fig.text(.05,.025,'Approximate barangay markers; facility-recorded indicator, not community infection risk.',fontsize=9)
     fig.tight_layout(rect=[0,.04,1,1]); buf=BytesIO(); fig.savefig(buf,format='png',dpi=160)
@@ -270,7 +270,7 @@ def show():
             if clicked in [r['Barangay'] for r in rows] and clicked != selected:
                 st.session_state['geo_selected'] = clicked
                 st.rerun()
-        html('<div class="geo-note">🟢 Low &nbsp;&nbsp; 🟠 Moderate &nbsp;&nbsp; 🔴 High &nbsp;&nbsp; ⚪ No cases &nbsp;&nbsp; ⚫ Population unavailable — relative <b>hospital-recorded incidence</b>, not clinical severity. Markers represent barangay centroids, not patient homes.</div>')
+        html('<div class="geo-note"><span style="color:#22c55e">●</span> Low &nbsp;&nbsp; <span style="color:#f59e0b">●</span> Moderate &nbsp;&nbsp; <span style="color:#ef4444">●</span> High &nbsp;&nbsp; <span style="color:#94a3b8">●</span> No cases &nbsp;&nbsp; <span style="color:#64748b">●</span> Population unavailable — relative <b>hospital-recorded incidence</b>, not clinical severity. Markers are approximate barangay reference points, not patient homes.</div>')
     with right:
         section('Barangay Case Summary')
         st.dataframe(pd.DataFrame(rows)[['Barangay','Recorded cases','Population (2024)','Incidence / 100k','Relative rate ratio','Incidence level']],
@@ -299,11 +299,13 @@ def show():
             st.error(f'Could not load monthly trend: {exc}')
             return
         st.line_chart(pd.DataFrame(trend).set_index('Month'),height=190)
-    missing = sum(1 for r in rows if r['Recorded cases'] and (r.get('Latitude (approx.)') is None or r.get('Longitude (approx.)') is None))
+    # Include zero-case barangays: map point availability is independent of incidence.
+    missing = sum(1 for r in rows if (r.get('Latitude (approx.)') is None or r.get('Longitude (approx.)') is None))
     if missing:
-        st.warning(f'{missing} barangay group(s) have recorded cases but no verified coordinates. They are shown in the table but cannot be plotted yet.')
+        st.warning(f'{missing} barangay group(s) lack an approximate reference location. They remain in the table but cannot be plotted yet.')
+    st.caption('Geocoded reference points may use Geoapify / OpenStreetMap data. Map tiles © OpenStreetMap contributors; use points only for approximate barangay visualisation.')
     section('Export Geospatial Report')
-    st.caption('Exports reflect this hospital and the current Philippine reporting month. PNG uses verified barangay centroids and is not a screenshot of map tiles.')
+    st.caption('Exports reflect this hospital and the current Philippine reporting month. PNG uses approximate barangay reference points, not patient homes or a screenshot of map tiles.')
     try:
         png = png_export(rows,name,period)
         p1,p2,p3 = st.columns(3)
