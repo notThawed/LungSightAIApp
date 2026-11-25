@@ -1,7 +1,30 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
+import { serve } from "@std/http/server";
+import { createClient } from "@supabase/supabase-js";
+import { crypto } from "@std/crypto";
 
+// ============================================================
+// PAYMONGO WEBHOOK TYPES
+// ============================================================
+
+interface PayMongoWebhookEvent {
+  data?: {
+    id?: string;
+    type?: string;
+    attributes?: {
+      type?: string;
+      data?: {
+        id?: string;
+        type?: string;
+        attributes?: {
+          payment_method_used?: string | null;
+          payment_intent?: {
+            id?: string;
+          } | null;
+        };
+      };
+    };
+  };
+}
 
 // ============================================================
 // ENV
@@ -180,15 +203,16 @@ serve(async (req) => {
   // 2. Parse the event
   // ------------------------------------------
 
-  let event: any;
-  try {
-    event = JSON.parse(rawBody);
-  } catch {
-    return new Response("bad json", { status: 400 });
-  }
+let event: PayMongoWebhookEvent;
 
-  const eventType = event?.data?.attributes?.type;
-  const paymentData = event?.data?.attributes?.data;
+try {
+  event = JSON.parse(rawBody) as PayMongoWebhookEvent;
+} catch {
+  return new Response("bad json", { status: 400 });
+}
+
+const eventType = event?.data?.attributes?.type;
+const paymentData = event?.data?.attributes?.data;
 
   // We only care about paid events for now
   if (eventType !== "checkout_session.payment.paid") {
