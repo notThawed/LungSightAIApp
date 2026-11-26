@@ -32,7 +32,7 @@ SECTION_TITLES = (
     ("screening", "Screening activity"),
     ("ai", "AI outcomes"),
     ("review", "Physician review"),
-    ("operations", "Operations"),
+    ("operations", "Operations Summary"),
 )
 
 ACCENT = colors.HexColor("#0E7490")

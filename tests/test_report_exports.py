@@ -184,4 +184,4 @@ def test_pdf_empty_period(monkeypatch):
 
     assert data.startswith(b"%PDF-")
     assert any("No examinations were registered" in text for text in seen)
-    assert "Not available" in seen
+    assert "Operations Summary" in seen

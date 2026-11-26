@@ -188,14 +188,15 @@ def test_review_totals_and_documented_findings():
     assert report.breakdown("severity").items == (("High Risk", 1), ("Not recorded", 1))
 
 
-def test_turnaround_medians_and_n():
+def test_turnaround_medians_are_not_reported():
     report = build()
 
-    ai_review = report.metric("tat_ai_to_review")
-
-    assert (ai_review.value, ai_review.denominator) == (60.0, 2)     # 60, 60
-    assert ai_review.display() == "1.0 h (n = 2)"
-    assert "tat_request_to_ai" not in {m.key for m in report.metrics}
+    keys = {m.key for m in report.metrics}
+    assert not {"tat_request_to_ai", "tat_ai_to_review"} & keys
+    assert not any(m.unit == "minutes" for m in report.metrics)
+    # per-examination durations remain in the patient-level rows: 60, 60
+    assert sorted(r.ai_to_review_minutes for r in report.exam_rows
+                  if r.ai_to_review_minutes is not None) == [60.0, 60.0]
 
 
 def test_status_breakdown_covers_every_exam():
@@ -333,8 +334,6 @@ def test_empty_period():
     assert report.metric("exams_registered").value == 0
     assert report.metric("reviewed").pct is None
     assert report.metric("reviewed").display() == "0 of 0 (n/a)"
-    assert report.metric("tat_ai_to_review").value is None
-    assert report.metric("tat_ai_to_review").display() == "Not available"
     assert all(b.registered == 0 for b in report.trend)
     assert report.audit_activity is None
     assert all(not b.items for b in report.breakdowns)
@@ -346,7 +345,7 @@ def test_missing_timestamps_are_excluded_from_turnaround_not_counts():
     report = build(inputs)
 
     assert report.metric("analyses_completed").value == 3
-    assert report.metric("tat_ai_to_review").denominator == 1
+    assert sum(r.ai_to_review_minutes is not None for r in report.exam_rows) == 1
 
 
 def test_negative_durations_are_ignored():
@@ -354,7 +353,7 @@ def test_negative_durations_are_ignored():
     inputs.reviews[0]["reviewed_at"] = "2026-10-01T02:00:00+00:00"  # before the AI result
     report = build(inputs)
 
-    assert report.metric("tat_ai_to_review").denominator == 1
+    assert sum(r.ai_to_review_minutes is not None for r in report.exam_rows) == 1
 
 
 def test_unrecognised_ai_finding_is_not_counted_as_negative():

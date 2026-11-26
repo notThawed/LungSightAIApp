@@ -45,7 +45,7 @@ SECTION_TITLES = {
     "screening": "Screening Activity",
     "ai": "AI Screening Outcomes",
     "review": "Physician Review & Concordance",
-    "operations": "Operational Efficiency",
+    "operations": "Operations Summary",
 }
 
 
