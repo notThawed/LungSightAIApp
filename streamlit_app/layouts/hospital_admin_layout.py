@@ -5,7 +5,7 @@ from components.navbar import show_top_navbar
 from pages.system_administrator import manage_user, manage_patients, manage_examinations
 
 from pages.hospital_administrator import dashboard, subscription_gate, subscription_usage, hospital_info, subscription_settings
-from pages import profile, audit_logs, hospital_reports, notification_history
+from pages import profile, audit_logs, hospital_reports
 
 
 def show_hospital_admin_layout():
@@ -16,7 +16,6 @@ def show_hospital_admin_layout():
         "Dashboard": "Track your patient workload, case highlights, and current diagnostic activity.",
         "Audit Logs": "Review security and activity events recorded for your hospital.",
         "Hospital Reports": "Weekly, monthly or custom reports on screening activity, AI outcomes and reviews.",
-        "Email Notifications": "Delivery history of account and subscription emails for your hospital.",
     }
     show_top_navbar(page_name=page, page_info=page_info.get(page, "Page information is not available."))
 
@@ -49,10 +48,7 @@ def show_hospital_admin_layout():
     if page == "Hospital Reports":
         hospital_reports.show()
 
-    if page == "Email Notifications":
-        notification_history.show()
-
-    elif page == "Geospatial Map":
+    if page == "Geospatial Map":
         geospatial_mapping.show()
 
     if page == "Profile":

@@ -600,6 +600,8 @@ def test_csv_export_uses_same_scope_and_is_audited(db, session):
     rows = read_csv(data)
     assert count == 3 and not truncated
     assert {r["hospital_id"] for r in rows} == {HOSP_A}
+    assert "event_type" not in rows[0]
+    assert all("." not in r["event"] for r in rows)   # readable names, not raw codes
 
     exported = db.audit_rows[-1]
     assert exported["event_type"] == "audit.exported"

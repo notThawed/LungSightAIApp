@@ -89,7 +89,7 @@ def test_hospital_admin_generates_report_with_golden_numbers():
     assert values["Examinations registered"] == "8"
     assert values["Analyses completed"] == "3"
     assert values["Reviewed by a physician"] == "2"
-    assert values["Median time, request to AI result"] == "50 min"
+    assert "Median time, request to AI result" not in values
     assert any(c.value == "of 3 · 66.7%" for c in at.caption)
     assert at.session_state["fetch_calls"] == [A.HOSP_A]
 

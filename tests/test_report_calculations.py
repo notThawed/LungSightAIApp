@@ -168,12 +168,11 @@ def test_screening_counts_unique_exams_with_boundaries_and_exclusions():
 def test_ai_outcomes_use_current_result_and_completed_denominator():
     report = build()
 
-    assert values(report, "ai_positive", "ai_negative", "ai_inconclusive", "ai_other") == {
+    assert values(report, "ai_positive", "ai_negative") == {
         "ai_positive": (1, 3),
         "ai_negative": (1, 3),
-        "ai_inconclusive": (1, 3),
-        "ai_other": (0, 3),
     }
+    assert not {"ai_inconclusive", "ai_other"} & {m.key for m in report.metrics}
     assert report.breakdown("ai_type").denominator == 1
     assert report.breakdown("ai_type").items == (("Bacterial (AI-flagged)", 1),)
 
@@ -192,12 +191,11 @@ def test_review_totals_and_documented_findings():
 def test_turnaround_medians_and_n():
     report = build()
 
-    request_ai = report.metric("tat_request_to_ai")
     ai_review = report.metric("tat_ai_to_review")
 
-    assert (request_ai.value, request_ai.denominator) == (50.0, 3)   # 70, 50, 20
     assert (ai_review.value, ai_review.denominator) == (60.0, 2)     # 60, 60
-    assert request_ai.display() == "50 min (n = 3)"
+    assert ai_review.display() == "1.0 h (n = 2)"
+    assert "tat_request_to_ai" not in {m.key for m in report.metrics}
 
 
 def test_status_breakdown_covers_every_exam():
@@ -335,8 +333,8 @@ def test_empty_period():
     assert report.metric("exams_registered").value == 0
     assert report.metric("reviewed").pct is None
     assert report.metric("reviewed").display() == "0 of 0 (n/a)"
-    assert report.metric("tat_request_to_ai").value is None
-    assert report.metric("tat_request_to_ai").display() == "Not available"
+    assert report.metric("tat_ai_to_review").value is None
+    assert report.metric("tat_ai_to_review").display() == "Not available"
     assert all(b.registered == 0 for b in report.trend)
     assert report.audit_activity is None
     assert all(not b.items for b in report.breakdowns)
@@ -348,7 +346,6 @@ def test_missing_timestamps_are_excluded_from_turnaround_not_counts():
     report = build(inputs)
 
     assert report.metric("analyses_completed").value == 3
-    assert report.metric("tat_request_to_ai").denominator == 2
     assert report.metric("tat_ai_to_review").denominator == 1
 
 
@@ -360,12 +357,14 @@ def test_negative_durations_are_ignored():
     assert report.metric("tat_ai_to_review").denominator == 1
 
 
-def test_unrecognised_ai_finding_is_counted_separately():
+def test_unrecognised_ai_finding_is_not_counted_as_negative():
     inputs = golden_inputs()
     inputs.ai_results[1]["ai_findings"] = "weird"
     report = build(inputs)
 
-    assert values(report, "ai_negative", "ai_other") == {"ai_negative": (0, 3), "ai_other": (1, 3)}
+    assert values(report, "ai_negative", "analyses_completed") == {
+        "ai_negative": (0, 3), "analyses_completed": (3, 5),
+    }
 
 
 # ============================================================
