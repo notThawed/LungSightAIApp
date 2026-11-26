@@ -167,7 +167,9 @@ def test_pdf_prints_the_same_numbers_as_the_screen(monkeypatch):
             assert label in seen and f"{count:,}" in seen
     assert report.report_id in seen
     assert any("not a diagnosis" in text for text in seen)
-    assert report.report_b_status in seen
+    assert report.report_b_status not in seen
+    assert "System activity" not in seen and "AI performance" not in seen
+    assert "Definitions" in seen and "Limitations" in seen
 
 
 def test_pdf_has_no_patient_level_rows(monkeypatch):

@@ -441,7 +441,7 @@ DEFINITIONS = (
 LIMITATIONS = (
     "Statuses are current values; the database keeps no status history for examinations.",
     "Failed AI analyses and images rejected by the X-ray validator are not stored with the examination. "
-    "They appear in the System activity section (audit log, from 2026-10-25).",
+    "They are recorded on the Audit Logs page (from 2026-10-25).",
     "Physician-confirmed labels are only stored for patients with AI-training consent, so AI-versus-"
     "physician agreement is not reported.",
     "AI accuracy (sensitivity, specificity) is not reported: no independent labelled reference set exists.",

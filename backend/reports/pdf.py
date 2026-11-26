@@ -191,20 +191,7 @@ def render_pdf(report, compress=True):
                 _table(rows, [width * 0.55, width * 0.2, width * 0.25], styles["body"]),
             ])]
 
-    story.append(_p("System activity", styles["h2"]))
-    activity = report.audit_activity
-    if activity is None or activity.total == 0:
-        story.append(_p("No audit events were recorded for this hospital in this period.", styles["body"]))
-    else:
-        story.append(_table([("Measure", "Count")] + [(k, f"{v:,}") for k, v in activity.highlights]
-                            + [("All audit events", f"{activity.total:,}")],
-                            [width * 0.7, width * 0.3], styles["body"]))
-    if activity is not None:
-        story.append(_p(activity.note, styles["small"]))
-
     story += [
-        _p("AI performance", styles["h2"]),
-        _p(report.report_b_status, styles["body"]),
         _p("Definitions", styles["h2"]),
         _table([("Term", "Definition")] + list(report.definitions), [width * 0.28, width * 0.72], styles["body"]),
         _p("Limitations", styles["h2"]),
