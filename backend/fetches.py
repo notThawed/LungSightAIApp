@@ -2766,7 +2766,25 @@ def get_training_candidates_detailed(
     """
     Return training candidates joined with patient,
     examination, X-ray image, and doctor info.
+
+    ONLY returns rows where the doctor-confirmed label is
+    one of the 4 direct diagnoses:
+
+        normal
+        bacterial_pneumonia
+        viral_pneumonia
+        covid_pneumonia
+
+    Everything else (NULL, pneumonia_unspecified,
+    other_uncertain, etc.) is excluded at the database level.
     """
+
+    ALLOWED_CONFIRMED_LABELS = [
+        "normal",
+        "bacterial_pneumonia",
+        "viral_pneumonia",
+        "covid_pneumonia",
+    ]
 
     try:
 
@@ -2776,7 +2794,7 @@ def get_training_candidates_detailed(
             .select("""
                 *,
 
-                patients (
+                patients!inner (
                     patient_id,
                     patient_code,
                     first_name,
@@ -2795,7 +2813,7 @@ def get_training_candidates_detailed(
                     )
                 ),
 
-                examinations (
+                examinations!inner (
                     examination_id,
                     examination_type,
                     examination_date,
@@ -2812,6 +2830,17 @@ def get_training_candidates_detailed(
 
         if status:
             query = query.eq("status", status)
+
+        if hospital_id:
+            query = query.eq("patients.hospital_id", hospital_id)
+
+        query = query.eq("patients.ai_consent_granted", True)
+
+        # THE ONLY LABELS THAT GET RETURNED
+        query = query.in_(
+            "examinations.confirmed_label",
+            ALLOWED_CONFIRMED_LABELS,
+        )
 
         response = query.execute()
         rows = response.data or []
@@ -2869,19 +2898,6 @@ def get_training_candidates_detailed(
                     row.get("confirmed_by")
                 )
 
-        if rows:
-            rows = [
-                r for r in rows
-                if (r.get("patients") or {}).get("ai_consent_granted") is True
-            ]
-
-        if hospital_id and rows:
-            rows = [
-                r for r in rows
-                if (r.get("patients") or {}).get("hospital_id")
-                == hospital_id
-            ]
-
         return rows
 
     except Exception as exc:
@@ -2891,3 +2907,56 @@ def get_training_candidates_detailed(
         )
 
         return []
+
+def get_training_candidate_stats(hospital_id=None):
+    """
+    Return counts of candidates grouped by status.
+
+    When hospital_id is provided, only candidates whose
+    patient belongs to that hospital are counted.
+    """
+
+    try:
+
+        query = (
+            admin_supabase
+            .table("xray_training_candidates")
+            .select("status, patients!inner(hospital_id)")
+        )
+
+        if hospital_id:
+            query = query.eq("patients.hospital_id", hospital_id)
+
+        response = query.execute()
+        rows = response.data or []
+
+        stats = {
+            "pending_review": 0,
+            "approved": 0,
+            "rejected": 0,
+            "used_in_training": 0,
+            "total": len(rows),
+        }
+
+        for row in rows:
+
+            status = row.get("status")
+
+            if status in stats:
+                stats[status] += 1
+
+        return stats
+
+    except Exception as exc:
+
+        print(
+            f"Failed to fetch candidate stats: {exc}"
+        )
+
+        return {
+            "pending_review": 0,
+            "approved": 0,
+            "rejected": 0,
+            "used_in_training": 0,
+            "total": 0,
+        }

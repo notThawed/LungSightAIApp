@@ -1,33 +1,37 @@
 """
-Export approved training candidates from Supabase into local folders
-ready to be merged into the training datasets.
+Export approved training candidates from Supabase into ONE flat dataset
+folder with 4 classes and train/val/test splits.
 
-What it does:
-  1. Fetches all `xray_training_candidates` rows where status = "approved"
-  2. Downloads each candidate's X-ray image from Supabase Storage
-  3. Sorts them into two dataset trees:
-       hybrid_negative_positive/approved_<DATE>/
-           positive/{train,val,test}
-           negative/{train,val,test}
-       international_classification/approved_<DATE>/
-           train/{bacterial_pneumonia,viral_pneumonia}
-           val/{bacterial_pneumonia,viral_pneumonia}
-           test/{bacterial_pneumonia,viral_pneumonia}
-  4. Marks each exported candidate as status = "used_in_training"
-     with used_in_model_version = "pending"
+Output:
+    approved_dataset/approved_<DATE>/
+        train/
+            normal/
+            bacterial_pneumonia/
+            viral_pneumonia/
+            covid_pneumonia/
+        val/
+            normal/
+            bacterial_pneumonia/
+            viral_pneumonia/
+            covid_pneumonia/
+        test/
+            normal/
+            bacterial_pneumonia/
+            viral_pneumonia/
+            covid_pneumonia/
 
 Split:   80% train / 10% val / 10% test (seeded, reproducible)
-Excludes: confirmed_label = "other_uncertain"
+Excludes: labels not in the 4 allowed classes (other_uncertain,
+          pneumonia_unspecified, NULL, etc.)
 
 Run:
     python scripts/export_approved_candidates.py
 """
 
-import io
 import random
 import sys
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # --------------------------------------------------
@@ -38,7 +42,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from backend.supabase_client import admin_supabase  # noqa: E402
-from datetime import timezone  # noqa: E402
 
 
 # --------------------------------------------------
@@ -48,17 +51,16 @@ from datetime import timezone  # noqa: E402
 SPLIT_SEED = 42
 SPLIT_RATIOS = (0.80, 0.10, 0.10)  # train, val, test
 
-BINARY_ROOT = PROJECT_ROOT / "hybrid_negative_positive"
-CLASSIFICATION_ROOT = PROJECT_ROOT / "international_classification"
+# ONE output folder with 4 classes
+DATASET_ROOT = PROJECT_ROOT / "approved_dataset"
 
-EXCLUDED_LABELS = {"other_uncertain"}
-
-# Maps confirmed_label → (binary_folder, classification_folder)
-LABEL_ROUTING = {
-    "normal":              ("negative", None),
-    "bacterial_pneumonia": ("positive", "bacterial_pneumonia"),
-    "viral_pneumonia":     ("positive", "viral_pneumonia"),
-}
+# The only labels we export
+ALLOWED_LABELS = [
+    "normal",
+    "bacterial_pneumonia",
+    "viral_pneumonia",
+    "covid_pneumonia",
+]
 
 STORAGE_BUCKET = "xray-images"
 
@@ -68,7 +70,13 @@ STORAGE_BUCKET = "xray-images"
 # --------------------------------------------------
 
 def fetch_approved_candidates():
-    """Return all approved candidates with their image info."""
+    """
+    Return all approved candidates with their image info.
+
+    confirmed_label lives on `examinations`, not on
+    `xray_training_candidates`, so it is fetched via an
+    inner join and flattened into each row.
+    """
 
     print("Fetching approved candidates from Supabase...")
 
@@ -78,10 +86,13 @@ def fetch_approved_candidates():
         .select("""
             candidate_id,
             image_id,
-            confirmed_label,
             ai_findings,
             ai_pneumonia_type,
-            confirmed_at
+            confirmed_at,
+
+            examinations!inner (
+                confirmed_label
+            )
         """)
         .eq("status", "approved")
         .order("confirmed_at", desc=False)
@@ -91,6 +102,13 @@ def fetch_approved_candidates():
     rows = response.data or []
 
     print(f"  -> {len(rows)} approved candidate(s) found")
+
+    # Flatten confirmed_label from the joined examination
+    for row in rows:
+        exam = row.get("examinations") or {}
+        if isinstance(exam, list):
+            exam = exam[0] if exam else {}
+        row["confirmed_label"] = exam.get("confirmed_label")
 
     # Attach image_path by looking up xray_images in bulk
     if rows:
@@ -117,16 +135,13 @@ def fetch_approved_candidates():
 
 def download_image(image_path):
     """Download bytes from Supabase Storage."""
-
     try:
-        data = (
+        return (
             admin_supabase
             .storage
             .from_(STORAGE_BUCKET)
             .download(image_path)
         )
-        return data
-
     except Exception as exc:
         print(f"  !! Download failed for {image_path}: {exc}")
         return None
@@ -134,10 +149,8 @@ def download_image(image_path):
 
 def split_indices(n, seed):
     """Return three lists of indices: train, val, test (80/10/10)."""
-
     idx = list(range(n))
-    rng = random.Random(seed)
-    rng.shuffle(idx)
+    random.Random(seed).shuffle(idx)
 
     train_end = int(n * SPLIT_RATIOS[0])
     val_end = train_end + int(n * SPLIT_RATIOS[1])
@@ -181,8 +194,7 @@ def mark_as_used(candidate_id):
 
 def main():
     timestamp = datetime.now().strftime("%Y_%m_%d")
-    binary_out = BINARY_ROOT / f"approved_{timestamp}"
-    class_out = CLASSIFICATION_ROOT / f"approved_{timestamp}"
+    dataset_out = DATASET_ROOT / f"approved_{timestamp}"
 
     # ----------------------------------------------
     # 1. Fetch
@@ -195,7 +207,7 @@ def main():
         return
 
     # ----------------------------------------------
-    # 2. Filter
+    # 2. Filter to the 4 allowed labels
     # ----------------------------------------------
 
     usable = []
@@ -204,12 +216,8 @@ def main():
         label = row.get("confirmed_label")
         image_path = row.get("image_path")
 
-        if label in EXCLUDED_LABELS:
-            print(f"  skip {row['candidate_id']}: label={label}")
-            continue
-
-        if label not in LABEL_ROUTING:
-            print(f"  skip {row['candidate_id']}: unknown label {label!r}")
+        if label not in ALLOWED_LABELS:
+            print(f"  skip {row['candidate_id']}: label={label!r} (not allowed)")
             continue
 
         if not image_path:
@@ -227,38 +235,29 @@ def main():
     # ----------------------------------------------
 
     by_label = defaultdict(list)
-
     for row in usable:
         by_label[row["confirmed_label"]].append(row)
 
     # ----------------------------------------------
-    # 4. Prepare output folders
+    # 4. Prepare folders: train/val/test × 4 classes
     # ----------------------------------------------
 
-    ensure_dirs(binary_out, [
-        "positive/train", "positive/val", "positive/test",
-        "negative/train", "negative/val", "negative/test",
-    ])
-
-    ensure_dirs(class_out, [
-        "train/bacterial_pneumonia", "val/bacterial_pneumonia", "test/bacterial_pneumonia",
-        "train/viral_pneumonia",     "val/viral_pneumonia",     "test/viral_pneumonia",
+    ensure_dirs(dataset_out, [
+        f"{split}/{label}"
+        for split in ("train", "val", "test")
+        for label in ALLOWED_LABELS
     ])
 
     # ----------------------------------------------
     # 5. Split + download
     # ----------------------------------------------
 
-    print(f"\nExporting to:")
-    print(f"  {binary_out}")
-    print(f"  {class_out}")
+    print(f"\nExporting to:\n  {dataset_out}")
 
     total_saved = 0
     total_skipped = 0
 
     for label, rows in sorted(by_label.items()):
-
-        binary_sub, class_sub = LABEL_ROUTING[label]
 
         train_i, val_i, test_i = split_indices(len(rows), SPLIT_SEED)
         split_map = {
@@ -268,7 +267,6 @@ def main():
         }
 
         for split_name, split_rows in split_map.items():
-
             for row in split_rows:
 
                 candidate_id = row["candidate_id"]
@@ -278,20 +276,11 @@ def main():
                     total_skipped += 1
                     continue
 
-                filename = f"{candidate_id}.png"
-
-                # Binary dataset
-                binary_path = (
-                    binary_out / binary_sub / split_name / filename
+                out_path = (
+                    dataset_out / split_name / label
+                    / f"{candidate_id}.png"
                 )
-                save_image(image_bytes, binary_path)
-
-                # Classification dataset (only for positive cases)
-                if class_sub is not None:
-                    class_path = (
-                        class_out / split_name / class_sub / filename
-                    )
-                    save_image(image_bytes, class_path)
+                save_image(image_bytes, out_path)
 
                 mark_as_used(candidate_id)
                 total_saved += 1
@@ -299,8 +288,7 @@ def main():
     print(f"\nDone.")
     print(f"  saved:   {total_saved}")
     print(f"  skipped: {total_skipped}")
-    print(f"\nNext: add the new folders to your training scripts' DATA_DIRS,")
-    print(f"then re-run training.")
+    print(f"\nDataset root:\n  {dataset_out}")
 
 
 if __name__ == "__main__":

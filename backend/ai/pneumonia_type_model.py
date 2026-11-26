@@ -1,5 +1,5 @@
 """
-Bacterial vs Viral classification — DenseNet-121.
+Bacterial vs Viral classification — ResNet-50.
 Supports PNG, JPG, and DICOM (.dcm) input.
 """
 
@@ -19,7 +19,7 @@ from backend.ai.image_loader import load_image
 # --------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-MODEL_PATH = PROJECT_ROOT / "models" / "densenet_121_classification.pt"
+MODEL_PATH = PROJECT_ROOT / "models" / "resnet_classification.pt"
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -63,12 +63,13 @@ def _load_model():
 
     if not MODEL_PATH.exists():
         raise FileNotFoundError(
-            f"DenseNet model not found: {MODEL_PATH}"
+            f"ResNet model not found: {MODEL_PATH}"
         )
 
-    model = models.densenet121(weights=None)
-    in_features = model.classifier.in_features
-    model.classifier = _make_head(in_features, len(CLASS_NAMES))
+    # ---- ResNet-50 backbone ----
+    model = models.resnet50(weights=None)
+    in_features = model.fc.in_features          # 2048
+    model.fc = _make_head(in_features, len(CLASS_NAMES))
 
     state = torch.load(
         MODEL_PATH,

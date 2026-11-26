@@ -21,5 +21,3 @@ pydicom
 reportlab==4.4.4
 xlsxwriter==3.2.9
 pandas
-requests>=2.31,<3
-pytest

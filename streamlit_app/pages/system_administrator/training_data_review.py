@@ -45,11 +45,12 @@ from shared.assets import load_css
 
 MANILA_TZ = ZoneInfo("Asia/Manila")
 
+# Only the 4 direct diagnoses. No "other_uncertain".
 LABEL_DISPLAY = {
     "normal":              "Normal",
     "bacterial_pneumonia": "Bacterial Pneumonia",
     "viral_pneumonia":     "Viral Pneumonia",
-    "other_uncertain":     "Other / Uncertain",
+    "covid_pneumonia":     "COVID-19 Pneumonia",
 }
 
 STATUS_DISPLAY = {
@@ -99,6 +100,16 @@ def patient_code(patient):
     if not patient:
         return "—"
     return patient.get("patient_code") or patient.get("patient_id")
+
+
+def hospital_name(patient):
+    """Return the hospital name for a candidate's patient."""
+    if not patient:
+        return "—"
+    hospital = patient.get("hospitals") or {}
+    if isinstance(hospital, list):
+        hospital = hospital[0] if hospital else {}
+    return hospital.get("hospital_name") or "—"
 
 
 def doctor_name(user):
@@ -164,6 +175,9 @@ def ai_label_from_row(row):
     if pneumonia_type == "viral_pneumonia":
         return "Viral Pneumonia"
 
+    if pneumonia_type == "covid_pneumonia":
+        return "COVID-19 Pneumonia"
+
     if ai_findings == "positive":
         return "Pneumonia (type not classified)"
 
@@ -211,13 +225,26 @@ def render_stat_card(label, value, icon, tone="blue"):
         )
 
 
+# Column widths for both the header row and each data row.
+# Patient | Hospital | AI Prediction | Doctor Confirmed | Action
+TABLE_COLUMNS = [2.2, 1.8, 2.2, 2.2, 1.0]
+
+TABLE_HEADERS = [
+    "Patient",
+    "Hospital",
+    "AI Prediction",
+    "Doctor Confirmed",
+    "Action",
+]
+
+
 def render_candidate_row(row):
     candidate_id = row.get("candidate_id")
     patient = row.get("patients") or {}
     doctor = row.get("confirming_user") or {}
 
     ai_label = ai_label_from_row(row)
-    
+
     # Get label from the nested examination
     confirmed_label_key = get_confirmed_label_from_row(row)
     doctor_label = LABEL_DISPLAY.get(
@@ -230,14 +257,9 @@ def render_candidate_row(row):
         and row.get("ai_findings") is not None
     )
 
-    status = row.get("status", "pending_review")
-    status_label, status_tone = STATUS_DISPLAY.get(
-        status, (status, "slate")
-    )
-
     with st.container(key=f"tdr_row_{candidate_id}"):
 
-        cols = st.columns([2.4, 2.2, 2.2, 1.2, 1.0])
+        cols = st.columns(TABLE_COLUMNS)
 
         with cols[0]:
             st.markdown(
@@ -250,11 +272,17 @@ def render_candidate_row(row):
 
         with cols[1]:
             st.markdown(
-                f"<div class='pr-cell'>{ai_label}</div>",
+                f"<div class='pr-cell'>{hospital_name(patient)}</div>",
                 unsafe_allow_html=True,
             )
 
         with cols[2]:
+            st.markdown(
+                f"<div class='pr-cell'>{ai_label}</div>",
+                unsafe_allow_html=True,
+            )
+
+        with cols[3]:
             override_badge = (
                 " <span style='color:#d97706;font-weight:700;'>"
                 "⚠️</span>"
@@ -266,9 +294,6 @@ def render_candidate_row(row):
                 f"{override_badge}</div>",
                 unsafe_allow_html=True,
             )
-
-        with cols[3]:
-            pill(status_label, status_tone)
 
         with cols[4]:
             if st.button(
@@ -288,26 +313,7 @@ def render_queue():
     )
 
     # ----------------------------------------------
-    # Stats
-    # ----------------------------------------------
-
-    stats = get_training_candidate_stats()
-
-    m1, m2, m3, m4 = st.columns(4)
-
-    with m1:
-        render_stat_card("Pending", stats.get("pending_review", 0), "hourglass_top")
-    with m2:
-        render_stat_card("Approved", stats.get("approved", 0), "check_circle")
-    with m3:
-        render_stat_card("Rejected", stats.get("rejected", 0), "cancel")
-    with m4:
-        render_stat_card("Total", stats.get("total", 0), "database")
-
-    st.divider()
-
-    # ----------------------------------------------
-    # Filters
+    # Filters (built FIRST so stats can use them)
     # ----------------------------------------------
 
     hospitals = get_all_hospitals() or []
@@ -318,8 +324,17 @@ def render_queue():
         if h.get("hospital_name")
     })
 
-    hospital_col, status_col, search_col = st.columns(
-        [1.6, 1.5, 2.5]
+    # Diagnosis filter — only the 4 direct diagnoses
+    diagnosis_options = {
+        "All diagnoses":       None,
+        "Normal":              "normal",
+        "Bacterial Pneumonia": "bacterial_pneumonia",
+        "Viral Pneumonia":     "viral_pneumonia",
+        "COVID-19 Pneumonia":  "covid_pneumonia",
+    }
+
+    hospital_col, diagnosis_col, status_col, search_col = st.columns(
+        [1.5, 1.5, 1.4, 2.0]
     )
 
     hospital_filter = hospital_col.selectbox(
@@ -327,6 +342,13 @@ def render_queue():
         hospital_names,
         label_visibility="collapsed",
         key="tdr_hospital_filter",
+    )
+
+    diagnosis_filter = diagnosis_col.selectbox(
+        "Diagnosis",
+        list(diagnosis_options.keys()),
+        label_visibility="collapsed",
+        key="tdr_diagnosis_filter",
     )
 
     status_filter = status_col.selectbox(
@@ -350,16 +372,8 @@ def render_queue():
     ).strip().lower()
 
     # ----------------------------------------------
-    # Map filter
+    # Map filter -> hospital_id
     # ----------------------------------------------
-
-    status_map = {
-        "Pending Review":   "pending_review",
-        "Approved":         "approved",
-        "Rejected":         "rejected",
-        "Used in Training": "used_in_training",
-        "All":              None,
-    }
 
     selected_hospital_id = None
 
@@ -373,10 +387,60 @@ def render_queue():
             None,
         )
 
+    # ----------------------------------------------
+    # Stats (scoped to the selected hospital)
+    # ----------------------------------------------
+
+    stats = get_training_candidate_stats(
+        hospital_id=selected_hospital_id,
+    )
+
+    m1, m2, m3, m4 = st.columns(4)
+
+    with m1:
+        render_stat_card("Pending", stats.get("pending_review", 0), "hourglass_top")
+    with m2:
+        render_stat_card("Approved", stats.get("approved", 0), "check_circle")
+    with m3:
+        render_stat_card("Rejected", stats.get("rejected", 0), "cancel")
+    with m4:
+        render_stat_card("Total", stats.get("total", 0), "database")
+
+    st.divider()
+
+    # ----------------------------------------------
+    # Map status filter
+    # ----------------------------------------------
+
+    status_map = {
+        "Pending Review":   "pending_review",
+        "Approved":         "approved",
+        "Rejected":         "rejected",
+        "Used in Training": "used_in_training",
+        "All":              None,
+    }
+
     rows = get_training_candidates_detailed(
         status=status_map.get(status_filter),
         hospital_id=selected_hospital_id,
     )
+
+    # ----------------------------------------------
+    # Diagnosis filter (in Python — the function
+    # already restricts to the allowed 4 labels)
+    # ----------------------------------------------
+
+    selected_diagnosis = diagnosis_options.get(diagnosis_filter)
+
+    if selected_diagnosis:
+        rows = [
+            r for r in rows
+            if get_confirmed_label_from_row(r) == selected_diagnosis
+        ]
+
+    # ----------------------------------------------
+    # Search filter
+    # ----------------------------------------------
 
     if search:
         rows = [
@@ -392,18 +456,12 @@ def render_queue():
         return
 
     # ----------------------------------------------
-    # Header
+    # Header row
     # ----------------------------------------------
 
     with st.container(key="tdr_table_header"):
-        cols = st.columns([2.4, 2.2, 2.2, 1.2, 1.0])
-        for col, label in zip(cols, [
-            "Patient",
-            "AI Prediction",
-            "Doctor Confirmed",
-            "Status",
-            "Action",
-        ]):
+        cols = st.columns(TABLE_COLUMNS)
+        for col, label in zip(cols, TABLE_HEADERS):
             with col:
                 st.markdown(
                     f"<div class='pr-header-cell'>{label}</div>",
