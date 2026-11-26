@@ -600,6 +600,8 @@ def test_csv_export_uses_same_scope_and_is_audited(db, session):
     rows = read_csv(data)
     assert count == 3 and not truncated
     assert {r["hospital_id"] for r in rows} == {HOSP_A}
+    assert "event_type" not in rows[0]
+    assert all("." not in r["event"] for r in rows)   # readable names, not raw codes
 
     exported = db.audit_rows[-1]
     assert exported["event_type"] == "audit.exported"
@@ -641,3 +643,42 @@ def test_export_truncates_at_limit(db, session, monkeypatch):
     _data, count, truncated = audit.export_audit_logs_csv({})
 
     assert count == 2 and truncated
+
+
+def test_target_labels_are_readable():
+    assert {t for t, _ in audit.EVENTS.values() if t} <= set(audit.TARGET_LABELS)
+    assert audit.target_label("xray_request", "3f2a1b4c-0000-0000", id_length=8) == "X-ray request · 3f2a1b4c…"
+    assert audit.target_label("user_profile", "abc") == "User · abc"
+    assert audit.target_label(None, None) == "—"
+    assert audit.target_label("some_new_type", "1") == "Some new type · 1"
+
+
+def test_csv_export_uses_readable_target_type(db, session):
+    seed_logs(db)
+    sign_in(session, ADMIN_A)
+
+    rows = read_csv(audit.export_audit_logs_csv({})[0])
+
+    assert "target_type" not in rows[0]
+    assert all("_" not in r["target"] for r in rows)
+
+
+def test_search_matches_readable_event_names(db, session):
+    seed_logs(db)
+    sign_in(session, ADMIN_A)
+
+    by_label = audit.query_audit_logs({"search": "Patient  registered"})["rows"]
+    by_code = audit.query_audit_logs({"search": "patient.created"})["rows"]
+
+    assert {r["event_type"] for r in by_label} == {"patient.created"}
+    assert {r["audit_log_id"] for r in by_label} == {r["audit_log_id"] for r in by_code}
+    assert audit.query_audit_logs({"search": "nothing like this"})["rows"] == []
+
+
+def test_search_with_spaces_never_reaches_filter_string(db, session):
+    seed_logs(db)
+    sign_in(session, ADMIN_A)
+    expr = audit._search_expression("report exported")
+    assert expr == "event_type.eq.report.exported"
+    with pytest.raises(ValueError):
+        audit.query_audit_logs({"search": "signed in,hospital_id.eq.x"})

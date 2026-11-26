@@ -92,7 +92,12 @@ def _render_filters(scope):
 
         date_from = c1.date_input("From Date", value=today - timedelta(days=30), key="audit_from")
         date_to = c2.date_input("To Date", value=today, key="audit_to")
-        category = c3.selectbox("Event Category", [ANY] + audit.CATEGORIES, key="audit_category")
+        category = c3.selectbox(
+            "Event Category",
+            [ANY] + audit.CATEGORIES,
+            key="audit_category",
+            format_func=lambda c: c if c == ANY else audit.category_label(c),
+        )
         outcome = c4.selectbox("Outcome", [ANY] + list(audit.OUTCOMES), key="audit_outcome")
 
         filters = {
@@ -128,9 +133,9 @@ def _render_filters(scope):
         filters["actor_user_id"] = None if actor_choice == ANY else actors[actor_choice]
 
         filters["search"] = search_col.text_input(
-            "Search event type or ID",
+            "Search event type",
             key="audit_search",
-            placeholder="e.g. auth.login or record ID",
+            placeholder="e.g. Report exported",
         )
 
         return filters, {v: k for k, v in hospital_names.items()}
@@ -154,7 +159,7 @@ def _render_detail(row, actor_name, hospital_label):
         f"<div class='sa-audit-inspector-header'>"
         f"<div class='sa-audit-inspector-title'>"
         f"<span class='material-symbols-rounded' style='color:#2563EB;'>manage_search</span>"
-        f"<span>Event Inspector: {safe(row.get('event_type'))}</span>"
+        f"<span>Event Inspector: {safe(audit.event_label(row.get('event_type')))}</span>"
         f"</div>"
         f"{outcome_pill}"
         f"</div>"
@@ -164,12 +169,13 @@ def _render_detail(row, actor_name, hospital_label):
 
     show_rows([
         ("Timestamp (UTC)", row.get("created_at")),
-        ("Event Type", row.get("event_type")),
+        ("Event", audit.event_label(row.get("event_type"))),
+        ("Event Code", row.get("event_type")),
         ("Outcome", row.get("outcome")),
         ("Actor", actor_name),
         ("Actor ID", row.get("actor_user_id") or "System"),
         ("Facility", hospital_label),
-        ("Target", f"{row.get('target_type') or '—'} · {row.get('target_id') or '—'}"),
+        ("Target", audit.target_label(row.get("target_type"), row.get("target_id"))),
     ])
 
     if row.get("metadata"):
@@ -321,10 +327,9 @@ def show():
     for row in rows:
         entry = {
             "Time (PH)": format_date(row.get("created_at"), with_time=True),
-            "Event": row.get("event_type"),
+            "Event": audit.event_label(row.get("event_type")),
             "Outcome": row.get("outcome"),
             "Actor": actor_label(row),
-            "Target": f"{row.get('target_type') or '—'} · {str(row.get('target_id') or '—')[:12]}",
         }
         if scope["platform"]:
             entry["Hospital"] = hospital_label(row)

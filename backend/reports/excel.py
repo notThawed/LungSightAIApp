@@ -102,22 +102,6 @@ def _summary(sheet, report):
         sheet.line(bucket.label, bucket.registered, bucket.analyzed, bucket.reviewed)
     sheet.gap()
 
-    sheet.title("System activity (audit log)")
-    activity = report.audit_activity
-    if activity is None or activity.total == 0:
-        sheet.line("No audit events were recorded for this hospital in this period.")
-    else:
-        sheet.header("Measure", "Count")
-        for label, count in activity.highlights:
-            sheet.line(label, count)
-        sheet.line("All audit events", activity.total)
-    if activity is not None:
-        sheet.line(activity.note)
-    sheet.gap()
-
-    sheet.title("AI performance")
-    sheet.line(report.report_b_status)
-    sheet.gap()
     sheet.line(report.disclaimer, fmt=sheet.f["note"])
 
 

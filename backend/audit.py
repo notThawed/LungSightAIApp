@@ -151,6 +151,176 @@ EVENTS = {
 
 CATEGORIES = sorted({event.split(".", 1)[0] for event in EVENTS})
 
+# Human-readable names for the audit log screen and CSV export. The stored
+# event_type codes never change; this is display only.
+EVENT_LABELS = {
+    "auth.login": "Signed in",
+    "auth.login_failed": "Sign-in failed",
+    "auth.login_denied": "Sign-in denied",
+    "auth.logout": "Signed out",
+    "auth.permission_denied": "Access denied",
+    "user.created": "User created",
+    "user.updated": "User updated",
+    "user.role_changed": "User role changed",
+    "user.deactivated": "User deactivated",
+    "user.activated": "User activated",
+    "user.invite_accepted": "User invitation accepted",
+    "patient.created": "Patient registered",
+    "patient.updated": "Patient updated",
+    "patient.deleted": "Patient deleted",
+    "patient.exported": "Patient records exported",
+    "examination.created": "Examination created",
+    "examination.updated": "Examination updated",
+    "examination.status_changed": "Examination status changed",
+    "examination.cancelled": "Examination cancelled",
+    "examination.deleted": "Examination deleted",
+    "inpatient.round_logged": "Inpatient round logged",
+    "inpatient.discharged": "Inpatient discharged",
+    "xray.request_created": "X-ray requested",
+    "xray.request_status_changed": "X-ray request status changed",
+    "xray.image_uploaded": "X-ray image uploaded",
+    "xray.quality_checked": "X-ray quality checked",
+    "xray.quality_rejected": "X-ray image rejected (quality)",
+    "xray.quality_overridden": "X-ray quality check overridden",
+    "ai.analysis_completed": "AI analysis completed",
+    "ai.analysis_failed": "AI analysis failed",
+    "ai.result_corrected": "AI result corrected",
+    "ai.training_candidate_reviewed": "AI training candidate reviewed",
+    "review.completed": "Physician review completed",
+    "review.diagnosis_confirmed": "Diagnosis confirmed by physician",
+    "hospital_application.submitted": "Hospital application submitted",
+    "hospital_application.approved": "Hospital application approved",
+    "hospital_application.rejected": "Hospital application rejected",
+    "hospital_application.deleted": "Hospital application deleted",
+    "hospital_application.payment_received": "Application payment received",
+    "hospital.created": "Hospital created",
+    "hospital.updated": "Hospital updated",
+    "hospital.deactivated": "Hospital deactivated",
+    "hospital.reactivated": "Hospital reactivated",
+    "hospital.setup_completed": "Hospital setup completed",
+    "subscription.created": "Subscription created",
+    "subscription.activated": "Subscription activated",
+    "subscription.cancel_requested": "Subscription cancellation requested",
+    "subscription.reactivated": "Subscription reactivated",
+    "subscription.downgrade_scheduled": "Subscription downgrade scheduled",
+    "subscription.downgrade_undone": "Subscription downgrade undone",
+    "subscription.downgraded": "Subscription downgraded",
+    "subscription.cancelled": "Subscription cancelled",
+    "subscription.renewed": "Subscription renewed",
+    "email.queued": "Email queued",
+    "email.sent": "Email sent",
+    "email.delivered": "Email delivered",
+    "email.failed": "Email failed",
+    "email.bounced": "Email bounced",
+    "email.complained": "Email marked as spam",
+    "email.retry_requested": "Email retry requested",
+    "payment.unhandled": "Payment not processed",
+    "report.generated": "Report generated",
+    "report.exported": "Report exported",
+    "audit.exported": "Audit log exported",
+}
+
+CATEGORY_LABELS = {
+    "ai": "AI analysis",
+    "audit": "Audit log",
+    "auth": "Sign-in",
+    "email": "Email",
+    "examination": "Examinations",
+    "hospital": "Hospitals",
+    "hospital_application": "Hospital applications",
+    "inpatient": "Inpatient care",
+    "patient": "Patients",
+    "payment": "Payments",
+    "report": "Reports",
+    "review": "Physician reviews",
+    "subscription": "Subscriptions",
+    "user": "Users",
+    "xray": "X-ray",
+}
+
+
+def events_matching_label(term):
+    """Event codes whose readable name contains the term (case-insensitive)."""
+
+    needle = " ".join(str(term or "").lower().split())
+    if not needle:
+        return []
+    return sorted(code for code, label in EVENT_LABELS.items() if needle in label.lower())
+
+
+def _search_expression(term):
+    """PostgREST or-filter for the search box.
+
+    Matches raw codes / record IDs (only for terms without spaces) and readable
+    event names (translated to exact codes here, so user text never reaches
+    the filter string when it contains spaces).
+    """
+
+    clauses = []
+    if _SEARCH_CODE.match(term):
+        clauses += [f"event_type.ilike.*{term}*", f"target_id.eq.{term}"]
+    clauses += [f"event_type.eq.{code}" for code in events_matching_label(term)]
+
+    if not clauses:
+        clauses = ["event_type.eq.__no_matching_event__"]
+    return ",".join(clauses)
+
+
+def event_label(event_type):
+    """Readable name for an event code; unknown codes are turned into words."""
+
+    if not event_type:
+        return "Unknown event"
+
+    code = str(event_type)
+    if code in EVENT_LABELS:
+        return EVENT_LABELS[code]
+
+    text = code.replace(".", " ").replace("_", " ").strip()
+    return text[:1].upper() + text[1:] if text else "Unknown event"
+
+
+TARGET_LABELS = {
+    "ai_result": "AI result",
+    "email": "Email",
+    "examination": "Examination",
+    "hospital": "Hospital",
+    "hospital_application": "Hospital application",
+    "hospital_subscription": "Subscription",
+    "patient": "Patient",
+    "payment": "Payment",
+    "report": "Report",
+    "training_candidate": "AI training candidate",
+    "user_profile": "User",
+    "xray_image": "X-ray image",
+    "xray_request": "X-ray request",
+    "xray_review": "Physician review",
+}
+
+
+def target_type_label(target_type):
+    if not target_type:
+        return ""
+    return TARGET_LABELS.get(target_type, str(target_type).replace("_", " ").capitalize())
+
+
+def target_label(target_type, target_id, id_length=None):
+    """Readable 'Patient · 3f2a…' text; '—' when the event has no target record."""
+
+    if not target_id:
+        return "—"
+
+    ident = str(target_id)
+    if id_length and len(ident) > id_length:
+        ident = ident[:id_length] + "…"
+
+    kind = target_type_label(target_type)
+    return f"{kind} · {ident}" if kind else ident
+
+
+def category_label(category):
+    return CATEGORY_LABELS.get(category, str(category).replace("_", " ").capitalize())
+
 # Defence in depth: a key containing any of these fragments is dropped even
 # if someone adds it to the allowlist above.
 DENIED_KEY_FRAGMENTS = (
@@ -631,7 +801,8 @@ PAGE_SIZE_MAX = 100
 EXPORT_ROW_LIMIT = 10_000
 EXPORT_BATCH = 1_000
 
-_SEARCH = re.compile(r"^[A-Za-z0-9_.\-]{1,128}$")
+_SEARCH = re.compile(r"^[A-Za-z0-9_.\- ]{1,128}$")
+_SEARCH_CODE = re.compile(r"^[A-Za-z0-9_.\-]{1,128}$")
 
 
 def get_viewer_scope(resource="audit_logs"):
@@ -705,10 +876,10 @@ def _normalize_filters(filters, scope):
     if actor and _UUID.match(str(actor)):
         clean["actor_user_id"] = str(actor)
 
-    search = (filters.get("search") or "").strip()
+    search = " ".join((filters.get("search") or "").split())
     if search:
         if not _SEARCH.match(search):
-            raise ValueError("Search may only contain letters, numbers, '.', '_' and '-'.")
+            raise ValueError("Search may only contain letters, numbers, spaces, '.', '_' and '-'.")
         clean["search"] = search
 
     if scope["platform"]:
@@ -760,8 +931,7 @@ def _build_query(filters, count=None, columns="*"):
         query = query.eq("actor_user_id", filters["actor_user_id"])
 
     if filters.get("search"):
-        term = filters["search"]
-        query = query.or_(f"event_type.ilike.*{term}*,target_id.eq.{term}")
+        query = query.or_(_search_expression(filters["search"]))
 
     return query.order("created_at", desc=True).order("audit_log_id", desc=True)
 
@@ -835,8 +1005,8 @@ def fetch_scoped_event_rows(filters=None, resource="audit_logs"):
 
 
 _CSV_COLUMNS = [
-    "created_at", "event_type", "outcome", "actor_user_id", "actor_name",
-    "hospital_id", "target_type", "target_id", "metadata",
+    "created_at", "event", "outcome", "actor_user_id", "actor_name",
+    "hospital_id", "target", "target_id", "metadata",
 ]
 
 
@@ -915,12 +1085,12 @@ def export_audit_logs_csv(filters=None):
         actor = row.get("actor_user_id")
         writer.writerow([
             _csv_safe(row.get("created_at")),
-            _csv_safe(row.get("event_type")),
+            _csv_safe(event_label(row.get("event_type"))),
             _csv_safe(row.get("outcome")),
             _csv_safe(actor),
             _csv_safe(names.get(str(actor), "System") if actor else "System"),
             _csv_safe(row.get("hospital_id")),
-            _csv_safe(row.get("target_type")),
+            _csv_safe(target_type_label(row.get("target_type"))),
             _csv_safe(row.get("target_id")),
             _csv_safe(row.get("metadata") or {}),
         ])

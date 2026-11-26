@@ -24,7 +24,6 @@ type EditableProfile = {
   user_sex: string;
   user_contact_number: string;
   user_address: string;
-  user_department: string;
 };
 
 const EMPTY_FORM: EditableProfile = {
@@ -35,7 +34,6 @@ const EMPTY_FORM: EditableProfile = {
   user_sex: "",
   user_contact_number: "",
   user_address: "",
-  user_department: "",
 };
 
 export default function Profile() {
@@ -63,7 +61,7 @@ export default function Profile() {
     const { data, error } = await supabase
       .from("user_profiles")
       .select(
-        "user_fname, user_mname, user_lname, user_birthdate, user_sex, user_contact_number, user_address, user_department"
+        "user_fname, user_mname, user_lname, user_birthdate, user_sex, user_contact_number, user_address"
       )
       .eq("user_id", authUser.id)
       .maybeSingle();
@@ -79,7 +77,6 @@ export default function Profile() {
       user_sex: data.user_sex ?? "",
       user_contact_number: data.user_contact_number ?? "",
       user_address: data.user_address ?? "",
-      user_department: data.user_department ?? "",
     };
 
     setUser(currentUser);
@@ -171,12 +168,11 @@ export default function Profile() {
           user_sex: sex || null,
           user_contact_number: form.user_contact_number.trim() || null,
           user_address: form.user_address.trim() || null,
-          user_department: form.user_department.trim() || null,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", authUser.id)
         .select(
-          "user_id, user_fname, user_mname, user_lname, user_birthdate, user_sex, user_contact_number, user_address, user_department"
+          "user_id, user_fname, user_mname, user_lname, user_birthdate, user_sex, user_contact_number, user_address"
         )
         .maybeSingle();
 
@@ -207,7 +203,6 @@ export default function Profile() {
         user_sex: updatedProfile.user_sex ?? "",
         user_contact_number: updatedProfile.user_contact_number ?? "",
         user_address: updatedProfile.user_address ?? "",
-        user_department: updatedProfile.user_department ?? "",
       };
 
       setForm(savedForm);
@@ -412,11 +407,6 @@ export default function Profile() {
                 onChangeText={(value) => updateField("user_address", value)}
                 multiline
               />
-              <Field
-                label="Department"
-                value={form.user_department}
-                onChangeText={(value) => updateField("user_department", value)}
-              />
 
               <View style={styles.actionRow}>
                 <Pressable
@@ -448,7 +438,6 @@ export default function Profile() {
               <Detail label="Sex" value={form.user_sex} />
               <Detail label="Contact Number" value={form.user_contact_number} />
               <Detail label="Address" value={form.user_address} />
-              <Detail label="Department" value={form.user_department} />
             </>
           )}
         </View>
@@ -457,7 +446,13 @@ export default function Profile() {
           <Text style={styles.sectionTitle}>Account Information</Text>
           <Detail label="Email Address" value={user.email} />
           <Detail label="Role" value={roleLabels[user.role] ?? user.role} />
-          <Detail label="Hospital" value={user.hospitalName || "Not assigned"} />
+          <Detail
+            label="Hospital"
+            value={
+              user.hospitalName ||
+              (user.hospitalId ? "Hospital name unavailable" : "Not assigned")
+            }
+          />
         </View>
 
         <Pressable

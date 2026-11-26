@@ -183,7 +183,6 @@ HOSPITAL_ADMIN_NAV = [
         "section": "Security",
         "items": [
             ("Audit Logs", "Audit Logs", "history"),
-            ("Email Notifications", "Email Notifications", "mail"),
         ],
     },
 ]

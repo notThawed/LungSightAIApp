@@ -45,7 +45,7 @@ SECTION_TITLES = {
     "screening": "Screening Activity",
     "ai": "AI Screening Outcomes",
     "review": "Physician Review & Concordance",
-    "operations": "Operational Efficiency",
+    "operations": "Operations Summary",
 }
 
 
@@ -212,65 +212,6 @@ def _activity_tab(report):
         st.divider()
 
 
-def _system_tab(report):
-    activity = report.audit_activity
-
-    if activity is None:
-        empty_state("System activity logs are unavailable for this report.")
-        return
-
-    st.caption(activity.note)
-
-    if activity.total == 0:
-        empty_state("No audit events were recorded for this hospital in this period.")
-        return
-
-    c1, c2 = st.columns([1, 2])
-    with c1:
-        st.markdown(
-            f"<div class='sa-metric sa-metric-teal'>"
-            f"<div class='sa-metric-icon'><span class='material-symbols-rounded'>history</span></div>"
-            f"<div>"
-            f"<div class='sa-metric-title'>Audit Events</div>"
-            f"<div class='sa-metric-value'>{activity.total:,}</div>"
-            f"<div style='font-size:0.75rem; color:var(--sa-slate);'>Total logged actions</div>"
-            f"</div>"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
-    with c2:
-        st.dataframe(
-            [{"Measure": label, "Count": count} for label, count in activity.highlights],
-            hide_index=True,
-            width="stretch",
-        )
-
-    d1, d2 = st.columns(2)
-    with d1:
-        st.markdown("**By Category**")
-        st.dataframe(
-            [{"Category": k, "Count": v} for k, v in activity.by_category],
-            hide_index=True,
-            width="stretch",
-        )
-    with d2:
-        st.markdown("**By Outcome**")
-        st.dataframe(
-            [{"Outcome": k, "Count": v} for k, v in activity.by_outcome],
-            hide_index=True,
-            width="stretch",
-        )
-
-
-def _definitions_tab(report):
-    for term, definition in report.definitions:
-        st.markdown(f"**{term}.** {definition}")
-
-    st.markdown("**Clinical Limitations**")
-    for item in report.limitations:
-        st.markdown(f"- {item}")
-
-
 def _exports(report):
     cache = st.session_state.setdefault(EXPORT_KEY, {})
 
@@ -354,16 +295,7 @@ def _render(report):
         unsafe_allow_html=True,
     )
 
-    tabs = st.tabs(["Screening & Clinical Activity", "System Audit Logs", "AI Performance Matrix", "Definitions & Scope"])
-
-    with tabs[0]:
-        _activity_tab(report)
-    with tabs[1]:
-        _system_tab(report)
-    with tabs[2]:
-        empty_state(report.report_b_status)
-    with tabs[3]:
-        _definitions_tab(report)
+    _activity_tab(report)
 
     st.divider()
     _exports(report)

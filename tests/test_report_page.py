@@ -89,7 +89,7 @@ def test_hospital_admin_generates_report_with_golden_numbers():
     assert values["Examinations registered"] == "8"
     assert values["Analyses completed"] == "3"
     assert values["Reviewed by a physician"] == "2"
-    assert values["Median time, request to AI result"] == "50 min"
+    assert "Median time, request to AI result" not in values
     assert any(c.value == "of 3 · 66.7%" for c in at.caption)
     assert at.session_state["fetch_calls"] == [A.HOSP_A]
 
@@ -146,8 +146,9 @@ def test_unauthorised_roles_see_error_only(user_id):
     assert not [b for b in at.button if b.key == "report_generate"]
 
 
-def test_report_b_and_empty_states_are_explicit():
+def test_report_tabs_are_removed():
     at = generate_golden(run_as({"user_id": A.ADMIN_A}))
 
+    assert len(at.tabs) == 0   # AI matrix, definitions and system audit tabs removed
     text = " ".join(m.value for m in at.markdown)
-    assert "Unavailable" in text and "reference set" in text
+    assert "reference set" not in text

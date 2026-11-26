@@ -73,7 +73,7 @@ def test_hospital_admin_sees_only_own_hospital_rows():
     frame = table(at)
     assert len(frame) == 3
     assert "Hospital" not in frame.columns
-    assert set(frame["Event"]) == {"user.created", "patient.created", "ai.analysis_failed"}
+    assert set(frame["Event"]) == {"User created", "Patient registered", "AI analysis failed"}
     assert [s.label for s in at.selectbox] == ["Category", "Outcome", "Actor"]
 
 

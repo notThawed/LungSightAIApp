@@ -16,7 +16,6 @@ immutable HospitalReport consumed by the page, the PDF and the Excel export.
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import timedelta, timezone
-from statistics import median
 
 from backend.reports.periods import REPORT_TZ, REPORT_TZ_LABEL, parse_timestamp, to_local_date
 
@@ -428,13 +427,11 @@ DEFINITIONS = (
     ("Analyses completed", "X-ray-requested examinations whose current image has a saved AI result."),
     ("Awaiting analysis", "X-ray-requested examinations without a current AI result."),
     ("Awaiting physician review", "Completed analyses with no physician review on the current request."),
-    ("AI-flagged positive / negative / inconclusive", "The current AI result's finding. Percentages use all "
-                                                      "completed analyses as the denominator. "
-                                                      "An AI flag is not a diagnosis."),
+    ("AI-flagged positive / negative", "The current AI result's finding. Percentages use all "
+                                       "completed analyses as the denominator, so they need not add up "
+                                       "to 100%. An AI flag is not a diagnosis."),
     ("Reviewed", "Completed analyses with a physician review on the current request."),
     ("Findings documented", "Reviews whose findings field is filled in (presence only)."),
-    ("Turnaround", "Median minutes between request and AI result, and between AI result and review, "
-                   "for examinations that have both timestamps. n is shown."),
     ("X-ray images uploaded", "Images uploaded in the period (the subscription-usage basis). Can exceed "
                               "completed analyses when an upload is retried."),
     ("Snapshot values", "Current status, currently admitted and active staff reflect the moment the report "
@@ -444,7 +441,7 @@ DEFINITIONS = (
 LIMITATIONS = (
     "Statuses are current values; the database keeps no status history for examinations.",
     "Failed AI analyses and images rejected by the X-ray validator are not stored with the examination. "
-    "They appear in the System activity section (audit log, from 2026-10-25).",
+    "They are recorded on the Audit Logs page (from 2026-10-25).",
     "Physician-confirmed labels are only stored for patients with AI-training consent, so AI-versus-"
     "physician agreement is not reported.",
     "AI accuracy (sensitivity, specificity) is not reported: no independent labelled reference set exists.",
@@ -479,21 +476,6 @@ def compute_hospital_report(inputs, period, *, report_id, generated_at, patient_
         f for f in reviewed if (f.review.get("findings") or "").strip()
     ]
 
-    tat_request_ai = [
-        m for m in (
-            _minutes_between(parse_timestamp(f.request.get("requested_at")),
-                             parse_timestamp(f.ai.get("processed_at")))
-            for f in completed
-        ) if m is not None
-    ]
-    tat_ai_review = [
-        m for m in (
-            _minutes_between(parse_timestamp(f.ai.get("processed_at")),
-                             parse_timestamp(f.review.get("reviewed_at")))
-            for f in reviewed
-        ) if m is not None
-    ]
-
     metrics = (
         Metric("exams_registered", "screening", "Examinations registered", len(facts)),
         Metric("exams_initial", "screening", "Initial examinations", sum(not f.follow_up for f in facts)),
@@ -506,18 +488,10 @@ def compute_hospital_report(inputs, period, *, report_id, generated_at, patient_
 
         Metric("ai_positive", "ai", "AI-flagged positive", ai_counts["positive"], len(completed)),
         Metric("ai_negative", "ai", "AI negative", ai_counts["negative"], len(completed)),
-        Metric("ai_inconclusive", "ai", "AI inconclusive", ai_counts["inconclusive"], len(completed)),
-        Metric("ai_other", "ai", AI_OTHER, ai_counts["other"], len(completed)),
 
         Metric("reviewed", "review", "Reviewed by a physician", len(reviewed), len(completed)),
         Metric("findings_documented", "review", "Findings documented", len(findings_documented), len(reviewed)),
 
-        Metric("tat_request_to_ai", "operations", "Median time, request to AI result",
-               round(median(tat_request_ai), 1) if tat_request_ai else None,
-               len(tat_request_ai), unit="minutes"),
-        Metric("tat_ai_to_review", "operations", "Median time, AI result to review",
-               round(median(tat_ai_review), 1) if tat_ai_review else None,
-               len(tat_ai_review), unit="minutes"),
         Metric("images_uploaded", "operations", "X-ray images uploaded", inputs.images_uploaded,
                note=f"Compare with {len(completed):,} completed analyses."),
         Metric("patients_registered", "operations", "Patients registered", inputs.patients_registered),
