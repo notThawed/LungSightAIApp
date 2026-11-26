@@ -262,15 +262,6 @@ def _system_tab(report):
         )
 
 
-def _definitions_tab(report):
-    for term, definition in report.definitions:
-        st.markdown(f"**{term}.** {definition}")
-
-    st.markdown("**Clinical Limitations**")
-    for item in report.limitations:
-        st.markdown(f"- {item}")
-
-
 def _exports(report):
     cache = st.session_state.setdefault(EXPORT_KEY, {})
 
@@ -354,16 +345,12 @@ def _render(report):
         unsafe_allow_html=True,
     )
 
-    tabs = st.tabs(["Screening & Clinical Activity", "System Audit Logs", "AI Performance Matrix", "Definitions & Scope"])
+    tabs = st.tabs(["Screening & Clinical Activity", "System Audit Logs"])
 
     with tabs[0]:
         _activity_tab(report)
     with tabs[1]:
         _system_tab(report)
-    with tabs[2]:
-        empty_state(report.report_b_status)
-    with tabs[3]:
-        _definitions_tab(report)
 
     st.divider()
     _exports(report)

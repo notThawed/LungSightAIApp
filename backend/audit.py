@@ -239,6 +239,33 @@ CATEGORY_LABELS = {
 }
 
 
+def events_matching_label(term):
+    """Event codes whose readable name contains the term (case-insensitive)."""
+
+    needle = " ".join(str(term or "").lower().split())
+    if not needle:
+        return []
+    return sorted(code for code, label in EVENT_LABELS.items() if needle in label.lower())
+
+
+def _search_expression(term):
+    """PostgREST or-filter for the search box.
+
+    Matches raw codes / record IDs (only for terms without spaces) and readable
+    event names (translated to exact codes here, so user text never reaches
+    the filter string when it contains spaces).
+    """
+
+    clauses = []
+    if _SEARCH_CODE.match(term):
+        clauses += [f"event_type.ilike.*{term}*", f"target_id.eq.{term}"]
+    clauses += [f"event_type.eq.{code}" for code in events_matching_label(term)]
+
+    if not clauses:
+        clauses = ["event_type.eq.__no_matching_event__"]
+    return ",".join(clauses)
+
+
 def event_label(event_type):
     """Readable name for an event code; unknown codes are turned into words."""
 
@@ -774,7 +801,8 @@ PAGE_SIZE_MAX = 100
 EXPORT_ROW_LIMIT = 10_000
 EXPORT_BATCH = 1_000
 
-_SEARCH = re.compile(r"^[A-Za-z0-9_.\-]{1,128}$")
+_SEARCH = re.compile(r"^[A-Za-z0-9_.\- ]{1,128}$")
+_SEARCH_CODE = re.compile(r"^[A-Za-z0-9_.\-]{1,128}$")
 
 
 def get_viewer_scope(resource="audit_logs"):
@@ -848,10 +876,10 @@ def _normalize_filters(filters, scope):
     if actor and _UUID.match(str(actor)):
         clean["actor_user_id"] = str(actor)
 
-    search = (filters.get("search") or "").strip()
+    search = " ".join((filters.get("search") or "").split())
     if search:
         if not _SEARCH.match(search):
-            raise ValueError("Search may only contain letters, numbers, '.', '_' and '-'.")
+            raise ValueError("Search may only contain letters, numbers, spaces, '.', '_' and '-'.")
         clean["search"] = search
 
     if scope["platform"]:
@@ -903,8 +931,7 @@ def _build_query(filters, count=None, columns="*"):
         query = query.eq("actor_user_id", filters["actor_user_id"])
 
     if filters.get("search"):
-        term = filters["search"]
-        query = query.or_(f"event_type.ilike.*{term}*,target_id.eq.{term}")
+        query = query.or_(_search_expression(filters["search"]))
 
     return query.order("created_at", desc=True).order("audit_log_id", desc=True)
 

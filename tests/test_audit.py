@@ -661,3 +661,24 @@ def test_csv_export_uses_readable_target_type(db, session):
 
     assert "target_type" not in rows[0]
     assert all("_" not in r["target"] for r in rows)
+
+
+def test_search_matches_readable_event_names(db, session):
+    seed_logs(db)
+    sign_in(session, ADMIN_A)
+
+    by_label = audit.query_audit_logs({"search": "Patient  registered"})["rows"]
+    by_code = audit.query_audit_logs({"search": "patient.created"})["rows"]
+
+    assert {r["event_type"] for r in by_label} == {"patient.created"}
+    assert {r["audit_log_id"] for r in by_label} == {r["audit_log_id"] for r in by_code}
+    assert audit.query_audit_logs({"search": "nothing like this"})["rows"] == []
+
+
+def test_search_with_spaces_never_reaches_filter_string(db, session):
+    seed_logs(db)
+    sign_in(session, ADMIN_A)
+    expr = audit._search_expression("report exported")
+    assert expr == "event_type.eq.report.exported"
+    with pytest.raises(ValueError):
+        audit.query_audit_logs({"search": "signed in,hospital_id.eq.x"})

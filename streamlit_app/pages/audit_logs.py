@@ -135,7 +135,7 @@ def _render_filters(scope):
         filters["search"] = search_col.text_input(
             "Search event type",
             key="audit_search",
-            placeholder="e.g. auth.login",
+            placeholder="e.g. Report exported",
         )
 
         return filters, {v: k for k, v in hospital_names.items()}

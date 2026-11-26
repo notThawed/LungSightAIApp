@@ -146,8 +146,10 @@ def test_unauthorised_roles_see_error_only(user_id):
     assert not [b for b in at.button if b.key == "report_generate"]
 
 
-def test_report_b_and_empty_states_are_explicit():
+def test_ai_matrix_and_definitions_tabs_are_removed():
     at = generate_golden(run_as({"user_id": A.ADMIN_A}))
 
+    labels = [t.label for t in at.tabs]
+    assert "AI Performance Matrix" not in labels and "Definitions & Scope" not in labels
     text = " ".join(m.value for m in at.markdown)
-    assert "Unavailable" in text and "reference set" in text
+    assert "reference set" not in text
