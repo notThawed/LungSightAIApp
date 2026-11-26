@@ -330,7 +330,6 @@ def show():
             "Event": audit.event_label(row.get("event_type")),
             "Outcome": row.get("outcome"),
             "Actor": actor_label(row),
-            "Target": audit.target_label(row.get("target_type"), row.get("target_id"), id_length=12),
         }
         if scope["platform"]:
             entry["Hospital"] = hospital_label(row)
