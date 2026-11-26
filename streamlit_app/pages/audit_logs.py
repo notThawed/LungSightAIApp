@@ -133,9 +133,9 @@ def _render_filters(scope):
         filters["actor_user_id"] = None if actor_choice == ANY else actors[actor_choice]
 
         filters["search"] = search_col.text_input(
-            "Search event type or ID",
+            "Search event type",
             key="audit_search",
-            placeholder="e.g. auth.login or record ID",
+            placeholder="e.g. auth.login",
         )
 
         return filters, {v: k for k, v in hospital_names.items()}
