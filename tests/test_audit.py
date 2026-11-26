@@ -643,3 +643,21 @@ def test_export_truncates_at_limit(db, session, monkeypatch):
     _data, count, truncated = audit.export_audit_logs_csv({})
 
     assert count == 2 and truncated
+
+
+def test_target_labels_are_readable():
+    assert {t for t, _ in audit.EVENTS.values() if t} <= set(audit.TARGET_LABELS)
+    assert audit.target_label("xray_request", "3f2a1b4c-0000-0000", id_length=8) == "X-ray request · 3f2a1b4c…"
+    assert audit.target_label("user_profile", "abc") == "User · abc"
+    assert audit.target_label(None, None) == "—"
+    assert audit.target_label("some_new_type", "1") == "Some new type · 1"
+
+
+def test_csv_export_uses_readable_target_type(db, session):
+    seed_logs(db)
+    sign_in(session, ADMIN_A)
+
+    rows = read_csv(audit.export_audit_logs_csv({})[0])
+
+    assert "target_type" not in rows[0]
+    assert all("_" not in r["target"] for r in rows)

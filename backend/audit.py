@@ -253,6 +253,44 @@ def event_label(event_type):
     return text[:1].upper() + text[1:] if text else "Unknown event"
 
 
+TARGET_LABELS = {
+    "ai_result": "AI result",
+    "email": "Email",
+    "examination": "Examination",
+    "hospital": "Hospital",
+    "hospital_application": "Hospital application",
+    "hospital_subscription": "Subscription",
+    "patient": "Patient",
+    "payment": "Payment",
+    "report": "Report",
+    "training_candidate": "AI training candidate",
+    "user_profile": "User",
+    "xray_image": "X-ray image",
+    "xray_request": "X-ray request",
+    "xray_review": "Physician review",
+}
+
+
+def target_type_label(target_type):
+    if not target_type:
+        return ""
+    return TARGET_LABELS.get(target_type, str(target_type).replace("_", " ").capitalize())
+
+
+def target_label(target_type, target_id, id_length=None):
+    """Readable 'Patient · 3f2a…' text; '—' when the event has no target record."""
+
+    if not target_id:
+        return "—"
+
+    ident = str(target_id)
+    if id_length and len(ident) > id_length:
+        ident = ident[:id_length] + "…"
+
+    kind = target_type_label(target_type)
+    return f"{kind} · {ident}" if kind else ident
+
+
 def category_label(category):
     return CATEGORY_LABELS.get(category, str(category).replace("_", " ").capitalize())
 
@@ -941,7 +979,7 @@ def fetch_scoped_event_rows(filters=None, resource="audit_logs"):
 
 _CSV_COLUMNS = [
     "created_at", "event", "outcome", "actor_user_id", "actor_name",
-    "hospital_id", "target_type", "target_id", "metadata",
+    "hospital_id", "target", "target_id", "metadata",
 ]
 
 
@@ -1025,7 +1063,7 @@ def export_audit_logs_csv(filters=None):
             _csv_safe(actor),
             _csv_safe(names.get(str(actor), "System") if actor else "System"),
             _csv_safe(row.get("hospital_id")),
-            _csv_safe(row.get("target_type")),
+            _csv_safe(target_type_label(row.get("target_type"))),
             _csv_safe(row.get("target_id")),
             _csv_safe(row.get("metadata") or {}),
         ])

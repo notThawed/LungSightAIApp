@@ -175,7 +175,7 @@ def _render_detail(row, actor_name, hospital_label):
         ("Actor", actor_name),
         ("Actor ID", row.get("actor_user_id") or "System"),
         ("Facility", hospital_label),
-        ("Target", f"{row.get('target_type') or '—'} · {row.get('target_id') or '—'}"),
+        ("Target", audit.target_label(row.get("target_type"), row.get("target_id"))),
     ])
 
     if row.get("metadata"):
@@ -330,7 +330,7 @@ def show():
             "Event": audit.event_label(row.get("event_type")),
             "Outcome": row.get("outcome"),
             "Actor": actor_label(row),
-            "Target": f"{row.get('target_type') or '—'} · {str(row.get('target_id') or '—')[:12]}",
+            "Target": audit.target_label(row.get("target_type"), row.get("target_id"), id_length=12),
         }
         if scope["platform"]:
             entry["Hospital"] = hospital_label(row)
