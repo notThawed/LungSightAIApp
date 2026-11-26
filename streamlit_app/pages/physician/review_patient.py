@@ -92,7 +92,6 @@ QUEUE_HEADERS = ["Patient", "Requested", "Status", "Action"]
 DISPOSITION_OPTIONS = [
     "Admission",
     "Treated and Sent Home",
-    "Referred",
     "Refused Admission",
     "Nowhere When Called",
 ]

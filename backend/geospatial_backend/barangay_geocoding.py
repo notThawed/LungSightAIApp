@@ -1,3 +1,4 @@
+# LUNGSIGHT_AUTO_COORDS_PATCH_20261126
 """PSGC-first approximate barangay geocoding for LungSightAI.
 
 Only public geographic names are transmitted to Geoapify.
@@ -126,42 +127,56 @@ def _geocode_api_cached(barangay, city, province, api_key, psgc_barangay_code=No
         if cache_key in _SUCCESS_CACHE:
             return dict(_SUCCESS_CACHE[cache_key])
     city_name = str(city).strip()
-    if city_name.lower().startswith("city of "):
-        city_name = city_name[8:].strip() + " City"
-    query = ", ".join(part for part in (barangay, city_name, province, "Philippines") if part)
+    city_base = _norm_city(city_name)
+    # Prefer the PSGC name; then try bare city name (e.g., "Mandaue"),
+    # followed by "Mandaue City" for Geoapify's differing naming conventions.
+    variants = [city_name, city_base.title(), city_base.title() + " City"]
+    city_variants = list(dict.fromkeys(v for v in variants if v))
     try:
-        response = requests.get(
-            GEOAPIFY_URL,
-            params={"text": query, "filter": "countrycode:ph", "format": "json",
-                    "limit": 8, "apiKey": api_key},
-            timeout=(5, 15),
-        )
-        response.raise_for_status()
-        payload = response.json()
-        results = payload.get("results", []) if isinstance(payload, dict) else []
-        if not isinstance(results, list):
-            return None
-        valid = [r for r in results if isinstance(r, dict)
-                 and _candidate_matches(r, barangay, city, province)]
-        if expected_code:
-            valid = [r for r in valid if not _reference_codes(r)
-                     or _reference_codes(r) == {expected_code}]
-            exact = [r for r in valid if _reference_codes(r) == {expected_code}]
-            if exact:
-                valid = exact
-        unique = {(round(float(r["lat"]), 5), round(float(r["lon"]), 5)) for r in valid}
-        if len(unique) != 1:
-            LOGGER.warning("Unresolved barangay geocoding: %s, %s, PSGC=%s, candidates=%s",
-                           barangay, city, expected_code, len(unique))
-            return None
-        lat, lon = next(iter(unique))
-        point = {"latitude": lat, "longitude": lon,
-                 "location_precision": "barangay", "source": "geoapify"}
-        with _CACHE_LOCK:
-            if len(_SUCCESS_CACHE) >= 1024:
-                _SUCCESS_CACHE.pop(next(iter(_SUCCESS_CACHE)), None)
-            _SUCCESS_CACHE[cache_key] = point
-        return dict(point)
+        # Do not allow any one failing query to silence another unambiguous
+        # geographic match. Query ONLY the public barangay/city/province.
+        for variant in city_variants:
+            query = ", ".join(part for part in (
+                barangay, variant, province, "Philippines") if part)
+            response = requests.get(
+                GEOAPIFY_URL,
+                params={"text": query, "filter": "countrycode:ph", "format": "json",
+                        "limit": 8, "apiKey": api_key},
+                timeout=(5, 15),
+            )
+            response.raise_for_status()
+            payload = response.json()
+            results = payload.get("results", []) if isinstance(payload, dict) else []
+            if not isinstance(results, list):
+                continue
+            valid = [r for r in results if isinstance(r, dict)
+                     and _candidate_matches(r, barangay, city, province)]
+            if expected_code:
+                valid = [r for r in valid if not _reference_codes(r)
+                         or _reference_codes(r) == {expected_code}]
+                exact = [r for r in valid if _reference_codes(r) == {expected_code}]
+                if exact:
+                    valid = exact
+            unique = {(round(float(r["lat"]), 5), round(float(r["lon"]), 5))
+                      for r in valid}
+            # Multiple plausible points are ambiguous: do not guess, and do
+            # not turn an amenity, school or road into a barangay point.
+            if len(unique) > 1:
+                LOGGER.warning("Ambiguous barangay geocoding: %s, %s, PSGC=%s, candidates=%s",
+                               barangay, city, expected_code, len(unique))
+                return None
+            if len(unique) == 1:
+                lat, lon = next(iter(unique))
+                point = {"latitude": lat, "longitude": lon,
+                         "location_precision": "barangay", "source": "geoapify"}
+                with _CACHE_LOCK:
+                    if len(_SUCCESS_CACHE) >= 1024:
+                        _SUCCESS_CACHE.pop(next(iter(_SUCCESS_CACHE)), None)
+                    _SUCCESS_CACHE[cache_key] = point
+                return dict(point)
+        LOGGER.warning("Unresolved barangay geocoding: %s, %s, PSGC=%s",
+                       barangay, city, expected_code)
+        return None
     except (requests.RequestException, ValueError, TypeError, KeyError) as exc:
         LOGGER.warning("Geocoding unavailable for %s, %s: %s", barangay, city, type(exc).__name__)
         return None

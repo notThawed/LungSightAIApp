@@ -1,3 +1,4 @@
+# LUNGSIGHT_AUTO_COORDS_PATCH_20261126
 # LUNGSIGHT_PSGC_NO_MANUAL_GEO_V2
 from datetime import datetime, timezone
 
@@ -6,6 +7,7 @@ from backend.fetches import generate_patient_id
 from backend import audit
 from backend.backend_utils.auth_redirect_config import get_auth_redirect_url
 from backend.backend_utils.password_policy import validate_strong_password
+from backend.geospatial_backend.barangay_geocoding import prepare_patient_coordinates
 
 
 def _audit_previous(table, key, value, columns):
@@ -528,6 +530,9 @@ def create_patient(
             "emergency_contact_relationship": emergency_contact_relationship,
         }
 
+        # PSGC-based barangay reference only; never geocode a patient's home.
+        patient_data = prepare_patient_coordinates(patient_data, db=admin_supabase)
+
         response = (
             admin_supabase
             .table("patients")
@@ -643,6 +648,21 @@ def update_patient(
                 timezone.utc
             ).isoformat(),
         }
+
+        # Read previous PSGC/coordinates to retain a verified point only
+        # when the patient's barangay has not changed.
+        previous_rows = (
+            admin_supabase.table("patients")
+            .select("psgc_barangay_code,latitude,longitude,location_precision")
+            .eq("patient_id", patient_id)
+            .limit(1)
+            .execute().data or []
+        )
+        if not previous_rows:
+            raise ValueError("Patient not found; coordinate-safe update cancelled")
+        patient_data = prepare_patient_coordinates(
+            patient_data, previous=previous_rows[0], db=admin_supabase
+        )
 
         response = (
             admin_supabase
