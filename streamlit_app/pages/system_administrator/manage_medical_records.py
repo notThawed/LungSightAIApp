@@ -68,6 +68,7 @@ from backend.backend_utils.lab_request_utils import (
 )
 
 from shared.assets import load_css
+from backend.supabase_client import admin_supabase
 
 
 # ============================================================
@@ -909,40 +910,11 @@ def render_patient_overview(patient):
 
     # Sleek Hero Banner
     render_patient_hero(patient)
+    render_consultation_history(patient)
 
-    st.markdown("<div class='sa-form-section-title' style='margin-top:1.5rem;'>Medical Record Archives</div>", unsafe_allow_html=True)
 
-    counts = count_category_items(patient)
 
-    col1, col2, col3 = st.columns(3, gap="medium", vertical_alignment="top")
 
-    with col1:
-        render_category_card(
-            patient,
-            CATEGORY_GENERAL,
-            "General Consults",
-            counts[CATEGORY_GENERAL],
-            "Initial examinations, preliminary evaluations, and baseline diagnostic reports.",
-        )
-
-    with col2:
-        render_category_card(
-            patient,
-            CATEGORY_FOLLOWUP,
-            "Follow-Up Examinations",
-            counts[CATEGORY_FOLLOWUP],
-            "Scheduled reassessments, treatment follow-ups, and interval scan comparisons.",
-        )
-
-    with col3:
-        render_category_card(
-            patient,
-            CATEGORY_EXTERNAL,
-            "External Records",
-            counts[CATEGORY_EXTERNAL],
-            "Outside clinical histories, previous imaging from other hospitals, and laboratory reports.",
-            allow_add=can_add_record(),
-        )
 
 
 # ============================================================
@@ -2002,44 +1974,172 @@ def show_add_medical_record_dialog(patient):
 
 def show():
     load_css("manage_medical_records.css")
+    from pathlib import Path as _LSPath
+    _css = _LSPath(__file__).resolve().parents[3] / "shared/theme/css_content/consultation_history_v3.css"
+    st.markdown("<style>" + _css.read_text(encoding="utf-8") + "</style>", unsafe_allow_html=True)
     show_flash_message()
-
-    role_id = current_role_id()
-    if role_id not in ALLOWED_ROLES:
+    if current_role_id() not in ALLOWED_ROLES:
         st.error("You don't have access to Patient Records.")
         return
+    patient = st.session_state.get(KEY_PATIENT)
+    if not patient:
+        render_patient_list(load_patient_rows())
+        return
+    selection = st.session_state.pop(KEY_EXAM,None)
+    external = st.session_state.pop(KEY_EXTERNAL,None)
+    st.session_state.pop(KEY_EXTERNAL_SHOWN,None)
+    add = st.session_state.get(KEY_ADD_RECORD)
+    st.session_state.pop(KEY_CATEGORY,None)
+    with st.container(key='sa_page' if True else 'ls_physician_page'):
+        render_patient_overview(patient)
+    if selection:
+        show_examination_archive_dialog(patient,selection)
+    elif external:
+        show_external_record_dialog(external)
+    elif add and can_add_record():
+        show_add_medical_record_dialog(add)
 
-    # Dialog: External Record View
-    if st.session_state.get(KEY_EXTERNAL):
-        if not st.session_state.get(KEY_EXTERNAL_SHOWN):
-            show_external_record_dialog(st.session_state[KEY_EXTERNAL])
-            st.session_state[KEY_EXTERNAL_SHOWN] = True
-        else:
-            st.session_state.pop(KEY_EXTERNAL, None)
-            st.session_state.pop(KEY_EXTERNAL_SHOWN, None)
+
+
+# LUNGSIGHT_HISTORY_V2
+
+from backend.backend_utils.consultation_history_utils import group_consultations
+
+
+def _ls_history_data(patient):
+    pid = patient['patient_id']
+    exams = get_examinations_by_patient(pid) or []
+    links = []
+    offset = 0
+    while True:
+        batch = (admin_supabase.table('follow_ups')
+                 .select('source_examination_id,follow_up_examination_id')
+                 .eq('patient_id', pid).order('follow_up_id').range(offset, offset+499).execute().data or [])
+        links.extend(batch)
+        if len(batch) < 500: break
+        offset += 500
+    return group_consultations(exams, links)
+
+
+def _ls_diagnosis(exam):
+    label = exam.get('confirmed_label')
+    return str(label).replace('_', ' ').title() if label else str(exam.get('diagnosis') or 'Not recorded')
+
+
+def _ls_row(patient, exam, root, previous=None):
+    with st.container(border=True):
+        a,b,c = st.columns([2.5,2,0.8], vertical_alignment='center')
+        icon = 'assignment' if root and exam.get('examination_id') == root.get('examination_id') else 'event_available'
+        title = _ls_escape(str(display_exam_type(exam)))
+        date = _ls_escape(str(format_date_only(exam.get('examination_date') or exam.get('created_at'))))
+        a.markdown(f'<div class="lsv3-row"><span class="lsv3-icon material-symbols-rounded">{icon}</span><div><strong>{title}</strong><small>{date}</small></div></div>', unsafe_allow_html=True)
+        status = str(exam.get('status') or 'Not recorded')
+        tone = 'done' if status.lower() in ('completed','discharged') else ''
+        diagnosis = _ls_diagnosis(exam)
+        b.markdown(f'<div class="lsv3-row"><div><strong>{_ls_escape(diagnosis[:120])}{"…" if len(diagnosis)>120 else ""}</strong><span class="lsv3-status {tone}">{_ls_escape(status)}</span></div></div>', unsafe_allow_html=True)
+        if c.button('View', key='ls_view_'+str(exam['examination_id']), width='stretch', icon=':material/visibility:'):
+            st.session_state[KEY_EXAM] = {'exam':exam,'root':root,'previous':previous}
             st.rerun()
 
-    # Dialog: Add External Record
-    if st.session_state.get(KEY_ADD_RECORD) and can_add_record():
-        show_add_medical_record_dialog(st.session_state[KEY_ADD_RECORD])
 
-    with st.container(key="sa_page"):
-        # Router
-        selected_patient = st.session_state.get(KEY_PATIENT)
-        selected_category = st.session_state.get(KEY_CATEGORY)
-        selected_exam = st.session_state.get(KEY_EXAM)
 
-        if selected_patient and selected_exam:
-            render_examination_report(selected_patient, selected_exam)
+
+def render_consultation_history(patient):
+    with st.container(key='ls_history'):
+        try:
+            roots, groups, orphaned = _ls_history_data(patient)
+        except Exception as error:
+            st.error(f'Unable to load consultation relationships: {error}')
             return
+        a,b,c = st.columns(3)
+        a.metric('General consultations',len(roots))
+        b.metric('Linked follow-ups',sum(map(len,groups.values())))
+        c.metric('Needs review',len(orphaned))
+        history, external = st.tabs(['Consultation History','External Records'])
+        with history:
+            st.markdown('<div class="lsv3-kicker">Longitudinal clinical history</div>', unsafe_allow_html=True)
+            st.caption('Expand a consultation to review its complete examination history.')
+            if not roots and not orphaned: st.info('No finalized examinations.')
+            for i, root in enumerate(roots):
+                children = groups[str(root['examination_id'])]
+                date = format_date_only(root.get('examination_date') or root.get('created_at'))
+                with st.expander(f'General Consultation {len(roots)-i:03d}  |  {date}  |  {len(children)} follow-up(s)'):
+                    st.markdown('<div class="lsv3-kicker">Initial consultation</div>', unsafe_allow_html=True)
+                    _ls_row(patient,root,root)
+                    st.markdown('<div class="lsv3-kicker">Follow-up timeline</div>', unsafe_allow_html=True)
+                    previous = root
+                    for child in children:
+                        _ls_row(patient,child,root,previous)
+                        previous = child
+                    if not children: st.info('No finalized follow-ups.')
+            if orphaned:
+                with st.expander(f'Relationships needing review ({len(orphaned)})'):
+                    st.warning('Missing or conflicting consultation links. No relationship has been guessed.')
+                    for child in orphaned: _ls_row(patient,child,None)
+        with external:
+            if can_add_record():
+                if st.button('Add External Record',key='ls_add_external',type='primary'):
+                    st.session_state[KEY_ADD_RECORD]=patient
+                    st.rerun()
+            records = get_medical_records_by_patient(patient['patient_id']) or []
+            if not records: st.info('No external medical records.')
+            for record in records: render_record_list_card(record)
 
-        if selected_patient and selected_category:
-            render_category_list(selected_patient, selected_category)
-            return
 
-        if selected_patient:
-            render_patient_overview(selected_patient)
-            return
+def _ls_field(label, value):
+    value = 'Not recorded' if value is None or value == '' else str(value)
+    st.markdown(f'<div class="lsv3-field"><label>{_ls_escape(str(label))}</label><div>{_ls_escape(value)}</div></div>', unsafe_allow_html=True)
 
-        rows = load_patient_rows()
-        render_patient_list(rows)
+
+
+
+@st.dialog('Examination Details', width='large')
+def show_examination_archive_dialog(patient, selection):
+    exam = selection.get('exam',selection)
+    root, previous = selection.get('root'), selection.get('previous')
+    with st.container(key='ls_exam'):
+        _ls_v3_hero(str(display_exam_type(exam)), f"{patient_name(patient)} · {patient_code(patient)} · {format_date_only(exam.get('examination_date'))}", 'Rx')
+        a,b = st.columns([3,1])
+        a.caption(str(exam.get('status') or 'Not recorded'))
+        if b.button('Close',key='ls_close'): st.rerun()
+        _ls_field('Physician-confirmed classification / recorded diagnosis',_ls_diagnosis(exam))
+        if root and root.get('examination_id') != exam.get('examination_id'):
+            st.caption('Originating consultation: '+format_date_only(root.get('examination_date')))
+        clinical,vitals,xray,labs,care = st.tabs(['Clinical','Vitals & Severity','X-Ray & AI','Laboratory','Care Plan'])
+        with clinical:
+            if previous: _ls_field('Previous examination diagnosis',_ls_diagnosis(previous))
+            for label,key in [('Chief complaint','chief_complaint'),('History of present illness','history_of_present_illness'),('Physical examination','physical_examination'),('Clinical diagnosis','diagnosis')]:
+                _ls_field(label,exam.get(key))
+        with vitals:
+            for label,keys in [('Blood pressure',('blood_pressure','bp')),('Temperature',('temperature','body_temperature')),('Heart rate',('heart_rate','pulse_rate')),('Respiratory rate',('respiratory_rate',)),('Oxygen saturation',('spo2','oxygen_saturation')),('Weight',('weight',))]:
+                _ls_field(label,next((exam[k] for k in keys if exam.get(k) is not None),None))
+            _ls_field('CURB-65',exam.get('curb65_score'))
+            _ls_field('Clinical severity',exam.get('severity_status'))
+        with xray:
+            request,image,ai = render_xray_analysis(exam)
+            if ai:
+                render_risk_card(ai.get('ai_findings'),ai.get('ai_confidence'),ai.get('pneumonia_type'))
+                render_ai_summary(ai,ai.get('ai_findings'),ai.get('pneumonia_type'),ai.get('ai_confidence'))
+            if st.button('Print Result',key='ls_print',icon=':material/print:'):
+                trigger_print_report(patient,exam,request or {},ai)
+        with labs:
+            actor = current_user().get('user_id')
+            requests = _get_examination_lab_requests(exam,actor) if actor else []
+            if not requests: st.info('No accessible laboratory requests.')
+            for item in requests:
+                with st.container(border=True):
+                    st.write(item.get('test_type') or 'Laboratory request')
+                    st.caption(str(item.get('status') or 'Not recorded'))
+                    for doc in item.get('_result_documents') or []:
+                        if doc.get('document_id'):
+                            url = signed_lab_document_url(doc['document_id'],actor)
+                            if url: st.link_button(doc.get('original_filename') or 'Open result',url)
+        with care:
+            for label,key in [('Plans / Orders','plans_orders'),('Disposition','disposition'),('Disposition notes','disposition_notes'),('Follow-up date','follow_up_date'),('Follow-up notes','follow_up_notes')]:
+                _ls_field(label,exam.get(key))
+            pass
+
+# LUNGSIGHT_HISTORY_V3
+from html import escape as _ls_escape
+def _ls_v3_hero(title, subtitle, initials):
+    st.markdown(f'<div class="lsv3-hero"><div class="lsv3-avatar">{_ls_escape(initials)}</div><div><h3>{_ls_escape(title)}</h3><small>{_ls_escape(subtitle)}</small></div></div>', unsafe_allow_html=True)

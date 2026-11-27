@@ -8,6 +8,7 @@ from datetime import date
 from html import escape
 from io import BytesIO
 from pathlib import Path
+import re  # LUNGSIGHT_GEOSPATIAL_CSS_FILTERS_20261127
 
 import folium
 import pandas as pd
@@ -24,7 +25,58 @@ from backend.geospatial_backend.incidence_population import (
 )
 
 CSS = Path(__file__).resolve().parents[2] / 'shared/theme/css_content/geospatial.css'
-COLORS = {'High':'#ef4444', 'Moderate':'#f59e0b', 'Low':'#22c55e', 'No cases':'#94a3b8', 'Unavailable':'#64748b'}
+
+# All presentation values are configured ONLY in geospatial.css.
+# The CSS file is the single source for HTML, Leaflet, charts and exports.
+_GEO_CSS_TEXT = CSS.read_text(encoding='utf-8')
+
+
+def geo_css_setting(name):
+    """Read a CSS custom property; no duplicate Python color defaults."""
+    match = re.search(r'--' + re.escape(name) + r'\s*:\s*([^;{}]+);', _GEO_CSS_TEXT)
+    if not match:
+        raise ValueError(f'Missing --{name} in {CSS}')
+    return match.group(1).strip()
+
+
+def geo_css_color(name):
+    value = geo_css_setting(name)
+    if not re.fullmatch(r'#[0-9a-fA-F]{6}', value):
+        raise ValueError(f'--{name} must be a six-digit hex color in geospatial.css')
+    return value
+
+
+def geo_css_number(name):
+    try:
+        return float(geo_css_setting(name))
+    except ValueError as exc:
+        raise ValueError(f'--{name} must be a plain CSS number') from exc
+
+
+COLORS = {
+    'High': geo_css_color('geo-circle-high'),
+    'Moderate': geo_css_color('geo-circle-moderate'),
+    'Low': geo_css_color('geo-circle-low'),
+    'No cases': geo_css_color('geo-circle-no-cases'),
+    'Unavailable': geo_css_color('geo-circle-unavailable'),
+}
+GEO_STYLE = {
+    'selected_outline': geo_css_color('geo-circle-selected-outline'),
+    'outline_weight': geo_css_number('geo-circle-outline-weight'),
+    'selected_outline_weight': geo_css_number('geo-circle-selected-outline-weight'),
+    'fill_opacity': geo_css_number('geo-circle-fill-opacity'),
+    'base_radius': geo_css_number('geo-circle-base-radius'),
+    'extra_radius': geo_css_number('geo-circle-extra-radius'),
+    'export_circle_outline': geo_css_color('geo-export-circle-outline'),
+    'export_circle_outline_width': geo_css_number('geo-export-circle-outline-width'),
+    'export_circle_opacity': geo_css_number('geo-export-circle-opacity'),
+    'export_circle_base_size': geo_css_number('geo-export-circle-base-size'),
+    'export_circle_extra_size': geo_css_number('geo-export-circle-extra-size'),
+    'export_circle_incidence_factor': geo_css_number('geo-export-circle-incidence-factor'),
+    'export_table_header': geo_css_color('geo-export-table-header'),
+    'hospital_pin_color': geo_css_setting('geo-hospital-pin-color'),
+    'trend_line': geo_css_color('geo-trend-line'),
+}
 
 
 def html(content):
@@ -98,6 +150,8 @@ def make_map(rows, mode, selected, hospital):
                sum(x[1] for x in coords)/len(coords)] if coords else
               [10.3157, 123.8854])
     m = folium.Map(location=center, zoom_start=11, tiles='OpenStreetMap', control_scale=True)
+    # The Folium map runs in an iframe: inject the SAME geospatial CSS there.
+    m.get_root().header.add_child(folium.Element('<style>' + _GEO_CSS_TEXT + '</style>'))
     max_rate = max((r['Incidence / 100k'] or 0 for r in rows), default=0)
     for row in rows:
         lat, lon = row.get('Latitude (approx.)'), row.get('Longitude (approx.)')
@@ -107,7 +161,7 @@ def make_map(rows, mode, selected, hospital):
         incidence, ratio = row['Incidence / 100k'], row['Relative rate ratio']
         label = row['Incidence level']
         color = COLORS.get(label, COLORS['Unavailable'])
-        marker_size = 6 + min(15, (incidence or 0) / max(1, max_rate) * 15)
+        marker_size = GEO_STYLE['base_radius'] + min(GEO_STYLE['extra_radius'], (incidence or 0) / max(1, max_rate) * GEO_STYLE['extra_radius'])
         detail = (
             f'<b>{escape(name)}</b><br>Newly recorded cases: {count}'
             f'<br>2024 census population: {row["Population (2024)"] if row["Population (2024)"] is not None else "Unavailable"}'
@@ -117,16 +171,16 @@ def make_map(rows, mode, selected, hospital):
         )
         folium.CircleMarker(
             location=[float(lat), float(lon)], radius=marker_size,
-            color='#fff' if name == selected else color,
-            weight=3 if name == selected else 1,
-            fill=True, fill_color=color, fill_opacity=.83,
+            color=GEO_STYLE['selected_outline'] if name == selected else color,
+            weight=GEO_STYLE['selected_outline_weight'] if name == selected else GEO_STYLE['outline_weight'],
+            fill=True, fill_color=color, fill_opacity=GEO_STYLE['fill_opacity'],
             tooltip=f'{name} — {count} newly recorded cases',
             popup=folium.Popup(detail, max_width=310),
         ).add_to(m)
     if hospital.get('latitude') is not None and hospital.get('longitude') is not None:
         folium.Marker([float(hospital['latitude']), float(hospital['longitude'])],
                       tooltip='Your hospital',
-                      icon=folium.Icon(color='blue', icon='plus-sign')).add_to(m)
+                      icon=folium.Icon(color=GEO_STYLE['hospital_pin_color'], icon='plus-sign')).add_to(m)
     if len(coords) > 1:
         m.fit_bounds(coords)
     return m
@@ -140,8 +194,12 @@ def png_export(rows, hospital_name, label):
         if r.get('Latitude (approx.)') is None or r.get('Longitude (approx.)') is None:
             continue
         ax.scatter(float(r['Longitude (approx.)']), float(r['Latitude (approx.)']),
-                   s=70+min(350, (r['Incidence / 100k'] or 0)*.5), c=COLORS[r['Incidence level']],
-                   alpha=.78, edgecolors='white', linewidths=1.5)
+                   s=GEO_STYLE['export_circle_base_size']+min(GEO_STYLE['export_circle_extra_size'],
+                       (r['Incidence / 100k'] or 0)*GEO_STYLE['export_circle_incidence_factor']),
+                   c=COLORS[r['Incidence level']],
+                   alpha=GEO_STYLE['export_circle_opacity'],
+                   edgecolors=GEO_STYLE['export_circle_outline'],
+                   linewidths=GEO_STYLE['export_circle_outline_width'])
         ax.annotate(r['Barangay'], (float(r['Longitude (approx.)']), float(r['Latitude (approx.)'])),
                     xytext=(4,5), textcoords='offset points', fontsize=7)
     ax.set_title(f'{hospital_name} | {label}\nHospital-recorded pneumonia incidence by approximate barangay point')
@@ -163,7 +221,7 @@ def pdf_export(rows,hospital_name,label,png):
     story.append(Image(BytesIO(png),width=530,height=337));story.append(Spacer(1,10))
     data=[['Barangay','New cases','2024 population','Incidence / 100k','Ratio','Incidence level']]
     for r in rows:data.append([str(r[k]) if r[k] is not None else 'N/A' for k in ('Barangay','Recorded cases','Population (2024)','Incidence / 100k','Relative rate ratio','Incidence level')])
-    t=Table(data,repeatRows=1,colWidths=[155,70,85,95,60,85]);t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#dceff2')),('GRID',(0,0),(-1,-1),.25,colors.lightgrey),('FONTSIZE',(0,0),(-1,-1),8),('BOTTOMPADDING',(0,0),(-1,-1),5)]));story.append(t)
+    t=Table(data,repeatRows=1,colWidths=[155,70,85,95,60,85]);t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor(GEO_STYLE['export_table_header'])),('GRID',(0,0),(-1,-1),.25,colors.lightgrey),('FONTSIZE',(0,0),(-1,-1),8),('BOTTOMPADDING',(0,0),(-1,-1),5)]));story.append(t)
     doc.build(story);return buf.getvalue()
 
 
@@ -180,7 +238,13 @@ def excel_export(rows,trend,hospital_name,label):
 def show():
     if CSS.is_file():
         html('<style>'+CSS.read_text(encoding='utf-8')+'</style>')
-    html('<div class="geo-hero"><div class="geo-eyebrow">LungSightAI · Analytics & Monitoring</div><div class="geo-title">Geospatial Case Monitoring</div><div class="geo-sub">First-recorded clinician-confirmed pneumonia patients by barangay, adjusted for PSA 2024 population</div></div>')
+    from streamlit_app.components.ui import refresh_button
+    with st.container(key="geo_hero_refresh_20261127"):
+        hero_col, refresh_col = st.columns([15, 1], vertical_alignment="center")
+        with hero_col:
+            html('<div class="geo-hero"><div class="geo-eyebrow">LungSightAI · Analytics & Monitoring</div><div class="geo-title">Geospatial Case Monitoring</div><div class="geo-sub">First-recorded clinician-confirmed pneumonia patients by barangay, adjusted for PSA 2024 population</div></div>')
+        with refresh_col:
+            refresh_button("page_refresh_geospatial")
     try:
         hospital = hospital_context()
         geo_rows = load_geo_catalog(hospital["hospital_id"])
@@ -270,20 +334,61 @@ def show():
             if clicked in [r['Barangay'] for r in rows] and clicked != selected:
                 st.session_state['geo_selected'] = clicked
                 st.rerun()
-        html('<div class="geo-note"><span style="color:#22c55e">●</span> Low &nbsp;&nbsp; <span style="color:#f59e0b">●</span> Moderate &nbsp;&nbsp; <span style="color:#ef4444">●</span> High &nbsp;&nbsp; <span style="color:#94a3b8">●</span> No cases &nbsp;&nbsp; <span style="color:#64748b">●</span> Population unavailable — relative <b>hospital-recorded incidence</b>, not clinical severity. Markers are approximate barangay reference points, not patient homes.</div>')
+        html('<div class="geo-note geo-legend">'
+             '<span class="geo-legend-item"><span class="geo-legend-dot geo-legend-dot-low"></span> Low</span>'
+             '<span class="geo-legend-item"><span class="geo-legend-dot geo-legend-dot-moderate"></span> Moderate</span>'
+             '<span class="geo-legend-item"><span class="geo-legend-dot geo-legend-dot-high"></span> High</span>'
+             '<span class="geo-legend-item"><span class="geo-legend-dot geo-legend-dot-no-cases"></span> No cases</span>'
+             '<span class="geo-legend-item"><span class="geo-legend-dot geo-legend-dot-unavailable"></span> Population unavailable</span>'
+             '<span class="geo-legend-disclaimer">Relative <b>hospital-recorded incidence</b>, not clinical severity. Markers are approximate barangay reference points, not patient homes.</span></div>')
     with right:
         section('Barangay Case Summary')
-        st.dataframe(pd.DataFrame(rows)[['Barangay','Recorded cases','Population (2024)','Incidence / 100k','Relative rate ratio','Incidence level']],
-                     hide_index=True,use_container_width=True,height=270)
-        names = [r['Barangay'] for r in rows]
+        # FILTER SWITCH: comment out the next line to hide the entire toolbar.
+        show_geo_filters = False
+        show_geo_filters = True
+        visible_rows = list(rows)
+        if show_geo_filters:
+            with st.container(key='geo_summary_filters'):
+                search_col, sort_col = st.columns([2, 1])
+                search_text = search_col.text_input('Search barangay', key='geo_summary_search').strip().casefold()
+                sort_choice = sort_col.selectbox('Sort by', ['Default order', 'Barangay A–Z', 'Barangay Z–A', 'Numbers ascending', 'Numbers descending'], key='geo_summary_sort_simple')
+            visible_rows = [r for r in rows if search_text in str(r['Barangay']).casefold()]
+            if sort_choice in ('Barangay A–Z', 'Barangay Z–A'):
+                visible_rows.sort(key=lambda r: str(r['Barangay']).casefold(), reverse=sort_choice == 'Barangay Z–A')
+            elif sort_choice in ('Numbers ascending', 'Numbers descending'):
+                # Numeric order uses incidence; other columns have clickable headers.
+                metric = 'Incidence / 100k'
+                visible_rows.sort(key=lambda r: (pd.isna(r[metric]), 0 if pd.isna(r[metric]) else float(r[metric]) * (1 if sort_choice == 'Numbers ascending' else -1)))
+        with st.container(key='geo_summary_table'):
+            html(f'<div class="geo-summary-count">Showing {len(visible_rows)} of {len(rows)} barangays</div>')
+            if visible_rows:
+                st.dataframe(
+                    pd.DataFrame(visible_rows)[[
+                        'Barangay', 'Recorded cases', 'Population (2024)',
+                        'Incidence / 100k', 'Relative rate ratio', 'Incidence level',
+                    ]], hide_index=True, use_container_width=True, height=270,
+                )
+            else:
+                st.info('No barangays match the current search or case filter.')
+
+        names = [r['Barangay'] for r in visible_rows]
         default_idx = names.index(selected) if selected in names else 0
-        barangay = selected if selected in names else names[default_idx]
-        if st.button('View Detailed Summary',icon=':material/insights:',use_container_width=True,type='primary'):
+        barangay = selected if selected in names else (names[default_idx] if names else None)
+        # Avoid displaying a stale detail card for a filtered-out barangay.
+        if st.session_state.get('geo_detail_open') not in names:
+            st.session_state.pop('geo_detail_open', None)
+        with st.container(key='geo_detail_button'):
+            open_detail = st.button(
+                'View Detailed Summary', icon=':material/insights:',
+                use_container_width=True, type='primary',
+                key='geo_show_detail', disabled=not names,
+            )
+        if open_detail:
             st.session_state['geo_detail_open'] = barangay
         if st.session_state.get('geo_detail_open'):
-            r = next((x for x in rows if x['Barangay']==st.session_state['geo_detail_open']),None)
+            r = next((x for x in visible_rows if x['Barangay']==st.session_state['geo_detail_open']),None)
             if r:
-                html(f'<div class="geo-note"><b>{escape(r["Barangay"])}</b><br>Confirmed cases: <b>{r["Recorded cases"]}</b><br>Population (2024): <b>{r["Population (2024)"] if r["Population (2024)"] is not None else "Unavailable"}</b><br>Incidence / 100k: <b>{r["Incidence / 100k"] if r["Incidence / 100k"] is not None else "Unavailable"}</b><br>Relative rate ratio: <b>{r["Relative rate ratio"] if r["Relative rate ratio"] is not None else "Unavailable"}</b><br>Relative incidence: <b>{escape(r["Incidence level"])}</b><br>Previous month: {r["Previous month"]}<br>Change: {r["Change (%)"] if r["Change (%)"] is not None else "N/A"}%</div>')
+                html(f'<div class="geo-note geo-detail-card"><b>{escape(r["Barangay"])}</b><br>Confirmed cases: <b>{r["Recorded cases"]}</b><br>Population (2024): <b>{r["Population (2024)"] if r["Population (2024)"] is not None else "Unavailable"}</b><br>Incidence / 100k: <b>{r["Incidence / 100k"] if r["Incidence / 100k"] is not None else "Unavailable"}</b><br>Relative rate ratio: <b>{r["Relative rate ratio"] if r["Relative rate ratio"] is not None else "Unavailable"}</b><br>Relative incidence: <b>{escape(r["Incidence level"])}</b><br>Previous month: {r["Previous month"]}<br>Change: {r["Change (%)"] if r["Change (%)"] is not None else "N/A"}%</div>')
                 if st.button('Close summary',key='geo_close_summary'):
                     st.session_state.pop('geo_detail_open',None)
                     st.rerun()
@@ -298,7 +403,7 @@ def show():
         except Exception as exc:
             st.error(f'Could not load monthly trend: {exc}')
             return
-        st.line_chart(pd.DataFrame(trend).set_index('Month'),height=190)
+        st.line_chart(pd.DataFrame(trend).set_index('Month'),height=190,color=GEO_STYLE['trend_line'])
     # Include zero-case barangays: map point availability is independent of incidence.
     missing = sum(1 for r in rows if (r.get('Latitude (approx.)') is None or r.get('Longitude (approx.)') is None))
     if missing:
@@ -310,14 +415,14 @@ def show():
         png = png_export(rows,name,period)
         p1,p2,p3 = st.columns(3)
         with p1:
-            st.download_button('Export PNG',png,file_name=f'geospatial_{year}_{month:02d}.png',mime='image/png',icon=':material/image:',use_container_width=True)
+            st.download_button('Export PNG',png,file_name=f'geospatial_{year}_{month:02d}.png',mime='image/png',icon=':material/image:',use_container_width=True,key='geo_export_png')
         with p2:
-            st.download_button('Export PDF',pdf_export(rows,name,period,png),file_name=f'geospatial_{year}_{month:02d}.pdf',mime='application/pdf',icon=':material/picture_as_pdf:',use_container_width=True)
+            st.download_button('Export PDF',pdf_export(rows,name,period,png),file_name=f'geospatial_{year}_{month:02d}.pdf',mime='application/pdf',icon=':material/picture_as_pdf:',use_container_width=True,key='geo_export_pdf')
         with p3:
-            st.download_button('Export Excel',excel_export(rows,trend,name,period),file_name=f'geospatial_{year}_{month:02d}.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',icon=':material/table_view:',use_container_width=True)
+            st.download_button('Export Excel',excel_export(rows,trend,name,period),file_name=f'geospatial_{year}_{month:02d}.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',icon=':material/table_view:',use_container_width=True,key='geo_export_excel')
     except Exception as exc:
         st.error(f'Could not generate export: {exc}')
-    html('<div class="geo-note"><b>Interpretation:</b> First hospital-recorded clinician-confirmed cases ÷ 2024 PSA census population × 100,000 (current PH month). Relative incidence categories compare to the population-weighted study-area reference. Not complete community surveillance, clinical case severity, transmission risk, or validated DOH alert levels.</div>')
+    html('<div class="geo-note geo-interpretation"><b>Interpretation:</b> First hospital-recorded clinician-confirmed cases ÷ 2024 PSA census population × 100,000 (current PH month). Relative incidence categories compare to the population-weighted study-area reference. Not complete community surveillance, clinical case severity, transmission risk, or validated DOH alert levels.</div>')
 
 
 if __name__ == '__main__':

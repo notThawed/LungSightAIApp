@@ -370,7 +370,7 @@ def render_table(entries, page):
 
         table_header(FOLLOWUP_HEADERS, FOLLOWUP_WIDTHS, "pf_fu")
 
-        for entry in page_entries:
+        for row_index, entry in enumerate(page_entries):
 
             patient = entry["patient"]
             patient_id = patient.get("patient_id")
@@ -391,7 +391,8 @@ def render_table(entries, page):
             if fu_count > 1:
                 patient_sub = f"{patient_sub} · {fu_count} follow-ups"
 
-            with table_row(f"pf_fu_row_{patient_id}", FOLLOWUP_WIDTHS) as columns:
+            position = "odd" if row_index % 2 == 0 else "even"
+            with table_row(f"pf_fu_row_{position}_{patient_id}", FOLLOWUP_WIDTHS) as columns:
 
                 text_cell(columns[0], code_display, strong=True)
 
@@ -472,6 +473,16 @@ def render_pagination(page, total_pages, total, start, end):
 # LANDING VIEW
 # ============================================================
 
+
+# LUNGSIGHT_GEO_FOLLOWUPS_SORT_20261127
+_FU_SORT_OPTIONS = ['Default order', 'Name A–Z', 'Name Z–A']
+
+def _fu_sort_groups(groups, order, appointment, count):
+    if order not in _FU_SORT_OPTIONS[1:]:
+        return groups
+    return sorted(groups, key=lambda g: patient_name(g['patient']).casefold(), reverse=order == 'Name Z–A')
+
+
 def render_landing(hospital_id):
 
     render_kpi_strip(hospital_id)
@@ -491,6 +502,8 @@ def render_landing(hospital_id):
                   if fu.get("status") in ACTIVE_STATUSES]
         entries = group_follow_ups_by_patient(active, "All")
         entries = apply_search(entries, query)
+        order = st.selectbox("Sort active follow-ups", _FU_SORT_OPTIONS, key="pf_fu_active_sort", on_change=reset_pagination)
+        entries = _fu_sort_groups(entries, order, lambda g: g["next_follow_up"], lambda g: len(g["follow_ups"]))
         if st.session_state.get("_pf_fu_active_last_query") != query:
             reset_pagination()
             st.session_state["_pf_fu_active_last_query"] = query
@@ -538,6 +551,7 @@ def render_follow_up_history(follow_ups):
         key="pf_fu_history_query",
     ).strip().lower()
 
+    order = st.selectbox("Sort history", _FU_SORT_OPTIONS, key="pf_fu_history_sort")
     statuses = st.multiselect(
         "History statuses",
         ["Completed", "Missed", "Cancelled"],
@@ -620,6 +634,8 @@ def render_follow_up_history(follow_ups):
         reverse=True,
     )
 
+    groups = _fu_sort_groups(groups, order, lambda g: g["appointments"][0], lambda g: len(g["appointments"]))
+
     st.caption(
         f"{len(groups)} patient(s) · "
         f"{sum(len(g['appointments']) for g in groups)} "
@@ -636,14 +652,15 @@ def render_follow_up_history(follow_ups):
     # ONE TOP-LEVEL ROW PER PATIENT
     # --------------------------------------------------------
 
-    for group in groups:
+    for row_index, group in enumerate(groups):
         patient = group["patient"]
         patient_id = patient.get("patient_id")
         appointments = group["appointments"]
 
         latest_fu = appointments[0]
 
-        with st.container(border=True):
+        position = "odd" if row_index % 2 == 0 else "even"
+        with st.container(key=f"pf_history_group_{position}_{patient_id}", border=True):
             col_patient, col_latest, col_action = st.columns(
                 [2.5, 2, 1],
                 vertical_alignment="center",

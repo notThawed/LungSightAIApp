@@ -24,6 +24,9 @@ PSGC_POPULATION_API = os.getenv(
     "LUNGSIGHT_POPULATION_API",
     "https://psgc.billyjamesramos.com/api/v1",
 ).rstrip("/")
+
+# PSGC 2024 population API is based on PSA 2026-Q3 publication, which is the
+# most recent official census data available as of 2024-06-01. The API
 CENSUS_YEAR = 2024
 LOW_UPPER = 0.85
 MODERATE_UPPER = 1.76

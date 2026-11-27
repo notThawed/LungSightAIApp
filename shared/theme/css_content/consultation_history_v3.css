@@ -1,0 +1,33 @@
+/* shared/theme/css_content/consultation_history_v3.css */
+/* LungSight clinical archive — scoped V3 */
+.st-key-ls_history,.st-key-ls_exam{font-family:Manrope,sans-serif;color:#0f172a;--archive-teal:#0f7c88;}
+.st-key-ls_history [data-testid="stMetric"]{background:linear-gradient(135deg,#fff,#e6f7f8);border:1px solid #c9e5e8;border-left:4px solid #0f7c88;border-radius:14px;padding:18px 20px;box-shadow:0 4px 14px #12283a09;}
+.st-key-ls_history [data-testid="stMetricValue"]{color:#0b626c;font-family:'Space Grotesk',sans-serif;font-weight:700;}
+.st-key-ls_history [data-testid="stExpander"] details{border:1px solid #d3e3e8;border-radius:14px;overflow:hidden;background:white;box-shadow:0 3px 12px #12283a09;margin:6px 0;}
+.st-key-ls_history [data-testid="stExpander"] summary{background:linear-gradient(110deg,#e6f7f8,#f7fbfc);padding:18px 20px!important;color:#0b626c;border-left:4px solid #0f7c88;}
+.st-key-ls_history [data-testid="stExpander"] summary p{font-weight:800!important;font-size:1rem!important;color:#0b626c!important;}
+.st-key-ls_history [data-testid="stExpander"] summary:hover{background:#d9f0f2;}
+.st-key-ls_history [data-testid="stExpanderDetails"]{padding:18px!important;}
+:is(.st-key-ls_history,.st-key-ls_exam) [role="tablist"]{gap:8px;border-bottom:1px solid #dce7eb;padding:6px 0;}
+:is(.st-key-ls_history,.st-key-ls_exam) [role="tab"]{padding:10px 15px;border-radius:9px;color:#475569;}
+:is(.st-key-ls_history,.st-key-ls_exam) [role="tab"][aria-selected="true"]{background:#e6f7f8;color:#0b626c;}
+:is(.st-key-ls_history,.st-key-ls_exam) [role="tab"] p{font-weight:700;}
+:is(.st-key-ls_history,.st-key-ls_exam) [data-testid="stBaseButton-secondary"]{border:1px solid #b8d8dd!important;color:#0b626c!important;border-radius:9px!important;background:#fff!important;}
+:is(.st-key-ls_history,.st-key-ls_exam) [data-testid="stBaseButton-secondary"]:hover{background:#e6f7f8!important;border-color:#0f7c88!important;}
+.lsv3-hero{background:linear-gradient(110deg,#095963,#0f7c88);color:white;padding:22px 26px;border-radius:16px;margin:4px 0 12px;display:flex;gap:16px;align-items:center;}
+.lsv3-avatar{width:54px;height:54px;display:grid;place-items:center;background:#ffffff24;border:1px solid #ffffff55;border-radius:14px;font-size:22px;font-weight:800;flex-shrink:0;}
+.lsv3-hero h3{font-family:Fraunces,Georgia,serif;color:white!important;margin:0;padding:0;font-size:1.5rem;}
+.lsv3-hero small{color:#d7f3f4;display:block;margin-top:5px;}
+.lsv3-kicker{font-size:.7rem;font-weight:800;letter-spacing:.12em;color:#0b626c;text-transform:uppercase;margin:12px 0 4px;}
+.lsv3-row{display:flex;align-items:center;gap:12px;min-height:56px;}
+.lsv3-icon{background:#e6f7f8;color:#0b626c;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;flex-shrink:0;}
+.lsv3-row strong{font-size:.94rem;color:#12283a;display:block;}
+.lsv3-row small{color:#64748b;display:block;margin-top:4px;}
+.lsv3-status{display:inline-block;border-radius:20px;padding:3px 9px;font-size:.72rem;font-weight:700;background:#eef2f6;color:#475569;margin-top:5px;}
+.lsv3-status.done{background:#eaf6f1;color:#23745a;}
+.lsv3-field{border:1px solid #e2e8f0;border-left:3px solid #b7dce0;border-radius:11px;background:#fff;padding:14px 17px;margin:4px 0;}
+.lsv3-field label{display:block;color:#0b626c;font-weight:800;font-size:.76rem;letter-spacing:.035em;margin-bottom:7px;}
+.lsv3-field div{color:#172b35;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;}
+.st-key-ls_exam [data-testid="stImage"] img{max-height:420px;object-fit:contain;background:#081e2c;border-radius:12px;}
+.st-key-ls_exam .pr-hero-row b{text-align:left;white-space:normal;}
+@media(max-width:700px){.lsv3-hero{padding:16px}.lsv3-hero h3{font-size:1.15rem}.st-key-ls_history [data-testid="stExpander"] summary{padding:12px!important;}}

@@ -492,9 +492,19 @@ def render_kpi_strip(follow_ups):
     with col4:
         metric_card("Active Total", len(upcoming) + len(overdue), "schedule", tone="teal")
 
+
+# LUNGSIGHT_GEO_FOLLOWUPS_SORT_20261127
+_FU_SORT_OPTIONS = ['Default order', 'Name A–Z', 'Name Z–A']
+
+def _fu_sort_groups(groups, order, appointment, count):
+    if order not in _FU_SORT_OPTIONS[1:]:
+        return groups
+    return sorted(groups, key=lambda g: patient_name(g['patient']).casefold(), reverse=order == 'Name Z–A')
+
+
 def render_filter_bar():
 
-    search_col, status_col = st.columns([3, 1.5])
+    search_col, status_col, sort_col = st.columns([3, 1.5, 1.7])
 
     search = search_col.text_input(
         "Search",
@@ -510,7 +520,8 @@ def render_filter_bar():
         label_visibility="collapsed",
     )
 
-    return search, status_filter
+    order = sort_col.selectbox("Sort follow-ups", _FU_SORT_OPTIONS, key="sf_fu_sort", label_visibility="collapsed")
+    return search, status_filter, order
 
 def apply_filters(follow_ups, search, status_filter):
 
@@ -648,7 +659,7 @@ def render_landing():
 
     st.divider()
 
-    search, status_filter = render_filter_bar()
+    search, status_filter, order = render_filter_bar()
 
     st.divider()
 
@@ -727,6 +738,8 @@ def render_landing():
         )
     )
 
+    groups = _fu_sort_groups(groups, order, lambda g: g["appointments"][0], lambda g: len(g["appointments"]))
+
     total_appointments = sum(
         len(group["appointments"])
         for group in groups
@@ -750,7 +763,7 @@ def render_landing():
     # RENDER ONE PATIENT GROUP AT A TIME
     # --------------------------------------------------------
 
-    for group in groups:
+    for row_index, group in enumerate(groups):
 
         patient = group["patient"]
         patient_id = patient.get("patient_id")
@@ -774,7 +787,7 @@ def render_landing():
             else appointments[0]
         )
 
-        position = "odd" if index % 2 == 0 else "even"
+        position = "odd" if row_index % 2 == 0 else "even"
 
         with st.container(key=f"sf_patient_group_{position}_{patient_id}", border=True):
             col_patient, col_summary, col_action = (

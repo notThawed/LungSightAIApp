@@ -1,11 +1,245 @@
-/* Dedicated geospatial UI. All HTML is emitted as single-line strings. */
-.geo-hero{padding:20px 23px;border:1px solid #d7e7ed;border-radius:16px;background:linear-gradient(120deg,#f4fbfc,#fff);margin-bottom:16px}
-.geo-eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#087f91}
-.geo-title{font-size:27px;font-weight:800;letter-spacing:-.035em;color:#102a43;margin:5px 0}
-.geo-sub{color:#61758a;font-size:13px}
-.geo-kpi{border:1px solid #dae8ee;background:#fff;border-radius:14px;padding:16px 18px;min-height:110px;box-shadow:0 2px 9px rgba(15,50,70,.035)}
-.geo-kpi-label{font-size:12px;color:#64748b;font-weight:600}.geo-kpi-value{font-size:27px;font-weight:800;color:#0b3047;margin-top:8px}
-.geo-section{font-size:16px;font-weight:800;color:#13354b;margin:14px 0 10px;border-left:4px solid #0795a7;padding-left:10px}
-.geo-note{background:#eff9fb;border:1px solid #c5eaf0;border-radius:11px;padding:12px 15px;color:#28546b;font-size:12px;margin:10px 0}
-.geo-chip{font-size:12px;color:#087b8c;font-weight:800;background:#e1f7f9;border-radius:30px;padding:5px 10px;display:inline-block}
-.geo-muted{color:#738499;font-size:12px}
+/* LUNGSIGHT_GEOSPATIAL_CSS_FILTERS_20261127
+   LUNGSIGHT GEOSPATIAL — SINGLE DESIGN CONTROL PANEL
+   Edit the custom properties below to change the screen, map circles,
+   export circle colors, buttons, borders, summary filters and legend.
+   IMPORTANT: Change presentation only. These are NOT incidence thresholds.
+   Hex colors are consumed by Python/Folium from THIS CSS file.
+*/
+
+/* ============================================================
+   01. ALL EDITABLE COLORS + NUMERIC VISUAL CONTROLS
+   Search for --geo- to customize the page from ONE place.
+   ============================================================ */
+:root {
+  /* Brand and typography */
+  --geo-font: 'Manrope', 'Segoe UI', sans-serif;
+  --geo-primary: #087f91;
+  --geo-primary-dark: #0b626c;
+  --geo-ink: #102a43;
+  --geo-muted-ink: #61758a;
+  --geo-background: #ffffff;
+  --geo-surface: #ffffff;
+  --geo-surface-soft: #f4fbfc;
+  --geo-border: #d7e7ed;
+  --geo-shadow: 0 2px 9px rgba(15,50,70,.035);
+
+  /* Hero / section title */
+  --geo-hero-background: #f4fbfc;
+  --geo-hero-background-end: #ffffff;
+  --geo-hero-border: #d7e7ed;
+  --geo-title-color: #102a43;
+  --geo-eyebrow-color: #087f91;
+  --geo-section-color: #13354b;
+  --geo-section-accent: #0795a7;
+
+  /* KPI metric cards */
+  --geo-kpi-background: #ffffff;
+  --geo-kpi-border: #dae8ee;
+  --geo-kpi-value-color: #0b3047;
+  --geo-kpi-label-color: #64748b;
+
+  /* Circle colors — SAME current values; edit only HERE */
+  --geo-circle-high: #db0f0f;
+  --geo-circle-moderate: #f59e0b;
+  --geo-circle-low: #22c55e;
+  --geo-circle-no-cases: #94a3b8;
+  --geo-circle-unavailable: #64748b;
+
+  /* Circle stroke, size and opacity, consumed by Folium in Python */
+  --geo-circle-selected-outline: #ffffff;
+  --geo-circle-outline-weight: 1;
+  --geo-circle-selected-outline-weight: 3;
+  --geo-circle-fill-opacity: 0.83;
+  --geo-circle-base-radius: 6;
+  --geo-circle-extra-radius: 15;
+
+  /* PNG export circles (same existing defaults) */
+  --geo-export-circle-outline: #ffffff;
+  --geo-export-circle-outline-width: 1.5;
+  --geo-export-circle-opacity: 0.78;
+  --geo-export-circle-base-size: 70;
+  --geo-export-circle-extra-size: 350;
+  --geo-export-circle-incidence-factor: 0.5;
+  --geo-export-table-header: #dceff2;
+  --geo-hospital-pin-color: blue;
+
+  /* Informational boxes */
+  --geo-note-background: #eff9fb;
+  --geo-note-border: #c5eaf0;
+  --geo-note-text: #28546b;
+  --geo-chip-background: #e1f7f9;
+  --geo-chip-text: #087b8c;
+
+  /* Barangay table and its filtering toolbar */
+  --geo-table-background: #ffffff;
+  --geo-table-border: #d7e7ed;
+  --geo-table-header-background: #f3fafb;
+  --geo-table-header-text: #13354b;
+  --geo-filter-background: #ffffff;
+  --geo-filter-border: #cbdfe5;
+  --geo-filter-focus: #087f91;
+  --geo-filter-label: #475569;
+
+  /* Buttons: summary and exports */
+  --geo-detail-button-bg: #f45100;
+  --geo-detail-button-hover: #d94500;
+  --geo-detail-button-text: #ffffff;
+  --geo-export-button-bg: #ffffff;
+  --geo-export-button-hover: #e6f7f8;
+  --geo-export-button-text: #0b626c;
+  --geo-export-button-border: #d6e3e7;
+  --geo-button-radius: 9px;
+
+  /* Map popup/tooltip (injected into Folium map from this CSS) */
+  --geo-map-popup-background: #ffffff;
+  --geo-map-popup-text: #102a43;
+  --geo-map-popup-border: #d7e7ed;
+  --geo-map-tooltip-background: #ffffff;
+  --geo-map-tooltip-text: #102a43;
+
+  /* Monthly trend line: consumed by Streamlit Python */
+  --geo-trend-line: #2563eb;
+}
+
+/* ============================================================
+   02. PAGE HEADERS AND PANELS
+   ============================================================ */
+.geo-hero {
+  padding:20px 23px;
+  border:1px solid var(--geo-hero-border);
+  border-radius:16px;
+  background:linear-gradient(120deg,var(--geo-hero-background),var(--geo-hero-background-end));
+  margin-bottom:16px;
+  font-family:var(--geo-font);
+}
+.geo-eyebrow {
+  font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  font-weight:800;color:var(--geo-eyebrow-color);
+}
+.geo-title {
+  font-size:27px;font-weight:800;letter-spacing:-.035em;
+  color:var(--geo-title-color);margin:5px 0;
+}
+.geo-sub {color:var(--geo-muted-ink);font-size:13px;line-height:1.55;}
+.geo-kpi {
+  border:1px solid var(--geo-kpi-border);background:var(--geo-kpi-background);
+  border-radius:14px;padding:16px 18px;min-height:110px;
+  box-shadow:var(--geo-shadow);transition:border-color .18s,box-shadow .18s;
+  font-family:var(--geo-font);
+}
+.geo-kpi:hover {border-color:var(--geo-primary);box-shadow:0 5px 20px rgba(10,90,110,.08);}
+.geo-kpi-label{font-size:12px;color:var(--geo-kpi-label-color);font-weight:600;}
+.geo-kpi-value{font-size:27px;font-weight:800;color:var(--geo-kpi-value-color);margin-top:8px;overflow-wrap:anywhere;}
+.geo-section{font-size:16px;font-weight:800;color:var(--geo-section-color);margin:14px 0 10px;border-left:4px solid var(--geo-section-accent);padding-left:10px;}
+.geo-note{background:var(--geo-note-background);border:1px solid var(--geo-note-border);border-radius:11px;padding:12px 15px;color:var(--geo-note-text);font-size:12px;line-height:1.6;margin:10px 0;}
+.geo-chip{font-size:12px;color:var(--geo-chip-text);font-weight:800;background:var(--geo-chip-background);border-radius:30px;padding:5px 10px;display:inline-block;}
+.geo-muted{color:var(--geo-muted-ink);font-size:12px;}
+
+/* ============================================================
+   03. MAP LEGEND CIRCLES — colors are shared with Folium map
+   ============================================================ */
+.geo-legend{display:flex;align-items:center;flex-wrap:wrap;gap:5px 11px;}
+.geo-legend-item{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.geo-legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex:0 0 9px;}
+.geo-legend-dot-low{background:var(--geo-circle-low);}
+.geo-legend-dot-moderate{background:var(--geo-circle-moderate);}
+.geo-legend-dot-high{background:var(--geo-circle-high);}
+.geo-legend-dot-no-cases{background:var(--geo-circle-no-cases);}
+.geo-legend-dot-unavailable{background:var(--geo-circle-unavailable);}
+.geo-legend-disclaimer{flex-basis:100%;margin-top:3px;}
+
+/* ============================================================
+   04. BARANGAY SUMMARY — SEARCH / SORT / NUMERIC FILTERS
+   Styles are scoped to these named Streamlit containers.
+   ============================================================ */
+.st-key-geo_summary_filters{padding:13px 14px 4px;background:var(--geo-surface-soft);border:1px solid var(--geo-table-border);border-radius:12px 12px 0 0;}
+.st-key-geo_summary_filters label p{font-family:var(--geo-font);font-size:12px!important;font-weight:700!important;color:var(--geo-filter-label)!important;}
+.st-key-geo_summary_filters [data-baseweb="input"] ,
+.st-key-geo_summary_filters [data-baseweb="select"],
+.st-key-geo_summary_filters input{
+  background:var(--geo-filter-background)!important;
+  border-color:var(--geo-filter-border)!important;
+  border-radius:var(--geo-button-radius)!important;
+}
+.st-key-geo_summary_filters [data-baseweb="input"]:focus-within,
+.st-key-geo_summary_filters [data-baseweb="select"]:focus-within{
+  border-color:var(--geo-filter-focus)!important;
+  box-shadow:0 0 0 2px rgba(8,127,145,.10)!important;
+}
+.st-key-geo_summary_table{border:1px solid var(--geo-table-border);border-top:none;border-radius:0 0 12px 12px;background:var(--geo-table-background);padding:0 7px 9px;}
+.st-key-geo_summary_table [data-testid="stDataFrame"]{border-radius:7px;overflow:hidden;}
+.st-key-geo_summary_table [data-testid="stDataFrame"] *{font-family:var(--geo-font);}
+.geo-summary-count{margin:8px 0 6px;font-size:12px;font-weight:700;color:var(--geo-muted-ink);}
+
+/* ============================================================
+   05. BUTTONS — Edit colors in section 01 only
+   ============================================================ */
+.st-key-geo_detail_button button[kind="primary"],
+.st-key-geo_detail_button [data-testid="stBaseButton-primary"]{
+  background:var(--geo-detail-button-bg)!important;
+  color:var(--geo-detail-button-text)!important;
+  border:1px solid var(--geo-detail-button-bg)!important;
+  border-radius:var(--geo-button-radius)!important;
+  font-weight:750!important;
+}
+.st-key-geo_detail_button button[kind="primary"]:hover,
+.st-key-geo_detail_button [data-testid="stBaseButton-primary"]:hover{
+  background:var(--geo-detail-button-hover)!important;
+  border-color:var(--geo-detail-button-hover)!important;
+}
+.st-key-geo_export_png button,
+.st-key-geo_export_pdf button,
+.st-key-geo_export_excel button{
+  background:var(--geo-export-button-bg)!important;
+  color:var(--geo-export-button-text)!important;
+  border:1px solid var(--geo-export-button-border)!important;
+  border-radius:var(--geo-button-radius)!important;
+  font-weight:650!important;
+}
+.st-key-geo_export_png button:hover,
+.st-key-geo_export_pdf button:hover,
+.st-key-geo_export_excel button:hover{
+  background:var(--geo-export-button-hover)!important;
+  border-color:var(--geo-primary)!important;
+}
+
+/* ============================================================
+   06. DETAILS / INTERPRETATION PANELS
+   ============================================================ */
+.geo-detail-card{background:var(--geo-note-background);border-color:var(--geo-note-border);}
+.geo-interpretation{background:var(--geo-note-background);}
+
+/* ============================================================
+   07. FOLIUM / LEAFLET — CSS injected into map HTML by Python.
+   Editing here styles popup boxes and tooltips in the map iframe.
+   Circle SVG fill colors use section 01 and Python reads those.
+   ============================================================ */
+.leaflet-popup-content-wrapper{
+  background:var(--geo-map-popup-background)!important;
+  color:var(--geo-map-popup-text)!important;
+  border:1px solid var(--geo-map-popup-border);
+  border-radius:12px!important;
+  box-shadow:0 6px 22px rgba(10,40,60,.13)!important;
+}
+.leaflet-popup-content{font-family:var(--geo-font);font-size:12px!important;line-height:1.65!important;}
+.leaflet-tooltip{
+  background:var(--geo-map-tooltip-background)!important;
+  color:var(--geo-map-tooltip-text)!important;
+  border:1px solid var(--geo-map-popup-border)!important;
+  border-radius:7px!important;
+  font-family:var(--geo-font);
+}
+@media(max-width:860px){
+  .geo-kpi{min-height:90px;padding:13px 14px;}
+  .geo-kpi-value{font-size:21px;}
+  .geo-hero{padding:16px;}
+  .geo-title{font-size:23px;}
+  .st-key-geo_summary_filters{padding:10px;}
+}
+
+/* LUNGSIGHT_GEO_FOLLOWUPS_SORT_20261127 — hero refresh */
+:root { --geo-refresh-bg:#e8f4f6; --geo-refresh-border:#a8d9df; --geo-refresh-text:#087983; --geo-refresh-hover:#d8eef0; }
+.st-key-geo_hero_refresh_20261127 {background:linear-gradient(120deg,var(--geo-hero-background),var(--geo-hero-background-end));border:1px solid var(--geo-hero-border);border-radius:16px;padding-right:16px;}
+.st-key-geo_hero_refresh_20261127 .geo-hero {border:0;background:transparent;margin-bottom:0;}
+.st-key-geo_hero_refresh_20261127 .st-key-page_refresh_geospatial button {background:var(--geo-refresh-bg)!important;border-color:var(--geo-refresh-border)!important;color:var(--geo-refresh-text)!important;}
+.st-key-geo_hero_refresh_20261127 .st-key-page_refresh_geospatial button:hover {background:var(--geo-refresh-hover)!important;}
